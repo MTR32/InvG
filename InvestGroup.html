@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="InvestGroup">
+<meta name="theme-color" content="#0b0c0e">
+<title>InvestGroup — Treasurer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text y='.9em' font-size='70' x='12' fill='%23c8f04a'>◆</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text y='.9em' font-size='70' x='12' fill='%23c8f04a'>◆</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0c0e;--surface:#111318;--surface2:#181b22;--border:#232630;--accent:#c8f04a;--green:#4af0b8;--red:#f04a6a;--gold:#f0c14a;--blue:#4af0b8;--text:#e8eaf0;--muted:#6b7280;--muted2:#9ca3af;--nav-h:62px;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{height:100%;height:-webkit-fill-available;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:13px;line-height:1.5;-webkit-text-size-adjust:100%;text-size-adjust:100%;min-height:100dvh;overflow:hidden;position:fixed;width:100%;top:0;left:0;}
+
+/* LOCK */
+#lock{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+#lock.off{display:none;}
+.lk-logo{font-family:'DM Serif Display',Georgia,serif;font-size:44px;color:var(--accent);margin-bottom:4px;}
+.lk-title{font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--text);}
+.lk-sub{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:28px;margin-top:2px;}
+.lk-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;width:100%;max-width:340px;}
+.lk-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:8px;font-family:'DM Mono',ui-monospace,monospace;font-size:18px;outline:none;letter-spacing:6px;text-align:center;transition:border-color .15s;margin-bottom:10px;}
+.lk-input:focus{border-color:var(--accent);}
+.lk-btn{width:100%;background:var(--accent);color:#0b0c0e;border:none;border-radius:8px;padding:13px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:14px;cursor:pointer;}
+.lk-err{color:var(--red);font-size:11px;text-align:center;margin-top:8px;min-height:16px;}
+.lk-hint{color:var(--muted);font-size:10px;text-align:center;margin-top:8px;}
+.lk-link{color:var(--accent);font-size:10px;cursor:pointer;display:block;text-align:center;margin-top:6px;font-family:'Syne',ui-sans-serif,sans-serif;}
+
+/* APP */
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
+#app.off{display:none;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;padding-top:calc(11px + env(safe-area-inset-top));background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.tb-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
+.tb-title{font-family:'DM Serif Display',Georgia,serif;font-size:17px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.back-btn{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:5px 9px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.back-btn.hidden{display:none;}
+.tb-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.tb-btn{background:var(--accent);color:#0b0c0e;border:none;border-radius:6px;padding:7px 11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:11px;cursor:pointer;white-space:nowrap;}
+.tb-ghost{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:6px 9px;font-size:14px;cursor:pointer;line-height:1;}
+
+/* SCROLL */
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+.page{display:none;padding:14px;}
+.page.active{display:block;}
+
+/* BOTTOM NAV */
+.bottom-nav{display:flex;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 2px;cursor:pointer;color:var(--muted);font-size:7px;letter-spacing:.2px;text-transform:uppercase;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;gap:2px;border:none;background:none;overflow:hidden;position:relative;}
+.nav-tab .ni{font-size:18px;line-height:1;}
+.nav-tab.active{color:var(--accent);}
+.nav-badge{position:absolute;top:4px;right:calc(50% - 16px);background:var(--red);color:#fff;font-size:8px;font-weight:700;border-radius:10px;padding:1px 4px;min-width:14px;text-align:center;display:none;}
+.nav-badge.show{display:block;}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;position:relative;overflow:hidden;}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.kpi-card.yellow::after{background:var(--accent);}.kpi-card.green::after{background:var(--green);}.kpi-card.blue::after{background:var(--blue);}.kpi-card.red::after{background:var(--red);}.kpi-card.gold::after{background:var(--gold);}
+.kl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
+.kv{font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--text);letter-spacing:-.5px;line-height:1.1;}
+.kv.green{color:var(--green);}.kv.red{color:var(--red);}.kv.gold{color:var(--gold);}
+.ks{font-size:10px;color:var(--muted);margin-top:4px;}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px;}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);}
+.card-title{font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px;color:var(--text);}
+.card-body{padding:14px;}
+
+/* TABLE */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead th{text-align:left;padding:8px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
+tbody tr{border-bottom:1px solid rgba(35,38,48,.5);}
+tbody tr:last-child{border-bottom:none;}
+tbody td{padding:9px 10px;color:var(--text);vertical-align:middle;}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;letter-spacing:.3px;text-transform:uppercase;}
+.bg{background:rgba(74,240,184,.12);color:var(--green);}.br{background:rgba(240,74,106,.12);color:var(--red);}
+.by{background:rgba(200,240,74,.12);color:var(--accent);}.bgold{background:rgba(240,193,74,.12);color:var(--gold);}
+.bb{background:rgba(74,240,184,.1);color:var(--blue);}.bm{background:rgba(107,114,128,.2);color:var(--muted2);}
+.bp{background:rgba(160,100,240,.12);color:#a064f0;}
+
+/* FORMS */
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.fg:last-child{margin-bottom:0;}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 10px;border-radius:8px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;transition:border-color .15s;width:100%;max-width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+select option{background:var(--surface2);}
+
+/* BUTTONS */
+.btn{background:var(--accent);color:#0b0c0e;border:none;border-radius:8px;padding:11px 12px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:12px;cursor:pointer;width:100%;white-space:nowrap;}
+.btn-g{background:transparent;border:1px solid var(--border);color:var(--muted2);border-radius:8px;padding:10px 12px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap;}
+.btn-d{background:transparent;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 8px;font-size:10px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn-sm{padding:5px 8px!important;font-size:10px!important;border-radius:6px!important;width:auto!important;}
+.brow{display:flex;gap:6px;margin-top:10px;}
+.brow .btn,.brow .btn-g{flex:1;min-width:0;}
+
+/* MODAL */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
+.mo.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:sup .2s ease;padding-bottom:env(safe-area-inset-bottom);}
+@keyframes sup{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.mhandle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 0;cursor:pointer;}
+.mhd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;}
+.mtitle{font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:var(--text);}
+.mclose{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;}
+.mbody{padding:0 18px 8px;}
+.mfoot{padding:12px 18px 16px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);}
+
+/* MISC */
+.divider{height:1px;background:var(--border);margin:10px 0;}
+.empty{text-align:center;padding:24px 12px;color:var(--muted);}
+.empty-icon{font-size:26px;margin-bottom:8px;}
+.prog-wrap{background:var(--surface2);border-radius:4px;height:5px;overflow:hidden;margin-top:5px;}
+.prog-fill{height:100%;border-radius:4px;transition:width .4s;}
+.tl{padding-left:16px;border-left:2px solid var(--border);}
+.tl-item{position:relative;padding:0 0 12px 14px;}
+.tl-item::before{content:'';position:absolute;left:-7px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);}
+.tl-item.in::before{border-color:var(--green);background:rgba(74,240,184,.15);}
+.tl-item.out::before{border-color:var(--red);background:rgba(240,74,106,.15);}
+.tl-item.loan::before{border-color:var(--gold);background:rgba(240,193,74,.15);}
+.tl-date{font-size:10px;color:var(--muted);}
+.tl-desc{font-size:12px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
+.tl-amt{font-size:12px;}
+.section-title{font-family:'DM Serif Display',Georgia,serif;font-size:18px;margin-bottom:12px;}
+.filter-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none;}
+.filter-bar::-webkit-scrollbar{display:none;}
+.chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;color:var(--muted2);cursor:pointer;white-space:nowrap;display:inline-block;}
+.chip.active{background:rgba(200,240,74,.1);border-color:var(--accent);color:var(--accent);}
+.flow-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.flow-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
+.fi{font-size:18px;margin-bottom:4px;}
+.fa{font-family:'DM Serif Display',Georgia,serif;font-size:17px;}
+.fl2{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:11px;color:var(--accent);flex-shrink:0;}
+.overdue-row{background:rgba(240,74,106,.04)!important;}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* MESSAGING */
+.msg-bubble{max-width:80%;padding:9px 12px;border-radius:12px;margin-bottom:6px;font-size:12px;line-height:1.5;word-break:break-word;}
+.msg-out{background:var(--accent);color:#0b0c0e;margin-left:auto;border-bottom-right-radius:3px;}
+.msg-in{background:var(--surface2);color:var(--text);margin-right:auto;border-bottom-left-radius:3px;}
+.msg-time{font-size:9px;color:var(--muted);margin-top:2px;}
+.msg-wrap{display:flex;flex-direction:column;padding:10px;}
+.msg-input-bar{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+.msg-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:20px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;}
+.msg-input:focus{border-color:var(--accent);}
+.msg-send{background:var(--accent);color:#0b0c0e;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.announce-card{background:rgba(200,240,74,.06);border:1px solid rgba(200,240,74,.2);border-radius:10px;padding:12px;margin-bottom:8px;}
+.announce-title{font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px;color:var(--accent);margin-bottom:4px;}
+.announce-text{font-size:12px;color:var(--text);line-height:1.6;}
+.announce-time{font-size:9px;color:var(--muted);margin-top:4px;}
+.member-msg-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.member-msg-row:last-child{border-bottom:none;}
+.member-msg-row:active{background:var(--surface2);}
+.unread-dot{width:8px;height:8px;background:var(--red);border-radius:50%;flex-shrink:0;}
+
+/* SMART HINT */
+.smart-hint{display:none;background:rgba(200,240,74,.07);border:1px solid rgba(200,240,74,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent);margin-bottom:8px;}
+.smart-hint.show{display:block;}
+
+/* STATUS BADGES */
+.status-open{background:rgba(74,240,184,.12);color:var(--green);}
+.status-closed{background:rgba(240,74,106,.12);color:var(--red);}
+.status-funding{background:rgba(160,100,240,.12);color:#a064f0;}
+
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock">
+  <div class="lk-logo">◆</div>
+  <div class="lk-title">InvestGroup</div>
+  <div class="lk-sub">Treasurer Dashboard</div>
+  <div class="lk-card">
+    <input class="lk-input" type="password" id="lk-in" placeholder="••••" maxlength="30">
+    <button class="lk-btn" onclick="tryUnlock()">Unlock →</button>
+    <div class="lk-err" id="lk-err"></div>
+    <div class="lk-hint">Enter your password to continue</div>
+    <a class="lk-link" onclick="openChangePw()">Change password</a>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="off">
+  <div class="topbar">
+    <div class="tb-left">
+      <button class="back-btn hidden" id="back-btn" onclick="goBack()">← Back</button>
+      <div class="tb-title" id="tb-title">Dashboard</div>
+    </div>
+    <div class="tb-right">
+      <span id="sync-dot" style="font-size:11px;color:var(--muted);cursor:help;" title="Firebase">●</span>
+      <button class="tb-ghost" onclick="showPage('settings')" title="Settings">⊙</button>
+      <button class="tb-btn" id="tb-action" onclick="openMainModal()">+ Add</button>
+    </div>
+  </div>
+
+  <div class="scroll-area">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div id="d-alerts"></div>
+      <div class="kpi-grid">
+        <div class="kpi-card yellow"><div class="kl">Capital Pool</div><div class="kv" id="d-cap">--</div><div class="ks">All contributions</div></div>
+        <div class="kpi-card green"><div class="kl">Reserve</div><div class="kv green" id="d-res">--</div><div class="ks" id="d-res-pct">0% of capital</div></div>
+        <div class="kpi-card blue"><div class="kl">Invested</div><div class="kv" id="d-inv">--</div><div class="ks" id="d-inv-c">0 positions</div></div>
+        <div class="kpi-card gold"><div class="kl">Loans Out</div><div class="kv gold" id="d-ln">--</div><div class="ks" id="d-ln-c">0 active</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">This Month</div></div>
+        <div class="card-body">
+          <div class="flow-grid">
+            <div class="flow-card"><div class="fi">↓</div><div class="fa green" id="d-fin">--</div><div class="fl2">In</div></div>
+            <div class="flow-card"><div class="fi">↑</div><div class="fa red" id="d-fout">--</div><div class="fl2">Out</div></div>
+            <div class="flow-card"><div class="fi">◈</div><div class="fa" id="d-fnet">--</div><div class="fl2">Net</div></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:10px;color:var(--muted)"><span>Reserve utilization</span><span id="d-util-p">0%</span></div>
+          <div class="prog-wrap"><div class="prog-fill" id="d-util-b" style="background:var(--accent);width:0%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Member Equity</div><button class="btn-g btn-sm" onclick="showPage('members')">View →</button></div>
+        <div class="card-body" id="d-mem" style="padding:10px 14px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Recent Activity</div><button class="btn-g btn-sm" onclick="showPage('transactions')">All →</button></div>
+        <div class="card-body" id="d-recent" style="padding:10px 14px;"></div>
+      </div>
+    </div>
+
+    <!-- CASH FLOW -->
+    <div class="page" id="page-cashflow">
+      <div class="filter-bar">
+        <div class="chip active" onclick="setCF(this,'all')">All Time</div>
+        <div class="chip" onclick="setCF(this,'thismonth')">This Month</div>
+        <div class="chip" onclick="setCF(this,'last3')">Last 3 Mo</div>
+        <div class="chip" onclick="setCF(this,'last6')">Last 6 Mo</div>
+        <div class="chip" onclick="setCF(this,'thisyear')">This Year</div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card green"><div class="kl">Inflows</div><div class="kv green" id="cf-in">--</div></div>
+        <div class="kpi-card red"><div class="kl">Outflows</div><div class="kv red" id="cf-out">--</div></div>
+        <div class="kpi-card yellow"><div class="kl">Net Flow</div><div class="kv" id="cf-net">--</div></div>
+        <div class="kpi-card blue"><div class="kl">Repayments</div><div class="kv" id="cf-rep">--</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Statement</div></div>
+        <div class="tw"><table><thead><tr><th>Date</th><th>Type</th><th>Desc</th><th>Amount</th><th>Balance</th></tr></thead><tbody id="cf-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- MEMBERS -->
+    <div class="page" id="page-members">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="section-title" style="margin:0">Members</div>
+        <button class="tb-btn" onclick="openModal('modal-add-member')">+ Add</button>
+      </div>
+      <div id="mem-list"></div>
+    </div>
+
+    <!-- MEMBER PORTFOLIO PAGE -->
+    <div class="page" id="page-member-portfolio">
+      <div id="mp-content"></div>
+    </div>
+
+    <!-- INVESTMENTS -->
+    <div class="page" id="page-investments">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="section-title" style="margin:0">Portfolio</div>
+        <button class="tb-btn" onclick="openModal('modal-add-investment')">+ Add</button>
+      </div>
+      <div class="kpi-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="kpi-card blue"><div class="kl">Deployed</div><div class="kv" id="iv-dep">--</div></div>
+        <div class="kpi-card green"><div class="kl">Value</div><div class="kv green" id="iv-val">--</div></div>
+        <div class="kpi-card yellow"><div class="kl">Total Profit</div><div class="kv" id="iv-ret">--</div><div class="ks" id="iv-rp">0%</div></div>
+      </div>
+      <div id="inv-list"></div>
+    </div>
+
+    <!-- LOANS -->
+    <div class="page" id="page-loans">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="section-title" style="margin:0">Loan Book</div>
+        <button class="tb-btn" onclick="openModal('modal-add-loan')">+ Loan</button>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card gold"><div class="kl">Lent Out</div><div class="kv gold" id="ln-tot">--</div></div>
+        <div class="kpi-card green"><div class="kl">Repaid</div><div class="kv green" id="ln-rep">--</div></div>
+        <div class="kpi-card red"><div class="kl">Outstanding</div><div class="kv red" id="ln-out">--</div></div>
+        <div class="kpi-card yellow"><div class="kl">Interest</div><div class="kv" id="ln-int">--</div></div>
+      </div>
+      <div id="loan-list"></div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div class="page" id="page-transactions">
+      <div class="filter-bar">
+        <input type="text" id="tx-search" placeholder="Search..." style="min-width:110px;padding:6px 10px;font-size:12px;" oninput="renderTx()">
+        <select id="tx-type-f" onchange="renderTx()" style="min-width:120px;padding:6px 8px;font-size:12px;">
+          <option value="">All Types</option>
+          <option value="contribution">Contribution</option>
+          <option value="withdrawal">Withdrawal</option>
+          <option value="investment">Investment</option>
+          <option value="return">Return</option>
+          <option value="loan_out">Loan Out</option>
+          <option value="loan_repayment">Loan Repayment</option>
+          <option value="expense">Expense</option>
+          <option value="profit">Profit Dist.</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Ledger</div><span class="badge bm" id="tx-count">0</span></div>
+        <div class="tw"><table><thead><tr><th>Date</th><th>Type</th><th>Desc</th><th>Member</th><th>Amount</th><th></th></tr></thead><tbody id="tx-table"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="page" id="page-reports">
+      <div class="filter-bar">
+        <div class="chip active" onclick="setRep(this,'thisyear')">This Year</div>
+        <div class="chip" onclick="setRep(this,'last3')">Last 3 Mo</div>
+        <div class="chip" onclick="setRep(this,'all')">All Time</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn" onclick="exportPDF()" style="flex:1;">↓ Export PDF Report</button>
+        <button class="btn-g" onclick="syncToFirebase()" style="flex:1;">↑ Sync Now</button>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card yellow"><div class="kl">Capital</div><div class="kv" id="rp-cap">--</div></div>
+        <div class="kpi-card green"><div class="kl">Inv. Profit</div><div class="kv green" id="rp-ret">--</div></div>
+        <div class="kpi-card blue"><div class="kl">Group ROI</div><div class="kv" id="rp-roi">--</div></div>
+        <div class="kpi-card gold"><div class="kl">Interest</div><div class="kv" id="rp-int">--</div></div>
+      </div>
+      <div class="card"><div class="card-hd"><div class="card-title">Income Statement</div></div><div class="card-body" id="rp-income"></div></div>
+      <div class="card"><div class="card-hd"><div class="card-title">Balance Sheet</div></div><div class="card-body" id="rp-balance"></div></div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Member P&amp;L (incl. 2% mgmt bonus)</div></div>
+        <div class="tw"><table><thead><tr><th>Member</th><th>Contributed</th><th>Mgmt Bonus</th><th>Inv. Profit</th><th>Total</th><th>ROI</th></tr></thead><tbody id="rp-mem"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="page" id="page-messages">
+      <div style="margin-bottom:12px;">
+        <!-- ANNOUNCEMENTS -->
+        <div class="card" style="margin-bottom:12px;">
+          <div class="card-hd">
+            <div class="card-title">📢 Announcements</div>
+            <button class="btn-g btn-sm" onclick="openModal('modal-announce')">+ Post</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--border);">Posts visible to all members in their app</div>
+          <div class="card-body" id="announce-list" style="padding:10px 14px;max-height:200px;overflow-y:auto;"></div>
+        </div>
+        <!-- MEMBER THREADS -->
+        <div class="card">
+          <div class="card-hd"><div class="card-title">💬 Direct Messages</div></div>
+          <div style="font-size:11px;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--border);">Tap a member to open your private conversation with them</div>
+          <div class="card-body" id="msg-member-list" style="padding:10px 14px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- THREAD PAGE -->
+    <div class="page" id="page-thread" style="padding:0;">
+      <div id="thread-messages" style="height:calc(100dvh - 130px);overflow-y:auto;padding:10px;"></div>
+      <div class="msg-input-bar">
+        <input class="msg-input" type="text" id="thread-input" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendThreadMessage()">
+        <button class="msg-send" onclick="sendThreadMessage()">➤</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="section-title">Settings</div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Group</div></div>
+        <div class="card-body">
+          <div class="fg"><label>Group Name</label><input id="s-name" placeholder="My Investment Group"></div>
+          <div class="fg"><label>Currency</label>
+            <select id="s-cur">
+              <option value="$">USD ($)</option><option value="R">ZAR (R)</option>
+              <option value="€">EUR (€)</option><option value="£">GBP (£)</option>
+              <option value="₦">NGN (₦)</option><option value="K">ZMW (K)</option>
+              <option value="UGX">UGX (Shs)</option>
+            </select>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Reserve Target %</label><input type="number" id="s-res" placeholder="20"></div>
+            <div class="fg"><label>Default Loan Rate %</label><input type="number" id="s-rate" placeholder="10"></div>
+          </div>
+          <button class="btn" onclick="saveSettings()">Save Settings</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">🏦 Bank Account Details</div></div>
+        <div class="card-body">
+          <div class="frow">
+            <div class="fg"><label>Account Name</label><input id="b-name" placeholder="Group Account Name"></div>
+            <div class="fg"><label>Account Number</label><input id="b-num" placeholder="000000000"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>Bank Name</label><input id="b-bank" placeholder="Bank Name"></div>
+            <div class="fg"><label>Branch Code</label><input id="b-branch" placeholder="Optional"></div>
+          </div>
+          <div class="fg"><label>Reference Format</label><input id="b-ref" placeholder="Your Name INVEST"></div>
+          <div class="fg"><label>Extra Note</label><input id="b-note" placeholder="Optional note for members"></div>
+          <button class="btn" onclick="saveBankDetails()">Save Bank Details</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">🔑 Member PINs</div></div>
+        <div class="card-body" style="padding:10px 14px;">
+          <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;">Assign a PIN to each member so they can access the Member App.</div>
+          <div id="pin-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">☁ Firebase Sync</div><span id="sync-status" style="font-size:10px;color:var(--muted)">Connecting…</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:11px;color:var(--muted2);margin-bottom:4px;">Load data from Firebase first (second admin). Then sync after making changes.</div>
+          <button class="btn" onclick="loadFromFirebase()">↓ Load from Firebase</button>
+          <button class="btn-g" onclick="syncToFirebase()">↑ Sync Now to Firebase</button>
+          <div style="font-size:10px;color:var(--muted);text-align:center" id="sync-last"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Security</div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn-g" onclick="openModal('modal-change-pw')">🔐 Change Password</button>
+          <button class="btn-g" style="color:var(--red);border-color:rgba(240,74,106,.3);" onclick="lockApp()">🔒 Lock App</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Data</div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn" onclick="exportData()">↓ Export JSON Backup</button>
+          <div class="fg"><label>Import Backup</label><input type="file" id="imp-file" accept=".json" onchange="importData(event)"></div>
+          <div class="divider"></div>
+          <button class="btn-d" style="width:100%;padding:10px;" onclick="clearAll()">⚠ Clear All Data</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- scroll-area -->
+
+  <nav class="bottom-nav">
+    <button class="nav-tab active" id="tab-dashboard" onclick="showPage('dashboard')"><span class="ni">⬡</span>Home</button>
+    <button class="nav-tab" id="tab-cashflow" onclick="showPage('cashflow')"><span class="ni">⇄</span>Flow</button>
+    <button class="nav-tab" id="tab-members" onclick="showPage('members')"><span class="ni">◉</span>Members</button>
+    <button class="nav-tab" id="tab-investments" onclick="showPage('investments')"><span class="ni">◈</span>Invest</button>
+    <button class="nav-tab" id="tab-loans" onclick="showPage('loans')"><span class="ni">⬕</span>Loans</button>
+    <button class="nav-tab" id="tab-transactions" onclick="showPage('transactions')"><span class="ni">≡</span>Ledger</button>
+    <button class="nav-tab" id="tab-reports" onclick="showPage('reports')"><span class="ni">◧</span>Reports</button>
+    <button class="nav-tab" id="tab-messages" onclick="showPage('messages')"><span class="ni">💬</span>Messages<span class="nav-badge" id="msg-badge">0</span></button>
+  </nav>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- ADD TRANSACTION -->
+<div class="mo" id="modal-tx">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-tx')"></div>
+    <div class="mhd"><div class="mtitle">Add Transaction</div><button class="mclose" onclick="closeModal('modal-tx')">×</button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg"><label>Date</label><input type="date" id="tx-date"></div>
+        <div class="fg"><label>Type</label>
+          <select id="tx-type">
+            <option value="contribution">Contribution</option><option value="withdrawal">Withdrawal</option>
+            <option value="investment">Investment</option><option value="return">Return / Profit</option>
+            <option value="loan_out">Loan Out</option><option value="loan_repayment">Loan Repayment</option>
+            <option value="expense">Expense</option><option value="profit">Profit Distribution</option>
+          </select>
+        </div>
+      </div>
+      <div class="smart-hint" id="smart-hint">🔍 <span id="smart-msg"></span></div>
+      <div class="fg"><label>Description</label><input id="tx-desc" placeholder="e.g. Monthly contribution" oninput="smartHint()"></div>
+      <div class="frow">
+        <div class="fg"><label>Amount</label><input type="number" id="tx-amt" min="0" placeholder="0.00" oninput="smartHint()"></div>
+        <div class="fg"><label>Member</label><select id="tx-mem"><option value="">None</option></select></div>
+      </div>
+      <div class="fg"><label>Notes</label><textarea id="tx-notes" rows="2"></textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="saveTx()">Save Transaction</button>
+      <button class="btn-g" onclick="closeModal('modal-tx')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MEMBER -->
+<div class="mo" id="modal-add-member">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-add-member')"></div>
+    <div class="mhd"><div class="mtitle">Add Member</div><button class="mclose" onclick="closeModal('modal-add-member')">×</button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg"><label>Full Name</label><input id="am-name" placeholder="John Doe"></div>
+        <div class="fg"><label>Role</label>
+          <select id="am-role"><option value="member">Member</option><option value="admin">Admin</option><option value="treasurer">Treasurer</option><option value="investor">Investor</option></select>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Email</label><input type="email" id="am-email" placeholder="optional"></div>
+        <div class="fg"><label>Phone</label><input id="am-phone" placeholder="optional"></div>
+      </div>
+      <div class="fg"><label>Opening Balance</label><input type="number" id="am-open" min="0" placeholder="0.00"></div>
+      <div class="fg"><label>Notes</label><textarea id="am-notes" rows="2"></textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="saveMember()">Add Member</button>
+      <button class="btn-g" onclick="closeModal('modal-add-member')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MEMBER -->
+<div class="mo" id="modal-edit-member">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-edit-member')"></div>
+    <div class="mhd"><div class="mtitle">Edit Member</div><button class="mclose" onclick="closeModal('modal-edit-member')">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="em-id">
+      <div class="frow">
+        <div class="fg"><label>Full Name</label><input id="em-name"></div>
+        <div class="fg"><label>Role</label>
+          <select id="em-role"><option value="member">Member</option><option value="admin">Admin</option><option value="treasurer">Treasurer</option><option value="investor">Investor</option></select>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Email</label><input type="email" id="em-email"></div>
+        <div class="fg"><label>Phone</label><input id="em-phone"></div>
+      </div>
+      <div class="fg"><label>Notes</label><textarea id="em-notes" rows="2"></textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="saveEditMember()">Save Changes</button>
+      <button class="btn-g" onclick="closeModal('modal-edit-member')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD INVESTMENT -->
+<div class="mo" id="modal-add-investment">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-add-investment')"></div>
+    <div class="mhd"><div class="mtitle">Add Investment</div><button class="mclose" onclick="closeModal('modal-add-investment')">×</button></div>
+    <div class="mbody">
+      <div class="fg"><label>Investment Name</label><input id="iv-name" placeholder="e.g. ABC Property"></div>
+      <div class="frow">
+        <div class="fg"><label>Type</label>
+          <select id="iv-type"><option>Property</option><option>Stock</option><option>Business</option><option>Crypto</option><option>Bond</option><option>Other</option></select>
+        </div>
+        <div class="fg"><label>Start Date</label><input type="date" id="iv-date"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Amount Deployed</label><input type="number" id="iv-amt" min="0" placeholder="0.00"></div>
+        <div class="fg"><label>Current Value</label><input type="number" id="iv-cur" min="0" placeholder="0.00"></div>
+      </div>
+      <div class="fg"><label>Status</label>
+        <select id="iv-status"><option value="open">Open</option><option value="closed">Closed</option><option value="funding">Funding (Accepting contributions)</option></select>
+      </div>
+      <div class="fg" id="iv-close-date-wrap" style="display:none;"><label>Close Date</label><input type="date" id="iv-close-date"></div>
+      <div class="fg"><label>Notes</label><input id="iv-notes" placeholder="optional"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="saveInvestment()">Save Investment</button>
+      <button class="btn-g" onclick="closeModal('modal-add-investment')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPDATE INVESTMENT VALUE -->
+<div class="mo" id="modal-upd-inv">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-upd-inv')"></div>
+    <div class="mhd"><div class="mtitle">Update Investment</div><button class="mclose" onclick="closeModal('modal-upd-inv')">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="ui-id">
+      <div class="fg"><label>Investment</label><input id="ui-name" readonly style="background:var(--bg)"></div>
+      <div class="frow">
+        <div class="fg"><label>New Value</label><input type="number" id="ui-val" min="0" placeholder="0.00"></div>
+        <div class="fg"><label>Status</label>
+          <select id="ui-status"><option value="open">Open</option><option value="closed">Closed</option><option value="funding">Funding</option></select>
+        </div>
+      </div>
+      <div class="fg" id="ui-close-wrap" style="display:none;"><label>Close Date</label><input type="date" id="ui-close-date"></div>
+      <div class="fg"><label>Update Note</label><input id="ui-note" placeholder="e.g. Q2 valuation"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="updateInv()">Update</button>
+      <button class="btn-g" onclick="closeModal('modal-upd-inv')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD INVESTMENT CONTRIBUTION (for open/funding investments) -->
+<div class="mo" id="modal-inv-contribution">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-inv-contribution')"></div>
+    <div class="mhd"><div class="mtitle">Add Contribution</div><button class="mclose" onclick="closeModal('modal-inv-contribution')">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="ic-inv-id">
+      <div class="fg"><label>Investment</label><input id="ic-inv-name" readonly style="background:var(--bg)"></div>
+      <div class="frow">
+        <div class="fg"><label>Member</label><select id="ic-member"><option value="">Select member</option></select></div>
+        <div class="fg"><label>Date</label><input type="date" id="ic-date"></div>
+      </div>
+      <div class="fg"><label>Amount</label><input type="number" id="ic-amount" min="0" placeholder="0.00"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="saveInvContribution()">Add Contribution</button>
+      <button class="btn-g" onclick="closeModal('modal-inv-contribution')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD LOAN -->
+<div class="mo" id="modal-add-loan">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-add-loan')"></div>
+    <div class="mhd"><div class="mtitle">Issue Loan</div><button class="mclose" onclick="closeModal('modal-add-loan')">×</button></div>
+    <div class="mbody">
+      <div class="fg"><label>Borrower Name</label><input id="ln-bor" placeholder="Full name"></div>
+      <div class="frow">
+        <div class="fg"><label>Amount</label><input type="number" id="ln-amt" min="0" placeholder="0.00"></div>
+        <div class="fg"><label>Interest Rate %</label><input type="number" id="ln-rate" min="0" step="0.1" placeholder="10"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Issue Date</label><input type="date" id="ln-date"></div>
+        <div class="fg"><label>Due Date</label><input type="date" id="ln-due"></div>
+      </div>
+      <div class="fg"><label>Notes</label><textarea id="ln-notes" rows="2"></textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="saveLoan()">Issue Loan</button>
+      <button class="btn-g" onclick="closeModal('modal-add-loan')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOAN REPAYMENT -->
+<div class="mo" id="modal-repay">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-repay')"></div>
+    <div class="mhd"><div class="mtitle">Record Repayment</div><button class="mclose" onclick="closeModal('modal-repay')">×</button></div>
+    <div class="mbody">
+      <input type="hidden" id="rp-id">
+      <div class="fg"><label>Loan</label><input id="rp-info" readonly style="background:var(--bg)"></div>
+      <div class="frow">
+        <div class="fg"><label>Amount</label><input type="number" id="rp-amt" min="0" placeholder="0.00"></div>
+        <div class="fg"><label>Date</label><input type="date" id="rp-date"></div>
+      </div>
+      <div class="fg"><label>Notes</label><input id="rp-notes" placeholder="optional"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="saveRepay()">Record</button>
+      <button class="btn-g" onclick="closeModal('modal-repay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANNOUNCEMENT -->
+<div class="mo" id="modal-announce">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-announce')"></div>
+    <div class="mhd"><div class="mtitle">Post Announcement</div><button class="mclose" onclick="closeModal('modal-announce')">×</button></div>
+    <div class="mbody">
+      <div class="fg"><label>Title</label><input id="ann-title" placeholder="e.g. Contributions Due"></div>
+      <div class="fg"><label>Message</label><textarea id="ann-text" rows="4" placeholder="Type your announcement…"></textarea></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="postAnnouncement()">Post to All Members</button>
+      <button class="btn-g" onclick="closeModal('modal-announce')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD -->
+<div class="mo" id="modal-change-pw">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-change-pw')"></div>
+    <div class="mhd"><div class="mtitle">Change Password</div><button class="mclose" onclick="closeModal('modal-change-pw')">×</button></div>
+    <div class="mbody">
+      <div class="fg"><label>Current Password</label><input type="password" id="pw-cur" placeholder="••••"></div>
+      <div class="fg"><label>New Password</label><input type="password" id="pw-new" placeholder="Min 4 chars"></div>
+      <div class="fg"><label>Confirm New</label><input type="password" id="pw-cf" placeholder="Repeat"></div>
+      <div style="color:var(--red);font-size:11px;min-height:16px;" id="pw-err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="savePw()">Update Password</button>
+      <button class="btn-g" onclick="closeModal('modal-change-pw')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+// FIREBASE CONFIG
+// ════════════════════════════════════════
+const FB_CONFIG={
+  apiKey:"AIzaSyAmWOFu5I7yyMy7clIM-LHt9cxa8RfDBt4",
+  authDomain:"investgroup-5f2f9.firebaseapp.com",
+  databaseURL:"https://investgroup-5f2f9-default-rtdb.firebaseio.com",
+  projectId:"investgroup-5f2f9",
+  storageBucket:"investgroup-5f2f9.firebasestorage.app",
+  messagingSenderId:"422666447690",
+  appId:"1:422666447690:web:d800f06e8a8b9fe0d32fb3"
+};
+
+// ════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════
+let DB={
+  settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}},
+  members:[],investments:[],loans:[],transactions:[],memberPins:{}
+};
+let cfFilter='all', repFilter='thisyear';
+let pageHistory=[], curPage='dashboard';
+let fbApp=null, fbDB=null;
+let activeMsgMemberId=null;
+
+const SECOND_ADMIN_PIN='7391';
+const ADMIN_BONUS_PCT=2;
+
+const IN_T=['contribution','return','loan_repayment'];
+const OUT_T=['withdrawal','investment','loan_out','expense','profit'];
+const TB={contribution:'bg',withdrawal:'br',investment:'bb',return:'bg',loan_out:'bgold',loan_repayment:'bb',expense:'br',profit:'by'};
+
+// ════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════
+function saveDB(){localStorage.setItem('ig_db',JSON.stringify(DB));}
+function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r);}catch(e){}
+  DB.settings=DB.settings||{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}};
+  if(!DB.settings.bank) DB.settings.bank={};
+  DB.members=DB.members||[];DB.investments=DB.investments||[];
+  DB.loans=DB.loans||[];DB.transactions=DB.transactions||[];DB.memberPins=DB.memberPins||{};
+  // Migrate old investments to new structure
+  DB.investments=DB.investments.map(i=>{
+    if(!i.contributions) i.contributions=[];
+    if(!i.valueHistory) i.valueHistory=[];
+    if(!i.status) i.status='open';
+    return i;
+  });
+}
+function save(){saveDB();renderAll();}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
+function today(){return new Date().toISOString().split('T')[0];}
+function C(){return DB.settings.currency||'$';}
+function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(1)+'k':a.toFixed(2);return(n<0?'-':'')+c+s;}
+function fmtF(n){return(n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(d1))/(1000*60*60*24)));}
+
+// ════════════════════════════════════════
+// AGGREGATES
+// ════════════════════════════════════════
+function sumTx(type){return DB.transactions.filter(t=>t.type===type).reduce((s,t)=>s+t.amount,0);}
+function capPool(){return sumTx('contribution');}
+function totInv(){return DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+i.amount,0);}
+function lnOut(){return DB.loans.reduce((s,l)=>s+Math.max(0,loanTotalOwed(l)-l.repaid),0);}
+function lnRepaid(){return DB.loans.reduce((s,l)=>s+l.repaid,0);}
+function lnTotal(){return DB.loans.reduce((s,l)=>s+l.amount,0);}
+function loanTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
+function loanBalance(l){return Math.max(0,loanTotalOwed(l)-l.repaid);}
+function intEarned(){return DB.loans.reduce((s,l)=>s+Math.min(Math.max(0,l.repaid-l.amount),(l.amount*l.rate)/100),0);}
+function reserve(){return capPool()-totInv()-lnOut()-sumTx('withdrawal')-sumTx('expense')-sumTx('profit')+sumTx('return')+lnRepaid();}
+function mCon(id){return DB.transactions.filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+function mWit(id){return DB.transactions.filter(t=>(t.type==='withdrawal'||t.type==='profit')&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+
+// NET EQUITY (after withdrawals)
+function getNetEquity(){
+  const nbm=DB.members.map(x=>({id:x.id,name:x.name,role:x.role,net:Math.max(0,mCon(x.id)-mWit(x.id))}));
+  const tnp=nbm.reduce((s,x)=>s+x.net,0)||1;
+  return{nbm,tnp};
+}
+
+// ════════════════════════════════════════
+// DAILY PROFIT CALCULATION
+// ════════════════════════════════════════
+function calcInvProfit(inv){
+  // Returns array of {memberId, memberName, contribution, joinDate, activeDays, shareAtJoinDate, profit}
+  if(!inv.contributions||!inv.contributions.length) return [];
+  const startDate=inv.startDate||inv.date||today();
+  const endDate=inv.closeDate||today();
+  const totalDays=daysBetween(startDate,endDate)||1;
+  const totalGain=inv.currentValue-inv.amount;
+  const dailyGain=totalGain/totalDays;
+
+  // Build pool size over time (sorted by date)
+  const sorted=[...inv.contributions].sort((a,b)=>a.date.localeCompare(b.date));
+  let runningPool=0;
+  const contribsWithPool=sorted.map(c=>{
+    runningPool+=c.amount;
+    return{...c,poolAtDate:runningPool};
+  });
+
+  return contribsWithPool.map(c=>{
+    const shareAtJoin=c.amount/c.poolAtDate;
+    const contribEnd=inv.closeDate?inv.closeDate:today();
+    const activeDays=daysBetween(c.date,contribEnd);
+    const profit=dailyGain*shareAtJoin*activeDays;
+    return{memberId:c.memberId,memberName:c.memberName||'Unknown',contribution:c.amount,joinDate:c.date,poolAtDate:c.poolAtDate,shareAtJoinDate:shareAtJoin,activeDays,profit};
+  });
+}
+
+function memberTotalInvProfit(memberId){
+  return DB.investments.reduce((s,inv)=>{
+    const rows=calcInvProfit(inv);
+    const memberRows=rows.filter(r=>r.memberId===memberId);
+    return s+memberRows.reduce((ss,r)=>ss+r.profit,0);
+  },0);
+}
+
+// ADMIN BONUS CALCULATION
+function calcAdminBonus(){
+  const totalInvProfit=DB.investments.reduce((s,inv)=>{
+    const rows=calcInvProfit(inv);
+    return s+rows.reduce((ss,r)=>ss+r.profit,0);
+  },0);
+  const totalIncome=totalInvProfit+intEarned();
+  const bonusPool=totalIncome*(ADMIN_BONUS_PCT/100);
+  const admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
+  const bonusPerAdmin=admins.length>0?bonusPool/admins.length:0;
+  return{bonusPool,bonusPerAdmin,admins,totalIncome};
+}
+
+function memberBonus(memberId){
+  const{bonusPerAdmin,admins}=calcAdminBonus();
+  const isAdmin=admins.some(a=>a.id===memberId);
+  return isAdmin?bonusPerAdmin:0;
+}
+
+// ════════════════════════════════════════
+// LOCK / AUTH
+// ════════════════════════════════════════
+function getPW(){return localStorage.getItem('ig_pw')||'1234';}
+function setPW(p){localStorage.setItem('ig_pw',p);}
+
+function tryUnlock(){
+  const v=document.getElementById('lk-in').value;
+  if(v===getPW()||v===SECOND_ADMIN_PIN){
+    document.getElementById('lock').classList.add('off');
+    document.getElementById('app').classList.remove('off');
+    document.getElementById('lk-in').value='';
+    document.getElementById('lk-err').textContent='';
+    renderAll();
+  }else{
+    document.getElementById('lk-err').textContent='✕ Wrong password. Try again.';
+    document.getElementById('lk-in').value='';
+    document.getElementById('lk-in').focus();
+  }
+}
+function lockApp(){
+  document.getElementById('app').classList.add('off');
+  document.getElementById('lock').classList.remove('off');
+  document.getElementById('lk-in').value='';
+  document.getElementById('lk-err').textContent='';
+}
+function openChangePw(){openModal('modal-change-pw');document.getElementById('lock').classList.add('off');document.getElementById('app').classList.remove('off');}
+function savePw(){
+  const cur=document.getElementById('pw-cur').value,nw=document.getElementById('pw-new').value,cf=document.getElementById('pw-cf').value;
+  const err=document.getElementById('pw-err');
+  if(cur!==getPW()){err.textContent='Current password incorrect.';return;}
+  if(nw.length<4){err.textContent='Minimum 4 characters.';return;}
+  if(nw!==cf){err.textContent='Passwords do not match.';return;}
+  setPW(nw);err.textContent='';closeModal('modal-change-pw');alert('✓ Password updated!');
+}
+
+// ════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════
+const PT={dashboard:'Dashboard',cashflow:'Cash Flow',members:'Members',investments:'Investments',loans:'Loans',transactions:'Ledger',reports:'Reports',messages:'Messages',settings:'Settings','member-portfolio':'Member Portfolio',thread:'Messages'};
+const PA={
+  dashboard:{l:'+ Add',f:'openMainModal()'},cashflow:{l:'+ Add',f:'openMainModal()'},
+  members:{l:'+ Member',f:"openModal('modal-add-member')"},
+  investments:{l:'+ Invest',f:"openModal('modal-add-investment')"},
+  loans:{l:'+ Loan',f:"openModal('modal-add-loan')"},
+  transactions:{l:'+ Add',f:'openMainModal()'},
+  reports:{l:'PDF',f:'exportPDF()'},
+  messages:{l:'+ Announce',f:"openModal('modal-announce')"},
+  settings:{l:'↑ Sync',f:'syncToFirebase()'},
+  'member-portfolio':{l:'Message',f:'msgActiveMember()'},
+  thread:{l:'',f:''}
+};
+
+function showPage(page,addH=true){
+  if(addH&&curPage!==page)pageHistory.push(curPage);
+  curPage=page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const el=document.getElementById('page-'+page);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  const tab=document.getElementById('tab-'+page);if(tab)tab.classList.add('active');
+  document.getElementById('tb-title').textContent=PT[page]||page;
+  const a=PA[page];
+  if(a&&a.l){document.getElementById('tb-action').textContent=a.l;document.getElementById('tb-action').setAttribute('onclick',a.f);document.getElementById('tb-action').style.display='';}
+  else{document.getElementById('tb-action').style.display='none';}
+  document.getElementById('back-btn').classList.toggle('hidden',pageHistory.length===0);
+  document.querySelector('.scroll-area').scrollTop=0;
+  if(page==='settings'){loadSettingsForm();}
+  if(page==='messages'){renderMessages();}
+  renderAll();
+}
+
+function goBack(){
+  if(!pageHistory.length)return;
+  const prev=pageHistory.pop();
+  showPage(prev,false);
+}
+
+function msgActiveMember(){
+  if(activeMsgMemberId) openThread(activeMsgMemberId);
+}
+
+// ════════════════════════════════════════
+// RENDER ALL
+// ════════════════════════════════════════
+function renderAll(){
+  renderDash();renderCF();renderMembers();renderInvestments();renderLoans();renderTx();renderReports();updateMemSel();
+}
+
+// ── DASHBOARD ──
+function renderDash(){
+  const cap=capPool(),res=reserve(),inv=totInv(),ln=lnOut();
+  const rp=cap>0?(res/cap*100):0,up=cap>0?((cap-res)/cap*100):0;
+  const el=id=>document.getElementById(id);
+  el('d-cap').textContent=fmt(cap);
+  el('d-res').textContent=fmt(res);
+  el('d-res-pct').textContent=rp.toFixed(1)+'% of capital';
+  el('d-inv').textContent=fmt(inv);
+  el('d-inv-c').textContent=DB.investments.filter(i=>i.status!=='closed').length+' positions';
+  el('d-ln').textContent=fmt(ln);
+  el('d-ln-c').textContent=DB.loans.filter(l=>loanBalance(l)>0).length+' active';
+  const now=new Date(),ms=now.getMonth(),ys=now.getFullYear();
+  const mt=DB.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===ms&&d.getFullYear()===ys;});
+  const mi=mt.filter(t=>IN_T.includes(t.type)).reduce((s,t)=>s+t.amount,0);
+  const mo=mt.filter(t=>OUT_T.includes(t.type)).reduce((s,t)=>s+t.amount,0);
+  const mn=mi-mo;
+  el('d-fin').textContent=fmt(mi);el('d-fout').textContent=fmt(mo);
+  const ne=el('d-fnet');ne.textContent=fmt(mn);ne.className='fa '+(mn>=0?'green':'red');
+  el('d-util-p').textContent=up.toFixed(1)+'%';
+  const bar=el('d-util-b');bar.style.width=Math.min(100,up)+'%';
+  bar.style.background=up>90?'var(--red)':up>70?'var(--gold)':'var(--accent)';
+  // alerts
+  const alerts=[];const t2=today();
+  DB.loans.forEach(l=>{if(loanBalance(l)>0&&l.dueDate&&l.dueDate<t2)alerts.push(`Loan to <b>${l.borrower}</b> overdue`);});
+  if(cap>0&&rp<(DB.settings.reserveTarget||20))alerts.push(`Reserve (${rp.toFixed(1)}%) below target ${DB.settings.reserveTarget}%`);
+  if(res<0)alerts.push(`Reserve is NEGATIVE (${fmtF(res)})`);
+  el('d-alerts').innerHTML=alerts.map(a=>`<div style="background:rgba(240,193,74,.08);border:1px solid rgba(240,193,74,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--gold);margin-bottom:8px;display:flex;gap:8px;">⚠ <span>${a}</span></div>`).join('');
+  // member equity
+  const me=el('d-mem');
+  if(!DB.members.length){me.innerHTML='<div class="empty"><div class="empty-icon">◉</div><div>No members yet</div></div>';return;}
+  const{nbm,tnp}=getNetEquity();
+  me.innerHTML=nbm.map(x=>{
+    const p=(x.net/tnp*100).toFixed(1);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div class="avatar">${x.name.substring(0,2).toUpperCase()}</div>
+      <div style="flex:1"><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">${x.name}</div>
+      <div class="prog-wrap" style="width:100%;margin-top:3px"><div class="prog-fill" style="background:var(--accent);width:${p}%"></div></div></div>
+      <div style="text-align:right"><div style="font-family:'DM Serif Display',Georgia,serif;font-size:13px;color:var(--green)">${fmt(x.net)}</div>
+      <div style="font-size:9px;color:var(--muted)">${p}%</div></div>
+    </div>`;
+  }).join('');
+  // recent
+  const re=el('d-recent');
+  const rec=[...DB.transactions].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  if(!rec.length){re.innerHTML='<div class="empty"><div>No transactions yet</div></div>';return;}
+  re.innerHTML='<div class="tl">'+rec.map(t=>{
+    const isIn=IN_T.includes(t.type),m=DB.members.find(x=>x.id===t.memberId);
+    const cl=isIn?'in':['loan_out','investment'].includes(t.type)?'loan':'out';
+    return `<div class="tl-item ${cl}"><div class="tl-date">${t.date}</div>
+    <div class="tl-desc">${t.desc}${m?' · '+m.name:''}</div>
+    <div class="tl-amt" style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'+':'−'}${fmtF(t.amount)}</div></div>`;
+  }).join('')+'</div>';
+}
+
+// ── CASH FLOW ──
+function getCFRange(){
+  const now=new Date();
+  if(cfFilter==='all')return{from:null,to:null};
+  if(cfFilter==='thismonth')return{from:`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`,to:today()};
+  if(cfFilter==='last3'){const d=new Date(now);d.setMonth(d.getMonth()-3);return{from:d.toISOString().split('T')[0],to:today()};}
+  if(cfFilter==='last6'){const d=new Date(now);d.setMonth(d.getMonth()-6);return{from:d.toISOString().split('T')[0],to:today()};}
+  if(cfFilter==='thisyear')return{from:`${now.getFullYear()}-01-01`,to:today()};
+  return{from:null,to:null};
+}
+function renderCF(){
+  const{from,to}=getCFRange();
+  let txs=DB.transactions.filter(t=>{if(from&&t.date<from)return false;if(to&&t.date>to)return false;return true;}).sort((a,b)=>a.date.localeCompare(b.date));
+  const tIn=txs.filter(t=>IN_T.includes(t.type)).reduce((s,t)=>s+t.amount,0);
+  const tOut=txs.filter(t=>OUT_T.includes(t.type)).reduce((s,t)=>s+t.amount,0);
+  const net=tIn-tOut,rep=txs.filter(t=>t.type==='loan_repayment').reduce((s,t)=>s+t.amount,0);
+  document.getElementById('cf-in').textContent=fmtF(tIn);
+  document.getElementById('cf-out').textContent=fmtF(tOut);
+  const cn=document.getElementById('cf-net');cn.textContent=fmtF(net);cn.className='kv '+(net>=0?'green':'red');
+  document.getElementById('cf-rep').textContent=fmtF(rep);
+  let run=0;
+  const rows=txs.map(t=>{
+    const isIn=IN_T.includes(t.type),isOut=OUT_T.includes(t.type);
+    if(isIn)run+=t.amount;if(isOut)run-=t.amount;
+    return `<tr><td>${t.date}</td><td><span class="badge ${TB[t.type]||'bm'}">${t.type.replace('_',' ')}</span></td>
+    <td>${t.desc}</td><td style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'+':'−'}${fmtF(t.amount)}</td>
+    <td style="color:${run>=0?'var(--text)':'var(--red)'}">${fmtF(run)}</td></tr>`;
+  });
+  document.getElementById('cf-table').innerHTML=rows.length?rows.join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No data</td></tr>';
+}
+function setCF(el,f){document.querySelectorAll('#page-cashflow .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');cfFilter=f;renderCF();}
+
+// ── MEMBERS ──
+function renderMembers(){
+  const el=document.getElementById('mem-list');
+  if(!DB.members.length){el.innerHTML='<div class="empty"><div class="empty-icon">◉</div><div>No members yet</div></div>';return;}
+  const{nbm,tnp}=getNetEquity();
+  const RB={admin:'by',treasurer:'bb',investor:'bm',member:'bm'};
+  el.innerHTML=DB.members.map(m=>{
+    const x=nbm.find(n=>n.id===m.id)||{net:0};
+    const c=mCon(m.id),w=mWit(m.id),p=(x.net/tnp*100).toFixed(1);
+    const invProfit=memberTotalInvProfit(m.id);
+    const bonus=memberBonus(m.id);
+    const netWorth=x.net+invProfit+intEarned()*(x.net/tnp)+bonus;
+    return `<div class="card"><div class="card-body" style="padding:12px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="avatar" style="width:38px;height:38px;font-size:13px">${m.name.substring(0,2).toUpperCase()}</div>
+          <div><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px">${m.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${m.role}${m.email?' · '+m.email:''}</div></div>
+        </div>
+        <span class="badge ${RB[m.role]||'bm'}">${p}% equity</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;text-align:center;margin-bottom:8px;">
+        <div><div style="font-size:11px;font-weight:700;color:var(--green)">${fmt(c)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Paid In</div></div>
+        <div><div style="font-size:11px;font-weight:700;color:var(--red)">${fmt(w)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Withdrawn</div></div>
+        <div><div style="font-size:11px;font-weight:700;color:${invProfit>=0?'var(--accent)':'var(--red)'}">${fmt(invProfit)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Inv. Profit</div></div>
+        <div><div style="font-size:11px;font-weight:700;color:${netWorth>=0?'var(--green)':'var(--red)'}">${fmt(netWorth)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Net Worth</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:3px"><span>Net Equity (after withdrawals)</span><span>${p}%</span></div>
+      <div class="prog-wrap"><div class="prog-fill" style="background:var(--accent);width:${p}%"></div></div>
+      ${m.notes?`<div style="margin-top:8px;font-size:11px;color:var(--muted)">${m.notes}</div>`:''}
+      ${bonus>0?`<div style="margin-top:6px;font-size:10px;color:var(--gold)">★ Admin bonus: +${fmtF(bonus)}</div>`:''}
+      <div class="brow">
+        <button class="btn btn-sm" onclick="openMemberPortfolio('${m.id}')">📊 Portfolio</button>
+        <button class="btn-g btn-sm" onclick="openEditMember('${m.id}')">✎ Edit</button>
+        <button class="btn-d btn-sm" onclick="delMember('${m.id}')">✕</button>
+      </div>
+    </div></div>`;
+  }).join('');
+}
+
+// ── MEMBER PORTFOLIO ──
+function openMemberPortfolio(id){
+  activeMsgMemberId=id;
+  const m=DB.members.find(x=>x.id===id);if(!m)return;
+  const{nbm,tnp}=getNetEquity();
+  const x=nbm.find(n=>n.id===id)||{net:0};
+  const eqF=x.net/tnp,eqP=(eqF*100).toFixed(2);
+  const totalIn=mCon(id),totalOut=mWit(id);
+  const invProfit=memberTotalInvProfit(id);
+  const loanInc=intEarned()*eqF;
+  const bonus=memberBonus(id);
+  const netWorth=x.net+invProfit+loanInc+bonus;
+  const roi=totalIn>0?((netWorth-totalIn)/totalIn*100):0;
+  const SC={open:'bg',closed:'br',funding:'bp'};
+
+  // per investment rows
+  const invRows=DB.investments.length?DB.investments.map(inv=>{
+    const rows=calcInvProfit(inv).filter(r=>r.memberId===id);
+    if(!rows.length)return`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:.5">
+      <div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">${inv.name}</div>
+      <div style="font-size:10px;color:var(--muted)">Not a contributor to this investment</div></div>`;
+    const myProfit=rows.reduce((s,r)=>s+r.profit,0);
+    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">${inv.name}</div>
+        <div style="font-size:9px;color:var(--muted)">${inv.type} · <span class="badge ${SC[inv.status]||'bm'}">${inv.status}</span></div></div>
+        <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:${myProfit>=0?'var(--green)':'var(--red)'}">${myProfit>=0?'+':''}${fmt(myProfit)}</div>
+        <div style="font-size:9px;color:var(--muted)">my profit</div></div>
+      </div>
+      ${rows.map(r=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);padding:3px 0;border-top:1px solid var(--border);">
+        <span>${fmtF(r.contribution)} · joined ${r.joinDate} · ${r.activeDays} days active</span>
+        <span style="color:${r.profit>=0?'var(--green)':'var(--red)'}">${r.profit>=0?'+':''}${fmtF(r.profit)}</span>
+      </div>`).join('')}
+    </div>`;
+  }).join(''):`<div class="empty"><div>No investments yet</div></div>`;
+
+  const myTxs=DB.transactions.filter(t=>t.memberId===id).sort((a,b)=>b.date.localeCompare(a.date));
+  const txRows=myTxs.length?myTxs.map(t=>{const isIn=IN_T.includes(t.type);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
+      <div><div style="font-size:11px;font-weight:600">${t.desc}</div>
+      <div style="font-size:9px;color:var(--muted)">${t.date} · <span class="badge ${TB[t.type]||'bm'}">${t.type.replace('_',' ')}</span></div></div>
+      <div style="font-size:12px;font-weight:700;color:${isIn?'var(--green)':'var(--red)'};flex-shrink:0;margin-left:8px">${isIn?'+':'−'}${fmtF(t.amount)}</div>
+    </div>`;}).join(''):`<div style="font-size:11px;color:var(--muted);padding:8px 0">No transactions.</div>`;
+
+  document.getElementById('mp-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <div class="avatar" style="width:48px;height:48px;font-size:16px;flex-shrink:0">${m.name.substring(0,2).toUpperCase()}</div>
+      <div><div style="font-family:'DM Serif Display',Georgia,serif;font-size:20px;color:var(--text)">${m.name}</div>
+      <div style="font-size:10px;color:var(--muted)">${m.role}${m.email?' · '+m.email:''}${m.phone?' · '+m.phone:''}</div></div>
+    </div>
+    <div class="kpi-grid" style="margin-bottom:14px;">
+      <div class="kpi-card yellow"><div class="kl">Net Equity</div><div class="kv">${eqP}%</div><div class="ks">${fmt(x.net)} in pool</div></div>
+      <div class="kpi-card ${netWorth>=0?'green':'red'}"><div class="kl">Net Worth</div><div class="kv ${netWorth>=0?'green':'red'}">${fmt(netWorth)}</div><div class="ks">all included</div></div>
+      <div class="kpi-card blue"><div class="kl">Inv. Profit</div><div class="kv ${invProfit>=0?'green':'red'}">${fmt(invProfit)}</div><div class="ks">daily weighted</div></div>
+      <div class="kpi-card gold"><div class="kl">${bonus>0?'Mgmt Bonus':'Loan Income'}</div><div class="kv">${fmt(bonus>0?bonus:loanInc)}</div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-hd"><div class="card-title">Financial Summary</div></div>
+      <div class="card-body"><div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Total Contributed</span><span style="color:var(--green);font-weight:700">+${fmtF(totalIn)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Total Withdrawn</span><span style="color:var(--red);font-weight:700">−${fmtF(totalOut)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Net Capital in Pool</span><span style="font-weight:700">${fmtF(x.net)}</span></div>
+        <div class="divider"></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Investment Profit (daily weighted)</span><span style="color:${invProfit>=0?'var(--green)':'var(--red)'};font-weight:700">${invProfit>=0?'+':''}${fmtF(invProfit)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loan Interest Share</span><span style="color:var(--gold);font-weight:700">+${fmtF(loanInc)}</span></div>
+        ${bonus>0?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Management Bonus (2%)</span><span style="color:var(--gold);font-weight:700">+${fmtF(bonus)}</span></div>`:''}
+        <div class="divider"></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px">Final Net Worth</span>
+        <span style="font-family:'DM Serif Display',Georgia,serif;font-size:20px;color:${netWorth>=0?'var(--green)':'var(--red)'}">${fmtF(netWorth)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--muted)">Overall ROI</span>
+        <span style="color:${roi>=0?'var(--green)':'var(--red)'};font-weight:700">${roi>=0?'+':''}${roi.toFixed(2)}%</span></div>
+      </div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-hd"><div class="card-title">📈 Investments (daily profit)</div></div>
+      <div class="card-body" style="padding:10px 14px;">${invRows}</div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-hd"><div class="card-title">≡ Transactions</div><span class="badge bm">${myTxs.length}</span></div>
+      <div class="card-body" style="padding:10px 14px;">${txRows}</div>
+    </div>`;
+  showPage('member-portfolio');
+}
+
+// ── INVESTMENTS ──
+function renderInvestments(){
+  const td=DB.investments.reduce((s,i)=>s+i.amount,0);
+  const tv=DB.investments.reduce((s,i)=>s+i.currentValue,0);
+  const totalProfit=DB.investments.reduce((s,inv)=>{
+    const rows=calcInvProfit(inv);
+    return s+rows.reduce((ss,r)=>ss+r.profit,0);
+  },0);
+  const rp=td>0?(totalProfit/td*100):0;
+  document.getElementById('iv-dep').textContent=fmt(td);
+  document.getElementById('iv-val').textContent=fmt(tv);
+  document.getElementById('iv-ret').textContent=fmt(totalProfit);
+  document.getElementById('iv-ret').className='kv '+(totalProfit>=0?'green':'red');
+  document.getElementById('iv-rp').textContent=rp.toFixed(1)+'% total return';
+  const el=document.getElementById('inv-list');
+  if(!DB.investments.length){el.innerHTML='<div class="empty"><div class="empty-icon">◈</div><div>No investments yet</div></div>';return;}
+  const SC={open:'bg',closed:'br',funding:'bp'};
+  const SL={open:'Open',closed:'Closed',funding:'Funding'};
+  el.innerHTML=DB.investments.map(inv=>{
+    const gain=inv.currentValue-inv.amount;
+    const rows=calcInvProfit(inv);
+    const totalDays=daysBetween(inv.startDate||inv.date||today(),inv.closeDate||today())||1;
+    const dailyGain=(inv.currentValue-inv.amount)/totalDays;
+    // member profit table
+    const memRows=rows.length?rows.map(r=>{
+      const m=DB.members.find(x=>x.id===r.memberId);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(35,38,48,.4);font-size:10px;">
+        <span style="color:var(--muted2)">${r.memberName} · ${r.activeDays}d · ${(r.shareAtJoinDate*100).toFixed(1)}%</span>
+        <span style="color:${r.profit>=0?'var(--green)':'var(--red)'};font-weight:700">${r.profit>=0?'+':''}${fmt(r.profit)}</span>
+      </div>`;
+    }).join(''):`<div style="font-size:10px;color:var(--muted);padding:6px 0">No contributions recorded yet</div>`;
+    return `<div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">${inv.name}</div>
+        <div style="font-size:9px;color:var(--muted)">${inv.type} · Started ${inv.startDate||inv.date||'—'} · ${totalDays} days</div></div>
+        <span class="badge ${SC[inv.status]||'bm'}">${SL[inv.status]||inv.status}</span>
+      </div>
+      <div class="card-body" style="padding:10px 14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center;margin-bottom:10px;">
+          <div><div style="font-size:12px;font-weight:700">${fmt(inv.amount)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Deployed</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--blue)">${fmt(inv.currentValue)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Current Value</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:${gain>=0?'var(--green)':'var(--red)'}">${gain>=0?'+':''}${fmt(gain)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Total Gain</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Daily gain: <strong style="color:var(--text)">${fmtF(dailyGain)}/day</strong> · ${inv.closeDate?'Closed '+inv.closeDate:'Running'}</div>
+        <div style="font-size:9px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding-bottom:4px">Member Profit Split</div>
+        ${memRows}
+        <div class="brow" style="margin-top:10px;">
+          <button class="btn-g btn-sm" onclick="openUpdInv('${inv.id}')">↻ Update Value</button>
+          ${inv.status!=='closed'?`<button class="btn-g btn-sm" onclick="openInvContribution('${inv.id}')">+ Contribution</button>`:''}
+          <button class="btn-d btn-sm" onclick="delInv('${inv.id}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── LOANS ──
+function renderLoans(){
+  document.getElementById('ln-tot').textContent=fmt(lnTotal());
+  document.getElementById('ln-rep').textContent=fmt(lnRepaid());
+  document.getElementById('ln-out').textContent=fmt(lnOut());
+  document.getElementById('ln-int').textContent=fmt(intEarned());
+  const el=document.getElementById('loan-list');
+  if(!DB.loans.length){el.innerHTML='<div class="empty"><div class="empty-icon">⬕</div><div>No loans recorded</div></div>';return;}
+  const t2=today();
+  el.innerHTML=DB.loans.map(l=>{
+    const bal=loanBalance(l),tot=loanTotalOwed(l),isPaid=bal===0,isOver=!isPaid&&l.dueDate&&l.dueDate<t2;
+    const sb=isPaid?'bg':isOver?'br':'by',pct=Math.min(100,(l.repaid/tot)*100);
+    return `<div class="card${isOver?' overdue-row':''}">
+      <div class="card-hd">
+        <div><div class="card-title">${l.borrower}</div><div style="font-size:9px;color:var(--muted)">Rate: ${l.rate}% · Due: ${l.dueDate||'—'}</div></div>
+        <span class="badge ${sb}">${isPaid?'Paid':isOver?'Overdue':'Active'}</span>
+      </div>
+      <div class="card-body" style="padding:10px 14px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center;margin-bottom:8px;">
+          <div><div style="font-size:12px;font-weight:700">${fmt(l.amount)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Principal</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--gold)">${fmt(l.amount*l.rate/100)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Interest</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:${bal>0?'var(--red)':'var(--green)'}">${fmt(bal)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Balance</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px"><span>Repayment progress</span><span>${pct.toFixed(0)}%</span></div>
+        <div class="prog-wrap"><div class="prog-fill" style="background:${isPaid?'var(--green)':isOver?'var(--red)':'var(--accent)'};width:${pct}%"></div></div>
+        ${l.notes?`<div style="font-size:11px;color:var(--muted);margin-top:6px">${l.notes}</div>`:''}
+        <div class="brow">
+          ${bal>0?`<button class="btn-g btn-sm" onclick="openRepay('${l.id}')">Record Repayment</button>`:''}
+          <button class="btn-d btn-sm" onclick="delLoan('${l.id}')">✕ Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── TRANSACTIONS ──
+function renderTx(){
+  const s=(document.getElementById('tx-search')?.value||'').toLowerCase();
+  const tf=document.getElementById('tx-type-f')?.value||'';
+  let txs=[...DB.transactions].sort((a,b)=>b.date.localeCompare(a.date));
+  if(s)txs=txs.filter(t=>t.desc.toLowerCase().includes(s)||(t.notes||'').toLowerCase().includes(s));
+  if(tf)txs=txs.filter(t=>t.type===tf);
+  const badge=document.getElementById('tx-count');if(badge)badge.textContent=txs.length;
+  const tb=document.getElementById('tx-table');
+  if(!txs.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">No transactions</td></tr>';return;}
+  tb.innerHTML=txs.map(t=>{
+    const m=DB.members.find(x=>x.id===t.memberId),isIn=IN_T.includes(t.type);
+    return `<tr><td>${t.date}</td><td><span class="badge ${TB[t.type]||'bm'}">${t.type.replace('_',' ')}</span></td>
+    <td>${t.desc}</td><td>${m?m.name:'—'}</td>
+    <td style="color:${isIn?'var(--green)':'var(--red)'};white-space:nowrap">${isIn?'+':'−'}${fmtF(t.amount)}</td>
+    <td><button class="btn-d" onclick="delTx('${t.id}')">✕</button></td></tr>`;
+  }).join('');
+}
+
+// ── REPORTS ──
+function getRepRange(){
+  const now=new Date();
+  if(repFilter==='all')return{from:null,to:null};
+  if(repFilter==='last3'){const d=new Date(now);d.setMonth(d.getMonth()-3);return{from:d.toISOString().split('T')[0],to:today()};}
+  return{from:`${now.getFullYear()}-01-01`,to:today()};
+}
+function renderReports(){
+  const{from,to}=getRepRange();
+  const txs=DB.transactions.filter(t=>{if(from&&t.date<from)return false;if(to&&t.date>to)return false;return true;});
+  const cap=txs.filter(t=>t.type==='contribution').reduce((s,t)=>s+t.amount,0);
+  const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const int=intEarned();
+  const totalInvProfit=DB.investments.reduce((s,inv)=>{const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
+  const{bonusPool}=calcAdminBonus();
+  const netIncome=totalInvProfit+int-exp;
+  const roi=cap>0?(netIncome/cap*100):0;
+  document.getElementById('rp-cap').textContent=fmtF(cap);
+  document.getElementById('rp-ret').textContent=fmtF(totalInvProfit);
+  document.getElementById('rp-roi').textContent=roi.toFixed(1)+'%';
+  document.getElementById('rp-int').textContent=fmtF(int);
+  document.getElementById('rp-income').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Investment Profit (daily weighted)</span><span style="color:${totalInvProfit>=0?'var(--green)':'var(--red)'}">${totalInvProfit>=0?'+':''}${fmtF(totalInvProfit)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loan Interest Earned</span><span style="color:var(--green)">+${fmtF(int)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Expenses</span><span style="color:var(--red)">−${fmtF(exp)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Mgmt Bonus Pool (2%)</span><span style="color:var(--gold)">−${fmtF(bonusPool)}</span></div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700">Net Income</span>
+      <span style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:${netIncome>=0?'var(--green)':'var(--red)'}">${fmtF(netIncome)}</span></div>
+    </div>`;
+  const res=reserve(),inv2=totInv(),lo=lnOut(),aC=capPool();
+  document.getElementById('rp-balance').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Cash Reserve</span><span>${fmtF(res)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Deployed Capital</span><span>${fmtF(inv2)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loans Receivable</span><span>${fmtF(lo)}</span></div>
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700">Total Assets</span>
+      <span style="font-family:'DM Serif Display',Georgia,serif;font-size:18px">${fmtF(res+inv2+lo)}</span></div>
+    </div>`;
+  const{nbm,tnp}=getNetEquity();
+  const rb=document.getElementById('rp-mem');
+  if(!DB.members.length){rb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">No members</td></tr>';return;}
+  rb.innerHTML=DB.members.map(m=>{
+    const x=nbm.find(n=>n.id===m.id)||{net:0};
+    const c=mCon(m.id),w=mWit(m.id);
+    const invP=memberTotalInvProfit(m.id);
+    const loanI=int*(x.net/tnp);
+    const bonus=memberBonus(m.id);
+    const total=invP+loanI+bonus;
+    const roi2=c>0?(total/c*100):0;
+    return `<tr><td><strong>${m.name}</strong><br><span style="font-size:9px;color:var(--muted)">${(x.net/tnp*100).toFixed(1)}% equity</span></td>
+    <td style="color:var(--green)">${fmtF(c)}</td>
+    <td style="color:var(--gold)">${bonus>0?'+'+fmtF(bonus):'—'}</td>
+    <td style="color:${invP>=0?'var(--green)':'var(--red)'}">${invP>=0?'+':''}${fmtF(invP)}</td>
+    <td style="font-weight:700;color:${total>=0?'var(--green)':'var(--red)'}">${total>=0?'+':''}${fmtF(total)}</td>
+    <td style="color:${roi2>=0?'var(--green)':'var(--red)'};font-weight:700">${roi2>=0?'+':''}${roi2.toFixed(2)}%</td></tr>`;
+  }).join('');
+}
+function setRep(el,f){document.querySelectorAll('#page-reports .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');repFilter=f;renderReports();}
+
+// ── MESSAGING ──
+function renderMessages(){
+  // Announcements
+  const annEl=document.getElementById('announce-list');
+  if(!fbDB){annEl.innerHTML='<div style="font-size:11px;color:var(--muted)">Connect to Firebase to use messaging.</div>';return;}
+  fbDB.ref('investgroup/announcements').orderByChild('timestamp').limitToLast(20).once('value').then(snap=>{
+    const items=[];snap.forEach(c=>items.unshift({id:c.key,...c.val()}));
+    if(!items.length){annEl.innerHTML='<div class="empty" style="padding:12px"><div>No announcements yet</div></div>';return;}
+    annEl.innerHTML=items.map(a=>`<div class="announce-card">
+      <div class="announce-title">📢 ${a.title||'Announcement'}</div>
+      <div class="announce-text">${a.text}</div>
+      <div class="announce-time">${new Date(a.timestamp).toLocaleString()}</div>
+    </div>`).join('');
+  });
+  // Member threads
+  const memEl=document.getElementById('msg-member-list');
+  if(!DB.members.length){memEl.innerHTML='<div class="empty" style="padding:12px"><div>No members yet</div></div>';return;}
+  memEl.innerHTML=DB.members.map(m=>`
+    <div class="member-msg-row" onclick="openThread('${m.id}')">
+      <div class="avatar">${m.name.substring(0,2).toUpperCase()}</div>
+      <div style="flex:1"><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">${m.name}</div>
+      <div style="font-size:10px;color:var(--muted)">Tap to open thread</div></div>
+      <div class="unread-dot" id="unread-${m.id}" style="display:none"></div>
+      <span style="color:var(--muted);font-size:16px">›</span>
+    </div>`).join('');
+  // Check for unread messages
+  DB.members.forEach(m=>{
+    fbDB.ref(`investgroup/messages/${m.id}`).orderByChild('read').equalTo(false).once('value').then(snap=>{
+      let hasUnread=false;
+      snap.forEach(c=>{if(c.val().sender==='member')hasUnread=true;});
+      const dot=document.getElementById('unread-'+m.id);
+      if(dot) dot.style.display=hasUnread?'block':'none';
+      updateMsgBadge();
+    });
+  });
+}
+
+function updateMsgBadge(){
+  if(!fbDB) return;
+  let count=0;
+  const badge=document.getElementById('msg-badge');
+  DB.members.forEach(m=>{
+    fbDB.ref(`investgroup/messages/${m.id}`).orderByChild('read').equalTo(false).once('value').then(snap=>{
+      snap.forEach(c=>{if(c.val().sender==='member')count++;});
+      if(count>0){badge.textContent=count;badge.classList.add('show');}
+      else{badge.classList.remove('show');}
+    });
+  });
+}
+
+function openThread(memberId){
+  activeMsgMemberId=memberId;
+  const m=DB.members.find(x=>x.id===memberId);if(!m)return;
+  document.getElementById('tb-title').textContent='💬 '+m.name;
+  document.getElementById('back-btn').classList.remove('hidden');
+  // Mark messages as read
+  if(fbDB){
+    fbDB.ref(`investgroup/messages/${memberId}`).once('value').then(snap=>{
+      snap.forEach(c=>{
+        if(c.val().sender==='member'&&!c.val().read){
+          fbDB.ref(`investgroup/messages/${memberId}/${c.key}/read`).set(true);
+        }
+      });
+    });
+  }
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-thread').classList.add('active');
+  pageHistory.push('messages');
+  curPage='thread';
+  document.getElementById('tb-action').style.display='none';
+  loadThreadMessages(memberId);
+  // Live listener
+  if(fbDB) fbDB.ref(`investgroup/messages/${memberId}`).on('value',()=>loadThreadMessages(memberId));
+}
+
+function loadThreadMessages(memberId){
+  const el=document.getElementById('thread-messages');
+  if(!fbDB){el.innerHTML='<div class="empty"><div>No connection</div></div>';return;}
+  fbDB.ref(`investgroup/messages/${memberId}`).orderByChild('timestamp').once('value').then(snap=>{
+    const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
+    if(!msgs.length){el.innerHTML='<div class="empty"><div>No messages yet. Send the first one!</div></div>';return;}
+    el.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
+      const isOut=msg.sender==='treasurer';
+      return `<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:6px;">
+        <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
+        <div class="msg-time">${new Date(msg.timestamp).toLocaleTimeString()}</div>
+      </div>`;
+    }).join('')+'</div>';
+    el.scrollTop=el.scrollHeight;
+  });
+}
+
+function sendThreadMessage(){
+  const input=document.getElementById('thread-input');
+  const text=input.value.trim();
+  if(!text||!activeMsgMemberId||!fbDB)return;
+  fbDB.ref(`investgroup/messages/${activeMsgMemberId}`).push({
+    sender:'treasurer',text,timestamp:Date.now(),read:false
+  }).then(()=>{input.value='';loadThreadMessages(activeMsgMemberId);});
+}
+
+function postAnnouncement(){
+  const title=document.getElementById('ann-title').value.trim();
+  const text=document.getElementById('ann-text').value.trim();
+  if(!text){alert('Please enter a message.');return;}
+  if(!fbDB){alert('Not connected to Firebase.');return;}
+  fbDB.ref('investgroup/announcements').push({title,text,timestamp:Date.now()}).then(()=>{
+    closeModal('modal-announce');
+    document.getElementById('ann-title').value='';
+    document.getElementById('ann-text').value='';
+    renderMessages();
+    alert('✓ Announcement posted to all members!');
+  });
+}
+
+// ── SETTINGS ──
+function loadSettingsForm(){
+  document.getElementById('s-name').value=DB.settings.groupName||'';
+  document.getElementById('s-cur').value=DB.settings.currency||'$';
+  document.getElementById('s-res').value=DB.settings.reserveTarget||20;
+  document.getElementById('s-rate').value=DB.settings.defaultRate||10;
+  loadBankForm();
+  renderPinList();
+  const t=localStorage.getItem('ig_last_sync');
+  if(t){document.getElementById('sync-last').textContent='Last synced: '+t;setSyncStatus('✓ Connected','var(--green)');}
+}
+function saveSettings(){
+  DB.settings.groupName=document.getElementById('s-name').value||'My Investment Group';
+  DB.settings.currency=document.getElementById('s-cur').value;
+  DB.settings.reserveTarget=parseFloat(document.getElementById('s-res').value)||20;
+  DB.settings.defaultRate=parseFloat(document.getElementById('s-rate').value)||10;
+  save();alert('✓ Settings saved!');
+}
+function loadBankForm(){
+  const b=DB.settings.bank||{};
+  document.getElementById('b-name').value=b.accountName||'';
+  document.getElementById('b-num').value=b.accountNumber||'';
+  document.getElementById('b-bank').value=b.bankName||'';
+  document.getElementById('b-branch').value=b.branchCode||'';
+  document.getElementById('b-ref').value=b.reference||'';
+  document.getElementById('b-note').value=b.note||'';
+}
+function saveBankDetails(){
+  if(!DB.settings.bank) DB.settings.bank={};
+  DB.settings.bank={accountName:document.getElementById('b-name').value,accountNumber:document.getElementById('b-num').value,bankName:document.getElementById('b-bank').value,branchCode:document.getElementById('b-branch').value,reference:document.getElementById('b-ref').value,note:document.getElementById('b-note').value};
+  save();alert('✓ Bank details saved!');
+}
+function renderPinList(){
+  const el=document.getElementById('pin-list');if(!el)return;
+  if(!DB.members.length){el.innerHTML='<div style="font-size:11px;color:var(--muted)">No members yet — add members first.</div>';return;}
+  if(!DB.memberPins)DB.memberPins={};
+  el.innerHTML=DB.members.map(m=>{
+    const hasPin=!!DB.memberPins[m.id];
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px;color:var(--text)">${m.name}</div>
+        <div id="pin-status-${m.id}" style="font-size:10px;color:${hasPin?'var(--green)':'var(--red)'}">${hasPin?'✓ PIN assigned':'✕ No PIN yet'}</div></div>
+        <span class="badge ${hasPin?'bg':'br'}">${hasPin?'Set':'Not set'}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="tel" inputmode="numeric" id="pin-${m.id}" placeholder="4-digit PIN"
+          style="flex:1;padding:9px 10px;font-size:13px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);color:var(--text);outline:none;font-family:'DM Mono',ui-monospace,monospace;">
+        <button class="btn-g btn-sm" onclick="savePin('${m.id}')">Set PIN</button>
+        ${hasPin?`<button class="btn-d btn-sm" onclick="clearPin('${m.id}')">Clear</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function savePin(id){
+  const input=document.getElementById('pin-'+id);if(!input)return;
+  const pin=input.value.replace(/\D/g,'').trim();
+  if(!pin||pin.length<4){alert('Please enter a PIN of at least 4 digits.');return;}
+  if(!DB.memberPins)DB.memberPins={};
+  DB.memberPins[id]=pin;input.value='';saveDB();renderPinList();
+  alert('✓ PIN set! Share it with the member privately.');
+}
+function updateMemSel(){
+  const opts='<option value="">None</option>'+DB.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  ['tx-mem','ic-member'].forEach(id=>{const el=document.getElementById(id);if(el){const cv=el.value;el.innerHTML=opts;el.value=cv;}});
+}
+
+// ════════════════════════════════════════
+// ACTIONS
+// ════════════════════════════════════════
+function saveMember(){
+  const name=document.getElementById('am-name').value.trim();if(!name)return alert('Enter a name.');
+  const op=parseFloat(document.getElementById('am-open').value)||0;
+  const m={id:uid(),name,role:document.getElementById('am-role').value,email:document.getElementById('am-email').value,phone:document.getElementById('am-phone').value,notes:document.getElementById('am-notes').value};
+  DB.members.push(m);
+  if(op>0)DB.transactions.push({id:uid(),date:today(),type:'contribution',desc:'Opening balance — '+name,amount:op,memberId:m.id,notes:'Initial'});
+  closeModal('modal-add-member');['am-name','am-email','am-phone','am-open','am-notes'].forEach(id=>document.getElementById(id).value='');save();
+}
+function openEditMember(id){
+  const m=DB.members.find(x=>x.id===id);if(!m)return;
+  document.getElementById('em-id').value=m.id;document.getElementById('em-name').value=m.name;
+  document.getElementById('em-role').value=m.role;document.getElementById('em-email').value=m.email||'';
+  document.getElementById('em-phone').value=m.phone||'';document.getElementById('em-notes').value=m.notes||'';
+  openModal('modal-edit-member');
+}
+function saveEditMember(){
+  const id=document.getElementById('em-id').value,m=DB.members.find(x=>x.id===id);if(!m)return;
+  const name=document.getElementById('em-name').value.trim();if(!name)return alert('Name cannot be empty.');
+  m.name=name;m.role=document.getElementById('em-role').value;m.email=document.getElementById('em-email').value;
+  m.phone=document.getElementById('em-phone').value;m.notes=document.getElementById('em-notes').value;
+  closeModal('modal-edit-member');save();
+}
+function saveInvestment(){
+  const name=document.getElementById('iv-name').value.trim(),amount=parseFloat(document.getElementById('iv-amt').value)||0;
+  if(!name||amount<=0)return alert('Fill name and amount.');
+  const cur=parseFloat(document.getElementById('iv-cur').value)||amount;
+  const status=document.getElementById('iv-status').value;
+  const startDate=document.getElementById('iv-date').value||today();
+  const inv={id:uid(),name,type:document.getElementById('iv-type').value,date:startDate,startDate,amount,currentValue:cur,status,notes:document.getElementById('iv-notes').value,contributions:[],valueHistory:[{date:startDate,value:cur,note:'Initial valuation'}]};
+  if(status==='closed') inv.closeDate=document.getElementById('iv-close-date').value||today();
+  DB.investments.push(inv);
+  DB.transactions.push({id:uid(),date:startDate,type:'investment',desc:'Investment: '+name,amount,memberId:'',notes:inv.notes});
+  closeModal('modal-add-investment');['iv-name','iv-amt','iv-cur','iv-notes','iv-date','iv-close-date'].forEach(id=>document.getElementById(id).value='');save();
+}
+
+function openUpdInv(id){
+  const i=DB.investments.find(x=>x.id===id);if(!i)return;
+  document.getElementById('ui-id').value=id;document.getElementById('ui-name').value=i.name;
+  document.getElementById('ui-val').value=i.currentValue;document.getElementById('ui-status').value=i.status;
+  document.getElementById('ui-close-wrap').style.display=i.status==='closed'?'':'none';
+  document.getElementById('ui-close-date').value=i.closeDate||today();
+  document.getElementById('ui-note').value='';
+  openModal('modal-upd-inv');
+}
+document.getElementById('ui-status')?.addEventListener('change',function(){
+  document.getElementById('ui-close-wrap').style.display=this.value==='closed'?'':'none';
+});
+document.getElementById('iv-status')?.addEventListener('change',function(){
+  document.getElementById('iv-close-date-wrap').style.display=this.value==='closed'?'':'none';
+});
+
+function updateInv(){
+  const id=document.getElementById('ui-id').value,i=DB.investments.find(x=>x.id===id);if(!i)return;
+  const val=parseFloat(document.getElementById('ui-val').value);if(isNaN(val))return alert('Enter valid value.');
+  const newStatus=document.getElementById('ui-status').value;
+  const note=document.getElementById('ui-note').value||'Value update';
+  i.currentValue=val;i.status=newStatus;
+  if(!i.valueHistory)i.valueHistory=[];
+  i.valueHistory.push({date:today(),value:val,note});
+  if(newStatus==='closed') i.closeDate=document.getElementById('ui-close-date').value||today();
+  else if(newStatus==='open'||newStatus==='funding') delete i.closeDate;
+  closeModal('modal-upd-inv');save();
+}
+
+function openInvContribution(invId){
+  const inv=DB.investments.find(x=>x.id===invId);if(!inv)return;
+  document.getElementById('ic-inv-id').value=invId;
+  document.getElementById('ic-inv-name').value=inv.name;
+  document.getElementById('ic-date').value=today();
+  document.getElementById('ic-amount').value='';
+  openModal('modal-inv-contribution');
+}
+
+function saveInvContribution(){
+  const invId=document.getElementById('ic-inv-id').value;
+  const inv=DB.investments.find(x=>x.id===invId);if(!inv)return;
+  const memberId=document.getElementById('ic-member').value;
+  const amount=parseFloat(document.getElementById('ic-amount').value)||0;
+  const date=document.getElementById('ic-date').value||today();
+  if(!memberId||amount<=0)return alert('Select member and enter amount.');
+  const m=DB.members.find(x=>x.id===memberId);
+  if(!inv.contributions)inv.contributions=[];
+  inv.contributions.push({id:uid(),memberId,memberName:m?m.name:'Unknown',amount,date});
+  closeModal('modal-inv-contribution');save();
+}
+
+// Safe confirm — works on Android Chrome where window.confirm can be blocked
+function safeConfirm(msg){
+  try{ return window.confirm(msg); }
+  catch(e){ return true; } // if confirm is blocked, proceed
+}
+
+function delMember(id){if(!safeConfirm('Remove member? Their transactions will remain.'))return;DB.members=DB.members.filter(m=>m.id!==id);save();}
+function delInv(id){
+  const inv=DB.investments.find(i=>i.id===id);if(!inv)return;
+  if(!safeConfirm('Delete investment "'+inv.name+'"?'))return;
+  DB.investments=DB.investments.filter(i=>i.id!==id);
+  DB.transactions=DB.transactions.filter(t=>!(t.type==='investment'&&t.desc==='Investment: '+inv.name));
+  save();
+}
+function delLoan(id){if(!safeConfirm('Delete this loan?'))return;DB.loans=DB.loans.filter(l=>l.id!==id);save();}
+function delTx(id){if(!safeConfirm('Delete this transaction?'))return;DB.transactions=DB.transactions.filter(t=>t.id!==id);save();}
+function clearPin(id){if(!safeConfirm('Clear this PIN?'))return;delete DB.memberPins[id];saveDB();renderPinList();}
+function clearAll(){
+  if(!safeConfirm('Delete ALL data permanently?'))return;
+  if(!safeConfirm('This cannot be undone. Are you absolutely sure?'))return;
+  DB={settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}},members:[],investments:[],loans:[],transactions:[],memberPins:{}};save();
+}
+
+function saveLoan(){
+  const bor=document.getElementById('ln-bor').value.trim(),amt=parseFloat(document.getElementById('ln-amt').value)||0;
+  if(!bor||amt<=0)return alert('Fill borrower and amount.');
+  const loan={id:uid(),borrower:bor,amount:amt,rate:parseFloat(document.getElementById('ln-rate').value)||DB.settings.defaultRate||10,date:document.getElementById('ln-date').value||today(),dueDate:document.getElementById('ln-due').value||'',notes:document.getElementById('ln-notes').value,repaid:0};
+  DB.loans.push(loan);
+  DB.transactions.push({id:uid(),date:loan.date,type:'loan_out',desc:'Loan to '+bor,amount:amt,memberId:'',notes:loan.notes});
+  closeModal('modal-add-loan');['ln-bor','ln-amt','ln-rate','ln-date','ln-due','ln-notes'].forEach(id=>document.getElementById(id).value='');save();
+}
+function openRepay(id){
+  const l=DB.loans.find(x=>x.id===id);if(!l)return;
+  document.getElementById('rp-id').value=id;
+  document.getElementById('rp-info').value=`${l.borrower} — ${fmtF(loanBalance(l))} outstanding`;
+  document.getElementById('rp-date').value=today();document.getElementById('rp-amt').value='';
+  openModal('modal-repay');
+}
+function saveRepay(){
+  const id=document.getElementById('rp-id').value,amt=parseFloat(document.getElementById('rp-amt').value);
+  const l=DB.loans.find(x=>x.id===id);if(!l||isNaN(amt)||amt<=0)return alert('Invalid amount.');
+  l.repaid+=amt;
+  DB.transactions.push({id:uid(),date:document.getElementById('rp-date').value||today(),type:'loan_repayment',desc:'Repayment — '+l.borrower,amount:amt,memberId:'',notes:document.getElementById('rp-notes').value});
+  closeModal('modal-repay');save();
+}
+
+function saveTx(){
+  const type=document.getElementById('tx-type').value,desc=document.getElementById('tx-desc').value.trim();
+  const amt=parseFloat(document.getElementById('tx-amt').value),date=document.getElementById('tx-date').value||today();
+  if(!desc||isNaN(amt)||amt<=0)return alert('Fill description and amount.');
+  const repayKeys=['repay','repaid','pay back','paying back','loan payment','installment','instalment','settl','brought back','bring back'];
+  const descLow=desc.toLowerCase();
+  const hasRepay=repayKeys.some(k=>descLow.includes(k));
+  if(hasRepay&&type==='loan_repayment'){
+    for(const l of DB.loans){
+      if(loanBalance(l)<=0)continue;
+      const words=l.borrower.toLowerCase().split(' ').filter(w=>w.length>2);
+      if(descLow.includes(l.borrower.toLowerCase())||words.some(w=>descLow.includes(w))){
+        if(safeConfirm(`Auto-link this as repayment from ${l.borrower}?`)){l.repaid+=amt;}
+      }
+    }
+  }
+  DB.transactions.push({id:uid(),date,type,desc,amount:amt,memberId:document.getElementById('tx-mem').value||'',notes:document.getElementById('tx-notes').value});
+  closeModal('modal-tx');['tx-desc','tx-amt','tx-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('smart-hint').classList.remove('show');
+  save();
+}
+
+function smartHint(){
+  const desc=(document.getElementById('tx-desc')?.value||'').toLowerCase();
+  const amt=parseFloat(document.getElementById('tx-amt')?.value)||0;
+  const hintEl=document.getElementById('smart-hint'),msgEl=document.getElementById('smart-msg');
+  if(!hintEl||!msgEl)return;
+  const repayKeys=['repay','repaid','pay back','loan payment','installment','settl','brought back'];
+  const hasRepay=repayKeys.some(k=>desc.includes(k));
+  if(hasRepay){
+    for(const l of DB.loans){
+      if(loanBalance(l)<=0)continue;
+      const words=l.borrower.toLowerCase().split(' ').filter(w=>w.length>2);
+      if(desc.includes(l.borrower.toLowerCase())||words.some(w=>desc.includes(w))){
+        const bal=loanBalance(l),remaining=amt>0?Math.max(0,bal-amt):bal;
+        hintEl.classList.add('show');
+        msgEl.innerHTML=`Repayment from <strong>${l.borrower}</strong>. Total owed: <strong style="color:var(--gold)">${fmtF(bal)}</strong>${amt>0?`. After: <strong style="color:${remaining>0?'var(--red)':'var(--green)'}">${remaining>0?fmtF(remaining)+' remaining':'Fully paid!'}</strong>`:''}`;
+        return;
+      }
+    }
+  }
+  hintEl.classList.remove('show');
+}
+
+// ════════════════════════════════════════
+// PDF EXPORT
+// ════════════════════════════════════════
+function exportPDF(){
+  const{nbm,tnp}=getNetEquity();
+  const cap=capPool(),res=reserve(),inv=totInv(),lo=lnOut();
+  const int=intEarned();
+  const totalInvProfit=DB.investments.reduce((s,inv2)=>{const rows=calcInvProfit(inv2);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
+  const{bonusPool}=calcAdminBonus();
+  const netIncome=totalInvProfit+int;
+  const roi=cap>0?(netIncome/cap*100):0;
+  const gname=DB.settings.groupName||'Investment Group';
+  const dt=new Date().toLocaleDateString('en',{year:'numeric',month:'long',day:'numeric'});
+
+  const memberRows=DB.members.map(m=>{
+    const x=nbm.find(n=>n.id===m.id)||{net:0};
+    const c=mCon(m.id),w=mWit(m.id);
+    const invP=memberTotalInvProfit(m.id);
+    const loanI=int*(x.net/tnp);
+    const bonus=memberBonus(m.id);
+    const total=invP+loanI+bonus;
+    const roi2=c>0?(total/c*100):0;
+    return `<tr style="border-bottom:1px solid #e5e7eb;">
+      <td style="padding:8px 10px;font-weight:600">${m.name}</td>
+      <td style="padding:8px 10px;text-align:right">${m.role}</td>
+      <td style="padding:8px 10px;text-align:right;color:#059669">${fmtF(c)}</td>
+      <td style="padding:8px 10px;text-align:right;color:#dc2626">${fmtF(w)}</td>
+      <td style="padding:8px 10px;text-align:right">${fmtF(x.net)}</td>
+      <td style="padding:8px 10px;text-align:right">${(x.net/tnp*100).toFixed(1)}%</td>
+      <td style="padding:8px 10px;text-align:right;color:${invP>=0?'#059669':'#dc2626'}">${invP>=0?'+':''}${fmtF(invP)}</td>
+      ${bonus>0?`<td style="padding:8px 10px;text-align:right;color:#d97706">+${fmtF(bonus)}</td>`:`<td style="padding:8px 10px;text-align:right;color:#9ca3af">—</td>`}
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:${total>=0?'#059669':'#dc2626'}">${total>=0?'+':''}${fmtF(total)}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:${roi2>=0?'#059669':'#dc2626'}">${roi2>=0?'+':''}${roi2.toFixed(2)}%</td>
+    </tr>`;
+  }).join('');
+
+  const invRows=DB.investments.map(inv2=>{
+    const gain=inv2.currentValue-inv2.amount;
+    const rows=calcInvProfit(inv2);
+    const totalDays=daysBetween(inv2.startDate||inv2.date||today(),inv2.closeDate||today())||1;
+    const profitRows=rows.map(r=>`<tr style="background:#f9fafb;">
+      <td style="padding:5px 10px;color:#6b7280" colspan="2">↳ ${r.memberName}</td>
+      <td style="padding:5px 10px;text-align:right;color:#6b7280">${fmtF(r.contribution)}</td>
+      <td style="padding:5px 10px;text-align:right;color:#6b7280">${r.joinDate}</td>
+      <td style="padding:5px 10px;text-align:right;color:#6b7280">${r.activeDays} days</td>
+      <td style="padding:5px 10px;text-align:right;color:${r.profit>=0?'#059669':'#dc2626'};font-weight:600">${r.profit>=0?'+':''}${fmtF(r.profit)}</td>
+    </tr>`).join('');
+    return `<tr style="border-bottom:1px solid #e5e7eb;background:#fff;">
+      <td style="padding:8px 10px;font-weight:600">${inv2.name}</td>
+      <td style="padding:8px 10px">${inv2.type}</td>
+      <td style="padding:8px 10px;text-align:right">${fmtF(inv2.amount)}</td>
+      <td style="padding:8px 10px;text-align:right">${inv2.startDate||'—'}</td>
+      <td style="padding:8px 10px;text-align:right">${totalDays}d</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:${gain>=0?'#059669':'#dc2626'}">${gain>=0?'+':''}${fmtF(gain)}</td>
+    </tr>${profitRows}`;
+  }).join('');
+
+  const loanRows=DB.loans.map(l=>{
+    const bal=loanBalance(l),isPaid=bal===0,isOver=!isPaid&&l.dueDate&&l.dueDate<today();
+    const status=isPaid?'Paid':isOver?'Overdue':'Active';
+    const color=isPaid?'#059669':isOver?'#dc2626':'#d97706';
+    return `<tr style="border-bottom:1px solid #e5e7eb;">
+      <td style="padding:8px 10px;font-weight:600">${l.borrower}</td>
+      <td style="padding:8px 10px;text-align:right">${fmtF(l.amount)}</td>
+      <td style="padding:8px 10px;text-align:right">${l.rate}%</td>
+      <td style="padding:8px 10px;text-align:right">${fmtF(l.amount*l.rate/100)}</td>
+      <td style="padding:8px 10px;text-align:right">${fmtF(loanTotalOwed(l))}</td>
+      <td style="padding:8px 10px;text-align:right;color:#059669">${fmtF(l.repaid)}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700;color:${bal>0?'#dc2626':'#059669'}">${fmtF(bal)}</td>
+      <td style="padding:8px 10px;text-align:center"><span style="background:${color}20;color:${color};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${status}</span></td>
+      <td style="padding:8px 10px">${l.dueDate||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${gname} — Financial Report</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',Arial,sans-serif;color:#111827;background:#fff;font-size:13px;}
+.cover{background:linear-gradient(135deg,#0b0c0e 0%,#1a1f2e 100%);color:#fff;padding:60px 40px;min-height:200px;page-break-after:always;}
+.cover-logo{font-size:48px;color:#c8f04a;margin-bottom:12px;}
+.cover-title{font-size:32px;font-weight:700;margin-bottom:8px;}
+.cover-sub{font-size:14px;color:#9ca3af;margin-bottom:4px;}
+.cover-date{font-size:12px;color:#6b7280;}
+.section{padding:30px 40px;page-break-inside:avoid;}
+.section-title{font-size:20px;font-weight:700;color:#111827;margin-bottom:4px;padding-bottom:10px;border-bottom:2px solid #c8f04a;}
+.section-sub{font-size:12px;color:#6b7280;margin-bottom:20px;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.kpi{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:16px;border-top:3px solid #c8f04a;}
+.kpi.green{border-top-color:#059669;}.kpi.red{border-top-color:#dc2626;}.kpi.gold{border-top-color:#d97706;}.kpi.blue{border-top-color:#2563eb;}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#6b7280;font-weight:600;margin-bottom:6px;}
+.kpi-value{font-size:22px;font-weight:700;color:#111827;}
+.kpi-value.green{color:#059669;}.kpi-value.red{color:#dc2626;}.kpi-value.gold{color:#d97706;}
+table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px;}
+thead th{background:#111827;color:#fff;padding:10px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;}
+tbody tr:nth-child(even){background:#f9fafb;}
+.summary-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:13px;}
+.summary-total{display:flex;justify-content:space-between;padding:12px 0;font-size:16px;font-weight:700;border-top:2px solid #111827;margin-top:8px;}
+.note{background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:12px 16px;font-size:12px;color:#854d0e;margin-top:16px;}
+.page-break{page-break-after:always;}
+@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact;}}
+</style></head><body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-logo">◆</div>
+  <div class="cover-title">${gname}</div>
+  <div class="cover-sub">Financial Report</div>
+  <div class="cover-date">Generated: ${dt}</div>
+</div>
+
+<!-- EXECUTIVE SUMMARY -->
+<div class="section page-break">
+  <div class="section-title">Executive Summary</div>
+  <div class="section-sub">Overall group financial position</div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Total Capital Pool</div><div class="kpi-value">${fmtF(cap)}</div></div>
+    <div class="kpi green"><div class="kpi-label">Cash Reserve</div><div class="kpi-value green">${fmtF(res)}</div></div>
+    <div class="kpi blue"><div class="kpi-label">Deployed Capital</div><div class="kpi-value">${fmtF(inv)}</div></div>
+    <div class="kpi gold"><div class="kpi-label">Loans Outstanding</div><div class="kpi-value gold">${fmtF(lo)}</div></div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi green"><div class="kpi-label">Investment Profit</div><div class="kpi-value green">${fmtF(totalInvProfit)}</div></div>
+    <div class="kpi gold"><div class="kpi-label">Interest Earned</div><div class="kpi-value gold">${fmtF(int)}</div></div>
+    <div class="kpi"><div class="kpi-label">Mgmt Bonus (2%)</div><div class="kpi-value">${fmtF(bonusPool)}</div></div>
+    <div class="kpi ${roi>=0?'green':'red'}"><div class="kpi-label">Group ROI</div><div class="kpi-value ${roi>=0?'green':'red'}">${roi.toFixed(2)}%</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:#111827">Income Statement</div>
+      <div class="summary-row"><span style="color:#6b7280">Investment Profit (daily weighted)</span><span style="color:${totalInvProfit>=0?'#059669':'#dc2626'};font-weight:600">${totalInvProfit>=0?'+':''}${fmtF(totalInvProfit)}</span></div>
+      <div class="summary-row"><span style="color:#6b7280">Loan Interest Earned</span><span style="color:#059669;font-weight:600">+${fmtF(int)}</span></div>
+      <div class="summary-row"><span style="color:#6b7280">★ Management Bonus Pool (2%)</span><span style="color:#d97706;font-weight:600">−${fmtF(bonusPool)}</span></div>
+      <div class="summary-total"><span>Net Income</span><span style="color:${netIncome>=0?'#059669':'#dc2626'}">${netIncome>=0?'+':''}${fmtF(netIncome)}</span></div>
+    </div>
+    <div>
+      <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:#111827">Balance Sheet</div>
+      <div class="summary-row"><span style="color:#6b7280">Cash Reserve</span><span>${fmtF(res)}</span></div>
+      <div class="summary-row"><span style="color:#6b7280">Deployed Capital</span><span>${fmtF(inv)}</span></div>
+      <div class="summary-row"><span style="color:#6b7280">Loans Receivable</span><span>${fmtF(lo)}</span></div>
+      <div class="summary-total"><span>Total Assets</span><span>${fmtF(res+inv+lo)}</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBERS -->
+<div class="section page-break">
+  <div class="section-title">Member Summary</div>
+  <div class="section-sub">Individual member positions including daily-weighted investment profits and management bonus</div>
+  <div class="note">★ Management Bonus: 2% of total income (${fmtF(bonusPool)}) is split equally among Admin/Treasurer roles. Net equity is calculated after withdrawals.</div>
+  <br>
+  <table>
+    <thead><tr><th>Member</th><th>Role</th><th>Contributed</th><th>Withdrawn</th><th>Net Capital</th><th>Equity%</th><th>Inv. Profit</th><th>Mgmt Bonus</th><th>Total Profit</th><th>ROI%</th></tr></thead>
+    <tbody>${memberRows}</tbody>
+  </table>
+</div>
+
+<!-- INVESTMENTS -->
+<div class="section page-break">
+  <div class="section-title">Investment Portfolio</div>
+  <div class="section-sub">Daily-weighted profit distribution per investment. Each member's profit is calculated from their join date.</div>
+  <table>
+    <thead><tr><th>Investment</th><th>Type</th><th>Deployed</th><th>Start Date</th><th>Days Active</th><th>Total Gain</th></tr></thead>
+    <tbody>${invRows||'<tr><td colspan="6" style="text-align:center;padding:20px;color:#6b7280">No investments recorded</td></tr>'}</tbody>
+  </table>
+</div>
+
+<!-- LOANS -->
+<div class="section page-break">
+  <div class="section-title">Loan Book</div>
+  <div class="section-sub">All loans issued including interest and repayment status</div>
+  <table>
+    <thead><tr><th>Borrower</th><th>Principal</th><th>Rate%</th><th>Interest</th><th>Total Owed</th><th>Repaid</th><th>Balance</th><th>Status</th><th>Due Date</th></tr></thead>
+    <tbody>${loanRows||'<tr><td colspan="9" style="text-align:center;padding:20px;color:#6b7280">No loans recorded</td></tr>'}</tbody>
+  </table>
+</div>
+
+<div style="padding:20px 40px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center;">
+  ${gname} · Generated ${dt} · InvestGroup Private Capital Manager · Confidential
+</div>
+
+<script>window.onload=function(){window.print();}<\/script>
+</body></html>`;
+
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=gname.replace(/\s+/g,'-')+'-Report-'+today()+'.html';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+}
+
+// ════════════════════════════════════════
+// DATA UTILS
+// ════════════════════════════════════════
+function exportData(){
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='InvestGroup-'+today()+'.json';a.click();
+}
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!safeConfirm('Replace all current data with this backup?'))return;DB=d;save();alert('✓ Imported!');}catch{alert('Invalid file.');}};r.readAsText(file);
+}
+// ════════════════════════════════════════
+// FIREBASE
+// ════════════════════════════════════════
+function setSyncStatus(msg,color){
+  const el=document.getElementById('sync-status');if(el){el.textContent=msg;el.style.color=color;}
+  const dot=document.getElementById('sync-dot');if(dot){dot.textContent=msg.charAt(0);dot.style.color=color;dot.title=msg;}
+}
+
+function loadFirebaseScript(){
+  const scripts=['https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js','https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'];
+  let loaded=0;
+  scripts.forEach(src=>{
+    const s=document.createElement('script');s.src=src;
+    s.onload=()=>{if(++loaded===scripts.length)initFirebase();};
+    s.onerror=()=>setSyncStatus('✗ Firebase unavailable','var(--muted)');
+    document.head.appendChild(s);
+  });
+}
+
+function initFirebase(){
+  try{
+    if(!fbApp)fbApp=firebase.initializeApp(FB_CONFIG);
+    fbDB=firebase.database(fbApp);
+    firebase.auth(fbApp).signInAnonymously().then(()=>{
+      setSyncStatus('✓ Ready','var(--green)');
+      const t=localStorage.getItem('ig_last_sync');
+      if(t)document.getElementById('sync-last').textContent='Last synced: '+t;
+      const isEmpty=!DB.members.length&&!DB.transactions.length&&!DB.investments.length;
+      if(isEmpty)loadFromFirebase();
+    }).catch(e=>setSyncStatus('✗ Auth: '+e.message,'var(--red)'));
+  }catch(e){console.warn(e);}
+}
+
+function syncToFirebase(){
+  if(!fbDB){alert('Not connected to Firebase. Check your internet connection.');return;}
+  setSyncStatus('⟳ Syncing…','var(--gold)');
+  const payload={
+    settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate},
+    members:DB.members.map(m=>({id:m.id,name:m.name,role:m.role,email:m.email||'',phone:m.phone||''})),
+    investments:DB.investments,loans:DB.loans,transactions:DB.transactions,
+    memberPins:DB.memberPins||{},lastUpdated:new Date().toISOString()
+  };
+  fbDB.ref('investgroup').update(payload).then(()=>{
+    const t=new Date().toLocaleTimeString();
+    setSyncStatus('✓ Synced','var(--green)');
+    document.getElementById('sync-last').textContent='Last synced: '+t;
+    localStorage.setItem('ig_last_sync',t);
+    alert('✓ Data synced to Firebase!');
+  }).catch(e=>{setSyncStatus('✗ Failed: '+e.message,'var(--red)');alert('Sync failed: '+e.message);});
+}
+
+function loadFromFirebase(){
+  if(!fbDB){alert('Firebase not connected. Make sure you have internet and wait a few seconds, then try again.');return;}
+  setSyncStatus('⟳ Loading…','var(--gold)');
+  fbDB.ref('investgroup').once('value').then(snap=>{
+    const data=snap.val();
+    if(!data){alert('No data found on Firebase. Make sure the primary admin has synced first.');setSyncStatus('✗ No data','var(--red)');return;}
+    if(data.settings)DB.settings={...DB.settings,...data.settings};
+    if(data.members)DB.members=data.members;
+    if(data.investments)DB.investments=data.investments;
+    if(data.loans)DB.loans=data.loans;
+    if(data.transactions)DB.transactions=data.transactions;
+    if(data.memberPins)DB.memberPins=data.memberPins;
+    // Migrate investments
+    DB.investments=DB.investments.map(i=>{if(!i.contributions)i.contributions=[];if(!i.valueHistory)i.valueHistory=[];if(!i.status)i.status='open';if(!i.startDate)i.startDate=i.date||today();return i;});
+    saveDB();renderAll();
+    const t=new Date().toLocaleTimeString();
+    setSyncStatus('✓ Loaded','var(--green)');
+    document.getElementById('sync-last').textContent='Last loaded: '+t;
+    alert('✓ Data loaded from Firebase!');
+  }).catch(e=>{alert('Load failed: '+e.message+'\n\nCheck internet and Firebase rules.');setSyncStatus('✗ Failed','var(--red)');});
+}
+
+// ════════════════════════════════════════
+// MODALS
+// ════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function openMainModal(){document.getElementById('tx-date').value=today();document.getElementById('smart-hint').classList.remove('show');openModal('modal-tx');}
+document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+document.getElementById('lk-in').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock();});
+
+// ════════════════════════════════════════
+// PWA
+// ════════════════════════════════════════
+(function(){
+  const m={name:'InvestGroup',short_name:'InvestGroup',display:'standalone',background_color:'#0b0c0e',theme_color:'#0b0c0e',start_url:'.',orientation:'portrait',icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='42' fill='%230b0c0e'/><text y='.85em' font-size='140' x='22' fill='%23c8f04a'>◆</text></svg>",sizes:'192x192',type:'image/svg+xml'}]};
+  const blob=new Blob([JSON.stringify(m)],{type:'application/json'});
+  const link=document.createElement('link');link.rel='manifest';link.href=URL.createObjectURL(blob);document.head.appendChild(link);
+})();
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{loadDB();renderAll();loadFirebaseScript();});
+</script>
+</body>
+</html>
