@@ -390,6 +390,7 @@ let GD=null, ME=null, MY_ID=null;
 let fbApp=null, fbDB=null;
 let pageHistory=[], currentPage='dashboard';
 let msgListener=null, annListener=null;
+let lastMemberThreadHtml='';
 
 const ADMIN_BONUS_PCT=2;
 const IN_T=['contribution','return','loan_repayment'];
@@ -815,30 +816,43 @@ function loadMessages(){
 
   // LIVE private thread listener
   if(msgListener){fbDB.ref(`investgroup/messages/${MY_ID}`).off('value',msgListener);msgListener=null;}
+  lastMemberThreadHtml='';
   msgListener=fbDB.ref(`investgroup/messages/${MY_ID}`).orderByChild('timestamp').on('value',snap=>{
     const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
     const el=document.getElementById('thread-messages');
     if(!el)return;
-    if(!msgs.length){el.innerHTML='<div class="empty" style="padding:12px"><div>No messages yet. Send a message to your treasurer!</div></div>';return;}
-    el.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
+    if(!msgs.length){
+      el.innerHTML='<div class="empty" style="padding:12px"><div>No messages yet. Send a message to your treasurer!</div></div>';
+      lastMemberThreadHtml='';return;
+    }
+    const newHtml='<div class="msg-wrap">'+msgs.map(msg=>{
       const isOut=msg.sender==='member';
       return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
         <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
         <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Treasurer'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
       </div>`;
     }).join('')+'</div>';
-    el.scrollTop=el.scrollHeight;
-    // Check for new unread from treasurer and update badge
+    // Only update DOM if content changed — preserves input focus on Android
+    if(newHtml!==lastMemberThreadHtml){
+      lastMemberThreadHtml=newHtml;
+      const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;
+      el.innerHTML=newHtml;
+      if(wasAtBottom)el.scrollTop=el.scrollHeight;
+    }
     checkMsgBadge();
   });
 }
 
 function sendMessage(){
   const input=document.getElementById('thread-input');
+  if(!input)return;
   const text=input.value.trim();
   if(!text||!fbDB||!MY_ID)return;
-  fbDB.ref(`investgroup/messages/${MY_ID}`).push({sender:'member',text,timestamp:Date.now(),read:false})
-    .then(()=>{input.value='';});
+  input.value='';
+  input.focus();
+  fbDB.ref(`investgroup/messages/${MY_ID}`).push({
+    sender:'member',text,timestamp:Date.now(),read:false
+  });
 }
 
 function markMessagesRead(){

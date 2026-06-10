@@ -1397,34 +1397,47 @@ function openThread(memberId){
 }
 
 let threadListener=null;
+let lastThreadHtml='';
 function loadThreadMessages(memberId){
   const el=document.getElementById('thread-messages');
   if(!fbDB){el.innerHTML='<div class="empty"><div>No connection</div></div>';return;}
-  // Remove previous listener
   if(threadListener&&activeMsgMemberId){
     fbDB.ref(`investgroup/messages/${activeMsgMemberId}`).off('value',threadListener);
   }
+  lastThreadHtml='';
   threadListener=fbDB.ref(`investgroup/messages/${memberId}`).orderByChild('timestamp').on('value',snap=>{
     const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
-    if(!msgs.length){el.innerHTML='<div class="empty"><div>No messages yet. Send the first one!</div></div>';return;}
-    el.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
+    if(!msgs.length){
+      el.innerHTML='<div class="empty"><div>No messages yet. Send the first one!</div></div>';
+      return;
+    }
+    const newHtml='<div class="msg-wrap">'+msgs.map(msg=>{
       const isOut=msg.sender==='treasurer';
       return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
         <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
         <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Member'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
       </div>`;
     }).join('')+'</div>';
-    el.scrollTop=el.scrollHeight;
+    // Only update DOM if content changed — prevents input losing focus
+    if(newHtml!==lastThreadHtml){
+      lastThreadHtml=newHtml;
+      const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;
+      el.innerHTML=newHtml;
+      if(wasAtBottom)el.scrollTop=el.scrollHeight;
+    }
   });
 }
 
 function sendThreadMessage(){
   const input=document.getElementById('thread-input');
+  if(!input)return;
   const text=input.value.trim();
   if(!text||!activeMsgMemberId||!fbDB)return;
+  input.value='';
+  input.focus();
   fbDB.ref(`investgroup/messages/${activeMsgMemberId}`).push({
     sender:'treasurer',text,timestamp:Date.now(),read:false
-  }).then(()=>{input.value='';loadThreadMessages(activeMsgMemberId);});
+  });
 }
 
 function postAnnouncement(){
