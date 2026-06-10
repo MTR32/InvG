@@ -13,11 +13,12 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text y='.9em' font-size='70' x='12' fill='%23c8f04a'>◆</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0c0e;--surface:#111318;--surface2:#181b22;--border:#232630;--accent:#c8f04a;--green:#4af0b8;--red:#f04a6a;--gold:#f0c14a;--blue:#4af0b8;--text:#e8eaf0;--muted:#6b7280;--muted2:#9ca3af;--nav-h:60px;}
+:root{--bg:#0b0c0e;--surface:#111318;--surface2:#181b22;--border:#232630;--accent:#c8f04a;--green:#4af0b8;--red:#f04a6a;--gold:#f0c14a;--blue:#4af0b8;--text:#e8eaf0;--muted:#6b7280;--muted2:#9ca3af;--nav-h:62px;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{height:100%;height:-webkit-fill-available;}
-body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:13px;line-height:1.5;min-height:100vh;min-height:100dvh;overflow:hidden;position:fixed;width:100%;top:0;left:0;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:13px;line-height:1.5;-webkit-text-size-adjust:100%;text-size-adjust:100%;min-height:100dvh;overflow:hidden;position:fixed;width:100%;top:0;left:0;}
 
+/* OFFLINE BANNER */
 #offline-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:9000;background:rgba(240,74,106,.15);border-bottom:1px solid rgba(240,74,106,.3);padding:8px 16px;font-size:11px;color:var(--red);text-align:center;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
 #offline-banner.show{display:block;}
 
@@ -34,6 +35,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 .lk-btn{width:100%;background:var(--accent);color:#0b0c0e;border:none;border-radius:8px;padding:12px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:13px;cursor:pointer;margin-top:4px;}
 .lk-err{color:var(--red);font-size:11px;text-align:center;margin-top:8px;min-height:16px;}
 .lk-info{color:var(--muted);font-size:11px;text-align:center;margin-top:6px;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
 /* APP */
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}
@@ -43,10 +46,10 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;padding-top:calc(11px + env(safe-area-inset-top));background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
 .tb-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 .tb-title{font-family:'DM Serif Display',Georgia,serif;font-size:17px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.tb-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.tb-ghost{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:6px 9px;font-size:14px;cursor:pointer;line-height:1;}
 .back-btn{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:5px 9px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
 .back-btn.hidden{display:none;}
+.tb-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.tb-ghost{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:6px 9px;font-size:14px;cursor:pointer;line-height:1;}
 
 /* SCROLL */
 .scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
@@ -55,9 +58,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 
 /* BOTTOM NAV */
 .bottom-nav{display:flex;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--nav-h) + env(safe-area-inset-bottom));}
-.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px;cursor:pointer;color:var(--muted);font-size:8px;letter-spacing:.2px;text-transform:uppercase;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;gap:2px;border:none;background:none;overflow:hidden;}
-.nav-tab .ni{font-size:20px;line-height:1;}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 2px;cursor:pointer;color:var(--muted);font-size:7px;letter-spacing:.2px;text-transform:uppercase;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;gap:2px;border:none;background:none;overflow:hidden;position:relative;}
+.nav-tab .ni{font-size:18px;line-height:1;}
 .nav-tab.active{color:var(--accent);}
+.nav-badge{position:absolute;top:4px;right:calc(50% - 16px);background:var(--red);color:#fff;font-size:8px;font-weight:700;border-radius:10px;padding:1px 4px;min-width:14px;text-align:center;display:none;}
+.nav-badge.show{display:block;}
 
 /* KPI */
 .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
@@ -88,6 +93,7 @@ tbody td{padding:9px 10px;color:var(--text);vertical-align:middle;}
 .bg{background:rgba(74,240,184,.12);color:var(--green);}.br{background:rgba(240,74,106,.12);color:var(--red);}
 .by{background:rgba(200,240,74,.12);color:var(--accent);}.bgold{background:rgba(240,193,74,.12);color:var(--gold);}
 .bb{background:rgba(74,240,184,.1);color:var(--blue);}.bm{background:rgba(107,114,128,.2);color:var(--muted2);}
+.bp{background:rgba(160,100,240,.12);color:#a064f0;}
 
 /* FORMS */
 .fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
@@ -132,8 +138,22 @@ input:focus{border-color:var(--accent);}
 .deposit-row:last-child{border-bottom:none;}
 .deposit-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
 .deposit-value{font-size:13px;font-weight:700;color:var(--text);text-align:right;word-break:break-all;max-width:62%;}
-.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;}
-@keyframes spin{to{transform:rotate(360deg);}}
+
+/* MESSAGING */
+.msg-bubble{max-width:80%;padding:9px 12px;border-radius:12px;margin-bottom:6px;font-size:12px;line-height:1.5;word-break:break-word;}
+.msg-out{background:var(--accent);color:#0b0c0e;margin-left:auto;border-bottom-right-radius:3px;}
+.msg-in{background:var(--surface2);color:var(--text);margin-right:auto;border-bottom-left-radius:3px;}
+.msg-time{font-size:9px;color:var(--muted);margin-top:2px;}
+.msg-wrap{display:flex;flex-direction:column;padding:10px;}
+.msg-input-bar{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surface);}
+.msg-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:20px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;}
+.msg-input:focus{border-color:var(--accent);}
+.msg-send{background:var(--accent);color:#0b0c0e;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.announce-card{background:rgba(200,240,74,.06);border:1px solid rgba(200,240,74,.2);border-radius:10px;padding:12px;margin-bottom:8px;}
+.announce-title{font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px;color:var(--accent);margin-bottom:4px;}
+.announce-text{font-size:12px;color:var(--text);line-height:1.6;}
+.announce-time{font-size:9px;color:var(--muted);margin-top:4px;}
+
 ::-webkit-scrollbar{width:3px;height:3px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
@@ -143,7 +163,7 @@ input:focus{border-color:var(--accent);}
 
 <div id="offline-banner">⚡ No internet — showing last cached data</div>
 
-<!-- ══ LOGIN ══ -->
+<!-- LOGIN -->
 <div id="login">
   <div class="lk-logo">◆</div>
   <div class="lk-title">My Portfolio</div>
@@ -151,7 +171,7 @@ input:focus{border-color:var(--accent);}
   <div class="lk-card">
     <span class="fl">Select Your Name</span>
     <select class="lk-select" id="login-name">
-      <option value="">— Loading… —</option>
+      <option value="">— Loading members… —</option>
     </select>
     <span class="fl">Enter Your PIN</span>
     <input class="lk-input" type="password" id="login-pin" placeholder="••••" maxlength="10" inputmode="numeric">
@@ -161,7 +181,7 @@ input:focus{border-color:var(--accent);}
   </div>
 </div>
 
-<!-- ══ APP ══ -->
+<!-- APP -->
 <div id="app" class="off">
 
   <div class="topbar">
@@ -170,7 +190,7 @@ input:focus{border-color:var(--accent);}
       <div class="tb-title" id="tb-title">My Portfolio</div>
     </div>
     <div class="tb-right">
-      <span id="sync-dot" title="Sync status" style="font-size:12px;color:var(--muted)">●</span>
+      <span id="sync-dot" style="font-size:12px;color:var(--muted);cursor:help;" title="Connection status">●</span>
       <button class="tb-ghost" onclick="showPage('settings-pg')" title="Settings">⊙</button>
       <button class="tb-ghost" onclick="logout()" title="Logout" style="color:var(--red);border-color:rgba(240,74,106,.3);">⏻</button>
     </div>
@@ -180,16 +200,16 @@ input:focus{border-color:var(--accent);}
 
     <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
-      <!-- Member card -->
+      <!-- Member header card -->
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;">
-        <div id="m-av" style="width:44px;height:44px;border-radius:50%;background:var(--surface2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:15px;color:var(--accent);flex-shrink:0">--</div>
+        <div id="m-av" style="width:44px;height:44px;border-radius:50%;background:var(--surface2);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:15px;color:var(--accent);flex-shrink:0;">--</div>
         <div style="flex:1;min-width:0;">
-          <div id="m-name-d" style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">--</div>
-          <div id="m-role-d" style="font-size:10px;color:var(--muted)">--</div>
+          <div id="m-name-d" style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:var(--text);">--</div>
+          <div id="m-role-d" style="font-size:10px;color:var(--muted);">--</div>
         </div>
         <div style="text-align:right;flex-shrink:0;">
-          <div id="m-eq-pct" style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--accent)">0%</div>
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Equity</div>
+          <div id="m-eq-pct" style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--accent);">0%</div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Net Equity</div>
         </div>
       </div>
 
@@ -197,7 +217,7 @@ input:focus{border-color:var(--accent);}
         <div class="kpi-card yellow"><div class="kl">Contributed</div><div class="kv" id="m-in">--</div><div class="ks">Total paid in</div></div>
         <div class="kpi-card red"><div class="kl">Withdrawn</div><div class="kv red" id="m-out">--</div><div class="ks">Total taken out</div></div>
         <div class="kpi-card green"><div class="kl">Net Capital</div><div class="kv green" id="m-net">--</div><div class="ks">In the pool</div></div>
-        <div class="kpi-card blue"><div class="kl">Inv. Profit</div><div class="kv" id="m-iprofit">--</div><div class="ks" id="m-iret">0% return</div></div>
+        <div class="kpi-card blue"><div class="kl">Inv. Profit</div><div class="kv" id="m-iprofit">--</div><div class="ks" id="m-iret">daily weighted</div></div>
       </div>
 
       <div class="card">
@@ -205,8 +225,9 @@ input:focus{border-color:var(--accent);}
         <div class="card-body">
           <div style="display:flex;flex-direction:column;gap:8px;">
             <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Net Capital in Pool</span><span id="sw-net" style="font-weight:700">--</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Investment Gain Share</span><span id="sw-igain" style="font-weight:700">--</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Investment Profit (daily)</span><span id="sw-igain" style="font-weight:700">--</span></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Loan Interest Share</span><span id="sw-linc" style="color:var(--gold);font-weight:700">--</span></div>
+            <div id="sw-bonus-row" style="display:none;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">★ Management Bonus (2%)</span><span id="sw-bonus" style="color:var(--gold);font-weight:700">--</span></div>
             <div class="divider"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px;">Final Net Worth</span>
@@ -236,7 +257,7 @@ input:focus{border-color:var(--accent);}
       <div class="kpi-grid">
         <div class="kpi-card blue"><div class="kl">My Input</div><div class="kv" id="i-in">--</div></div>
         <div class="kpi-card green"><div class="kl">My Value Now</div><div class="kv green" id="i-val">--</div></div>
-        <div class="kpi-card yellow"><div class="kl">My Gain</div><div class="kv" id="i-gain">--</div></div>
+        <div class="kpi-card yellow"><div class="kl">My Profit</div><div class="kv" id="i-gain">--</div></div>
         <div class="kpi-card gold"><div class="kl">My Equity</div><div class="kv gold" id="i-eq">--</div></div>
       </div>
       <div id="inv-cards"></div>
@@ -261,7 +282,7 @@ input:focus{border-color:var(--accent);}
     <div class="page" id="page-deposit">
       <div class="section-title">Make a Deposit</div>
       <div style="background:rgba(200,240,74,.06);border:1px solid rgba(200,240,74,.2);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--muted2);line-height:1.8;">
-        Transfer to the group account below. Use the reference format shown so your payment is identified correctly.
+        Transfer to the group account below. Use the reference shown so your payment is correctly identified.
       </div>
       <div class="card">
         <div class="card-hd"><div class="card-title">🏦 Group Bank Account</div></div>
@@ -270,6 +291,30 @@ input:focus{border-color:var(--accent);}
         </div>
       </div>
       <div id="deposit-note-card" style="display:none;background:rgba(240,193,74,.07);border:1px solid rgba(240,193,74,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--gold);line-height:1.8;"></div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="page" id="page-messages">
+      <!-- Announcements -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-hd"><div class="card-title">📢 Announcements</div></div>
+        <div style="font-size:11px;color:var(--muted);padding:6px 14px;border-bottom:1px solid var(--border);">From your treasurer — read only</div>
+        <div id="ann-list" style="max-height:200px;overflow-y:auto;padding:10px 14px;">
+          <div class="empty" style="padding:12px"><span class="spinner"></span></div>
+        </div>
+      </div>
+      <!-- Private thread with treasurer -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">💬 Message Treasurer</div></div>
+        <div style="font-size:11px;color:var(--muted);padding:6px 14px;border-bottom:1px solid var(--border);">Private — only you and the treasurer can see this</div>
+        <div id="thread-messages" style="min-height:120px;max-height:260px;overflow-y:auto;padding:10px 14px;"></div>
+        <div style="display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surface2);">
+          <input type="text" id="thread-input" placeholder="Type your message here…"
+            style="flex:1;padding:9px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;"
+            onkeydown="if(event.key==='Enter')sendMessage()">
+          <button onclick="sendMessage()" style="background:var(--accent);color:#0b0c0e;border:none;border-radius:50%;width:38px;height:38px;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">➤</button>
+        </div>
+      </div>
     </div>
 
     <!-- SETTINGS -->
@@ -302,6 +347,7 @@ input:focus{border-color:var(--accent);}
     <button class="nav-tab" id="tab-tx-pg" onclick="showPage('tx-pg')"><span class="ni">≡</span>History</button>
     <button class="nav-tab" id="tab-loans-pg" onclick="showPage('loans-pg')"><span class="ni">⬕</span>Loans</button>
     <button class="nav-tab" id="tab-deposit-pg" onclick="showPage('deposit-pg')"><span class="ni">💰</span>Deposit</button>
+    <button class="nav-tab" id="tab-messages" onclick="showPage('messages')"><span class="ni">💬</span>Messages<span class="nav-badge" id="msg-badge">0</span></button>
   </nav>
 </div>
 
@@ -324,10 +370,10 @@ input:focus{border-color:var(--accent);}
 </div>
 
 <script>
-// ─────────────────────────────────────
+// ════════════════════════════════
 // FIREBASE CONFIG
-// ─────────────────────────────────────
-const FB_CFG = {
+// ════════════════════════════════
+const FB_CFG={
   apiKey:"AIzaSyAmWOFu5I7yyMy7clIM-LHt9cxa8RfDBt4",
   authDomain:"investgroup-5f2f9.firebaseapp.com",
   databaseURL:"https://investgroup-5f2f9-default-rtdb.firebaseio.com",
@@ -337,167 +383,150 @@ const FB_CFG = {
   appId:"1:422666447690:web:d800f06e8a8b9fe0d32fb3"
 };
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // STATE
-// ─────────────────────────────────────
+// ════════════════════════════════
 let GD=null, ME=null, MY_ID=null;
 let fbApp=null, fbDB=null;
 let pageHistory=[], currentPage='dashboard';
+let msgListener=null, annListener=null;
+
+const ADMIN_BONUS_PCT=2;
 const IN_T=['contribution','return','loan_repayment'];
 const TB={contribution:'bg',withdrawal:'br',investment:'bb',return:'bg',loan_out:'bgold',loan_repayment:'bb',expense:'br',profit:'by'};
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // UTILS
-// ─────────────────────────────────────
-function C(){ return (GD&&GD.settings&&GD.settings.currency)||'$'; }
-function fmt(n){ const c=C(),a=Math.abs(n); let s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(1)+'k':a.toFixed(2); return (n<0?'-':'')+c+s; }
-function fmtF(n){ return (n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function today(){ return new Date().toISOString().split('T')[0]; }
-function setSyncDot(s,c){ const e=document.getElementById('sync-dot');if(e){e.textContent=s;e.style.color=c;} }
+// ════════════════════════════════
+function C(){return(GD&&GD.settings&&GD.settings.currency)||'$';}
+function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(1)+'k':a.toFixed(2);return(n<0?'-':'')+c+s;}
+function fmtF(n){return(n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function today(){return new Date().toISOString().split('T')[0];}
+function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(d1))/(1000*60*60*24)));}
+function setSyncDot(s,c){const e=document.getElementById('sync-dot');if(e){e.textContent=s;e.style.color=c;e.title=s;}}
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // CACHE
-// ─────────────────────────────────────
-function saveCache(d){ try{localStorage.setItem('igm_cache',JSON.stringify(d));}catch(e){} }
-function loadCache(){ try{const r=localStorage.getItem('igm_cache');return r?JSON.parse(r):null;}catch(e){return null;} }
-function saveSession(id){ localStorage.setItem('igm_session',id); }
-function getSession(){ return localStorage.getItem('igm_session'); }
-function clearSession(){ localStorage.removeItem('igm_session'); }
+// ════════════════════════════════
+function saveCache(d){try{localStorage.setItem('igm_cache',JSON.stringify(d));}catch(e){}}
+function loadCache(){try{const r=localStorage.getItem('igm_cache');return r?JSON.parse(r):null;}catch(e){return null;}}
+function saveSession(id){localStorage.setItem('igm_session',id);}
+function getSession(){return localStorage.getItem('igm_session');}
+function clearSession(){localStorage.removeItem('igm_session');}
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // ONLINE / OFFLINE
-// ─────────────────────────────────────
+// ════════════════════════════════
 function checkOnline(){
   const offline=!navigator.onLine;
   document.getElementById('offline-banner').style.display=offline?'block':'none';
-  setSyncDot(offline?'✗':'●', offline?'var(--red)':'var(--green)');
+  if(!offline) setSyncDot('●','var(--green)');
+  else setSyncDot('✗','var(--red)');
 }
-window.addEventListener('online', ()=>{ checkOnline(); if(MY_ID&&fbDB) startLiveSync(); });
-window.addEventListener('offline', checkOnline);
+window.addEventListener('online',()=>{checkOnline();if(MY_ID&&fbDB)startLiveSync();});
+window.addEventListener('offline',checkOnline);
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // FIREBASE
-// ─────────────────────────────────────
+// ════════════════════════════════
 function loadFirebase(){
   let loaded=0;
-  const srcs=[
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'
-  ];
+  const srcs=['https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js','https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'];
   srcs.forEach(src=>{
-    const s=document.createElement('script'); s.src=src;
-    s.onload=()=>{ if(++loaded===srcs.length) onFirebaseReady(); };
-    s.onerror=()=>{ setSyncDot('✗','var(--red)'); useCache(); };
+    const s=document.createElement('script');s.src=src;
+    s.onload=()=>{if(++loaded===srcs.length)onFirebaseReady();};
+    s.onerror=()=>{setSyncDot('✗','var(--red)');useCache();};
     document.head.appendChild(s);
   });
 }
 
 function onFirebaseReady(){
   try{
-    if(!fbApp) fbApp=firebase.initializeApp(FB_CFG);
+    if(!fbApp)fbApp=firebase.initializeApp(FB_CFG);
     fbDB=firebase.database(fbApp);
-    // Silent anonymous auth — required for locked database rules
-    firebase.auth(fbApp).signInAnonymously()
-      .then(()=>{
-        setSyncDot('●','var(--green)');
-        populateLoginList();
-        const sid=getSession();
-        if(sid) tryAutoLogin(sid);
-      })
-      .catch(e=>{ console.warn('Auth failed:',e); setSyncDot('✗','var(--red)'); useCache(); });
-  }catch(e){ console.warn(e); useCache(); }
+    firebase.auth(fbApp).signInAnonymously().then(()=>{
+      setSyncDot('●','var(--green)');
+      populateLoginList();
+      const sid=getSession();
+      if(sid)tryAutoLogin(sid);
+    }).catch(e=>{console.warn('Auth:',e);setSyncDot('✗','var(--red)');useCache();});
+  }catch(e){console.warn(e);useCache();}
 }
 
 function populateLoginList(){
-  if(!fbDB) return;
-  setSyncDot('⟳','var(--gold)');
+  if(!fbDB)return;
   fbDB.ref('investgroup/members').once('value').then(snap=>{
     const members=snap.val()||[];
     const sel=document.getElementById('login-name');
     if(!Array.isArray(members)||!members.length){
-      sel.innerHTML='<option value="">— No members yet —</option>';
-      document.getElementById('login-info').textContent='Ask your treasurer to set up members first.';
+      sel.innerHTML='<option value="">— No members set up yet —</option>';
+      document.getElementById('login-info').textContent='Ask your treasurer to add members and assign your PIN.';
       return;
     }
     sel.innerHTML='<option value="">— Select your name —</option>'+members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
-    setSyncDot('●','var(--green)');
-  }).catch(()=>{ setSyncDot('✗','var(--red)'); useCache(); });
+  }).catch(()=>{setSyncDot('✗','var(--red)');useCache();});
 }
 
-function fetchAll(callback){
-  if(!fbDB||!navigator.onLine){ useCache(callback); return; }
+function fetchAll(cb){
+  if(!fbDB||!navigator.onLine){useCache(cb);return;}
   setSyncDot('⟳','var(--gold)');
   fbDB.ref('investgroup').once('value').then(snap=>{
     const d=snap.val();
-    if(!d){ document.getElementById('login-err').textContent='No group data found. Ask treasurer to sync.'; return; }
-    saveCache(d); GD=d; setSyncDot('●','var(--green)');
-    if(callback) callback();
-  }).catch(()=>{ setSyncDot('✗','var(--red)'); useCache(callback); });
+    if(!d){document.getElementById('login-err').textContent='No group data found. Ask treasurer to sync.';return;}
+    saveCache(d);GD=d;setSyncDot('●','var(--green)');
+    if(cb)cb();
+  }).catch(()=>{setSyncDot('✗','var(--red)');useCache(cb);});
 }
 
 function startLiveSync(){
-  if(!fbDB||!navigator.onLine) return;
+  if(!fbDB||!navigator.onLine)return;
   fbDB.ref('investgroup').on('value',snap=>{
-    const d=snap.val(); if(!d) return;
-    saveCache(d); GD=d;
-    if(MY_ID) renderAll();
+    const d=snap.val();if(!d)return;
+    saveCache(d);GD=d;
+    if(MY_ID){renderAll();checkMsgBadge();}
     setSyncDot('●','var(--green)');
   });
 }
 
-function useCache(callback){
+function useCache(cb){
   const c=loadCache();
-  if(c){ GD=c; document.getElementById('offline-banner').style.display='block'; if(callback) callback(); }
-  else { document.getElementById('login-info').textContent='No cache available. Please connect to internet first.'; }
+  if(c){GD=c;document.getElementById('offline-banner').style.display='block';if(cb)cb();}
+  else{document.getElementById('login-info').textContent='No cached data. Connect to internet first.';}
 }
 
-// ─────────────────────────────────────
-// LOGIN
-// ─────────────────────────────────────
 function tryAutoLogin(savedId){
   fetchAll(()=>{
-    if(!GD) return;
+    if(!GD)return;
     const member=(GD.members||[]).find(m=>m.id===savedId);
-    if(!member) return;
-    // auto-login with cached/local PIN — don't ask for PIN again
+    if(!member)return;
     const localPin=localStorage.getItem('igm_pin_'+savedId);
     const treasurerPin=(GD.memberPins||{})[savedId];
-    if(localPin||treasurerPin){
-      MY_ID=savedId; ME=member;
-      openApp();
-    }
+    if(localPin||treasurerPin){MY_ID=savedId;ME=member;openApp();}
   });
 }
 
+// ════════════════════════════════
+// LOGIN
+// ════════════════════════════════
 function tryLogin(){
   const id=document.getElementById('login-name').value;
   const pin=document.getElementById('login-pin').value.trim();
   const errEl=document.getElementById('login-err');
   errEl.textContent='';
-
-  if(!id){ errEl.textContent='Please select your name.'; return; }
-  if(!pin){ errEl.textContent='Please enter your PIN.'; return; }
-
-  document.getElementById('login-info').innerHTML='<span class="spinner"></span>';
-
+  if(!id){errEl.textContent='Please select your name.';return;}
+  if(!pin){errEl.textContent='Please enter your PIN.';return;}
+  document.getElementById('login-info').innerHTML='<span class="spinner"></span> Verifying…';
   fetchAll(()=>{
     document.getElementById('login-info').textContent='';
-    if(!GD){ errEl.textContent='Could not load data. Check connection.'; return; }
-
+    if(!GD){errEl.textContent='Could not load data. Check internet.';return;}
     const member=(GD.members||[]).find(m=>m.id===id);
-    if(!member){ errEl.textContent='Member not found. Ask treasurer.'; return; }
-
+    if(!member){errEl.textContent='Member not found. Ask your treasurer.';return;}
     const localPin=localStorage.getItem('igm_pin_'+id);
     const treasurerPin=(GD.memberPins||{})[id];
     const validPin=localPin||treasurerPin;
-
-    if(!validPin){ errEl.textContent='No PIN set for your account. Ask your treasurer.'; return; }
-    if(pin!==validPin){ errEl.textContent='Incorrect PIN. Try again.'; document.getElementById('login-pin').value=''; return; }
-
-    MY_ID=id; ME=member;
-    saveSession(id);
-    openApp();
+    if(!validPin){errEl.textContent='No PIN set for your account. Ask your treasurer.';return;}
+    if(pin!==validPin){errEl.textContent='Incorrect PIN. Try again.';document.getElementById('login-pin').value='';return;}
+    MY_ID=id;ME=member;saveSession(id);openApp();
   });
 }
 
@@ -507,13 +536,13 @@ function openApp(){
   renderAll();
   startLiveSync();
   checkOnline();
+  loadMessages(); // start live listeners immediately for badge + announcements
 }
 
 function logout(){
-  if(!confirm('Log out?')) return;
   clearSession();
-  if(fbDB) fbDB.ref('investgroup').off();
-  MY_ID=null; ME=null;
+  if(fbDB){fbDB.ref('investgroup').off();if(msgListener)fbDB.ref(`investgroup/messages/${MY_ID}`).off();}
+  MY_ID=null;ME=null;GD=null;
   document.getElementById('app').classList.add('off');
   document.getElementById('login').classList.remove('off');
   document.getElementById('login-pin').value='';
@@ -521,69 +550,108 @@ function logout(){
   document.getElementById('login-name').value='';
 }
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // NAVIGATION
-// ─────────────────────────────────────
-const PAGE_TITLES={dashboard:'My Portfolio','invest-pg':'My Investments','tx-pg':'Transactions','loans-pg':'My Loans','deposit-pg':'Deposit','settings-pg':'Settings'};
+// ════════════════════════════════
+const PAGE_TITLES={dashboard:'My Portfolio','invest-pg':'My Investments','tx-pg':'Transactions','loans-pg':'My Loans','deposit-pg':'Deposit','messages':'Messages','settings-pg':'Settings'};
 
-function showPage(pg, addH=true){
-  if(addH && currentPage!==pg) pageHistory.push(currentPage);
+function showPage(pg,addH=true){
+  if(addH&&currentPage!==pg)pageHistory.push(currentPage);
   currentPage=pg;
-  // Map page id: some pages strip -pg suffix
-  const pageEl = document.getElementById('page-'+pg) || document.getElementById('page-'+pg.replace('-pg',''));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  if(pageEl) pageEl.classList.add('active');
+  // map page id
+  const pageId='page-'+pg.replace('-pg','');
+  const el=document.getElementById(pageId)||document.getElementById('page-'+pg);
+  if(el)el.classList.add('active');
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  const tab=document.getElementById('tab-'+pg); if(tab) tab.classList.add('active');
+  const tab=document.getElementById('tab-'+pg);if(tab)tab.classList.add('active');
   document.getElementById('tb-title').textContent=PAGE_TITLES[pg]||pg;
   document.getElementById('back-btn').classList.toggle('hidden',pageHistory.length===0);
   document.querySelector('.scroll-area').scrollTop=0;
-  if(pg==='settings-pg'){ const el=document.getElementById('sett-name'); if(el) el.textContent=ME?.name||'--'; }
+  if(pg==='settings-pg'){const e=document.getElementById('sett-name');if(e)e.textContent=ME?.name||'--';}
+  if(pg==='messages'){loadMessages();markMessagesRead();}
 }
 
 function goBack(){
-  if(!pageHistory.length) return;
+  if(!pageHistory.length)return;
   const prev=pageHistory.pop();
   showPage(prev,false);
 }
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // AGGREGATES
-// ─────────────────────────────────────
-function mCon(id){ return (GD.transactions||[]).filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0); }
-function mWit(id){ return (GD.transactions||[]).filter(t=>(t.type==='withdrawal'||t.type==='profit')&&t.memberId===id).reduce((s,t)=>s+t.amount,0); }
+// ════════════════════════════════
+function mCon(id){return(GD.transactions||[]).filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+function mWit(id){return(GD.transactions||[]).filter(t=>(t.type==='withdrawal'||t.type==='profit')&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+
 function getEq(){
   const nbm=(GD.members||[]).map(x=>({id:x.id,net:Math.max(0,mCon(x.id)-mWit(x.id))}));
   const tnp=nbm.reduce((s,x)=>s+x.net,0)||1;
   const mNet=Math.max(0,mCon(MY_ID)-mWit(MY_ID));
-  return {mNet,eqF:mNet/tnp,eqP:(mNet/tnp*100).toFixed(2)};
+  return{mNet,eqF:mNet/tnp,eqP:(mNet/tnp*100).toFixed(2)};
 }
-function lnOwed(l){ return Math.max(0, l.amount+(l.amount*l.rate/100)-l.repaid); }
-function lnTot(l){ return l.amount+(l.amount*l.rate/100); }
-function intEarned(){ return (GD.loans||[]).reduce((s,l)=>s+Math.min(Math.max(0,l.repaid-l.amount),(l.amount*l.rate)/100),0); }
 
-// ─────────────────────────────────────
+function intEarned(){return(GD.loans||[]).reduce((s,l)=>s+Math.min(Math.max(0,l.repaid-l.amount),(l.amount*l.rate)/100),0);}
+function lnTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
+function lnBalance(l){return Math.max(0,lnTotalOwed(l)-l.repaid);}
+
+// DAILY PROFIT CALC — same formula as treasurer app
+function calcInvProfit(inv){
+  if(!inv.contributions||!inv.contributions.length)return[];
+  const startDate=inv.startDate||inv.date||today();
+  const endDate=inv.closeDate||today();
+  const totalDays=daysBetween(startDate,endDate)||1;
+  const totalGain=inv.currentValue-inv.amount;
+  const dailyGain=totalGain/totalDays;
+  const sorted=[...inv.contributions].sort((a,b)=>a.date.localeCompare(b.date));
+  let runningPool=0;
+  const withPool=sorted.map(c=>{runningPool+=c.amount;return{...c,poolAtDate:runningPool};});
+  return withPool.map(c=>{
+    const shareAtJoin=c.amount/c.poolAtDate;
+    const activeDays=daysBetween(c.date,inv.closeDate||today());
+    const profit=dailyGain*shareAtJoin*activeDays;
+    return{memberId:c.memberId,contribution:c.amount,joinDate:c.date,shareAtJoin,activeDays,profit};
+  });
+}
+
+function myInvProfit(){
+  return(GD.investments||[]).reduce((s,inv)=>{
+    const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);
+    return s+rows.reduce((ss,r)=>ss+r.profit,0);
+  },0);
+}
+
+function myBonus(){
+  const totalInvProfit=(GD.investments||[]).reduce((s,inv)=>{
+    const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+r.profit,0);
+  },0);
+  const totalIncome=totalInvProfit+intEarned();
+  const bonusPool=totalIncome*(ADMIN_BONUS_PCT/100);
+  const admins=(GD.members||[]).filter(m=>m.role==='admin'||m.role==='treasurer');
+  const isAdmin=admins.some(a=>a.id===MY_ID);
+  return isAdmin&&admins.length>0?bonusPool/admins.length:0;
+}
+
+// ════════════════════════════════
 // RENDER
-// ─────────────────────────────────────
+// ════════════════════════════════
 function renderAll(){
-  if(!GD||!MY_ID||!ME) return;
-  renderDash();
-  renderInvestments();
-  renderTransactions();
-  renderLoans();
-  renderDeposit();
+  if(!GD||!MY_ID||!ME)return;
+  renderDash();renderInvestments();renderTransactions();renderLoans();renderDeposit();
 }
 
 function renderDash(){
   const{mNet,eqF,eqP}=getEq();
-  const totalIn=mCon(MY_ID), totalOut=mWit(MY_ID);
-  const invs=GD.investments||[];
-  const invGain=invs.reduce((s,i)=>s+(i.currentValue-i.amount),0)*eqF;
-  const invDep=invs.reduce((s,i)=>s+i.amount,0)*eqF;
+  const totalIn=mCon(MY_ID),totalOut=mWit(MY_ID);
+  const invProfit=myInvProfit();
   const loanInc=intEarned()*eqF;
-  const netWorth=mNet+invGain+loanInc;
+  const bonus=myBonus();
+  const netWorth=mNet+invProfit+loanInc+bonus;
   const roi=totalIn>0?((netWorth-totalIn)/totalIn*100):0;
-  const invRetPct=invDep>0?(invGain/invDep*100):0;
+  const invDep=(GD.investments||[]).reduce((s,i)=>{
+    const rows=calcInvProfit(i).filter(r=>r.memberId===MY_ID);
+    return s+rows.reduce((ss,r)=>ss+r.contribution,0);
+  },0);
 
   // Header
   document.getElementById('m-av').textContent=ME.name.substring(0,2).toUpperCase();
@@ -595,24 +663,27 @@ function renderDash(){
   document.getElementById('m-in').textContent=fmt(totalIn);
   document.getElementById('m-out').textContent=fmt(totalOut);
   document.getElementById('m-net').textContent=fmt(mNet);
-  document.getElementById('m-iprofit').textContent=fmt(invGain);
-  document.getElementById('m-iprofit').className='kv '+(invGain>=0?'green':'red');
-  document.getElementById('m-iret').textContent=invRetPct.toFixed(1)+'% return';
+  document.getElementById('m-iprofit').textContent=fmt(invProfit);
+  document.getElementById('m-iprofit').className='kv '+(invProfit>=0?'green':'red');
 
   // Summary
   document.getElementById('sw-net').textContent=fmtF(mNet);
-  const ig=document.getElementById('sw-igain'); ig.textContent=(invGain>=0?'+':'')+fmtF(invGain); ig.style.color=invGain>=0?'var(--green)':'var(--red)';
+  const ig=document.getElementById('sw-igain');ig.textContent=(invProfit>=0?'+':'')+fmtF(invProfit);ig.style.color=invProfit>=0?'var(--green)':'var(--red)';
   document.getElementById('sw-linc').textContent='+'+fmtF(loanInc);
-  const nw=document.getElementById('sw-nw'); nw.textContent=fmtF(netWorth); nw.style.color=netWorth>=0?'var(--green)':'var(--red)';
-  const r=document.getElementById('sw-roi'); r.textContent=(roi>=0?'+':'')+roi.toFixed(2)+'%'; r.style.color=roi>=0?'var(--green)':'var(--red)';
+  if(bonus>0){
+    document.getElementById('sw-bonus-row').style.display='flex';
+    document.getElementById('sw-bonus').textContent='+'+fmtF(bonus);
+  }
+  const nw=document.getElementById('sw-nw');nw.textContent=fmtF(netWorth);nw.style.color=netWorth>=0?'var(--green)':'var(--red)';
+  const r=document.getElementById('sw-roi');r.textContent=(roi>=0?'+':'')+roi.toFixed(2)+'%';r.style.color=roi>=0?'var(--green)':'var(--red)';
 
   // Recent
   const myTxs=(GD.transactions||[]).filter(t=>t.memberId===MY_ID).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
   const el=document.getElementById('m-recent');
-  if(!myTxs.length){ el.innerHTML='<div class="empty"><div>No transactions yet</div></div>'; return; }
+  if(!myTxs.length){el.innerHTML='<div class="empty"><div>No transactions yet</div></div>';return;}
   el.innerHTML='<div class="tl">'+myTxs.map(t=>{
-    const isIn=IN_T.includes(t.type), cls=isIn?'in':t.type==='loan_out'?'loan':'out';
-    return `<div class="tl-item ${cls}"><div class="tl-date">${t.date}</div>
+    const isIn=IN_T.includes(t.type),cls=isIn?'in':t.type==='loan_out'?'loan':'out';
+    return`<div class="tl-item ${cls}"><div class="tl-date">${t.date}</div>
     <div class="tl-desc">${t.desc}</div>
     <div class="tl-amt" style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'+':'−'}${fmtF(t.amount)}</div></div>`;
   }).join('')+'</div>';
@@ -621,33 +692,49 @@ function renderDash(){
 function renderInvestments(){
   const{eqF,eqP}=getEq();
   const invs=GD.investments||[];
-  const myIn=invs.reduce((s,i)=>s+i.amount,0)*eqF;
-  const myVal=invs.reduce((s,i)=>s+i.currentValue,0)*eqF;
-  const myGain=myVal-myIn;
-  document.getElementById('i-in').textContent=fmt(myIn);
-  document.getElementById('i-val').textContent=fmt(myVal);
-  document.getElementById('i-gain').textContent=fmt(myGain);
-  document.getElementById('i-gain').className='kv '+(myGain>=0?'green':'red');
+  // Only show investments where member has contributions
+  const myInvs=invs.filter(inv=>calcInvProfit(inv).some(r=>r.memberId===MY_ID));
+  const myInput=myInvs.reduce((s,inv)=>{const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);return s+rows.reduce((ss,r)=>ss+r.contribution,0);},0);
+  const myProfit=myInvs.reduce((s,inv)=>{const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
+  const myValue=myInput+myProfit;
+  document.getElementById('i-in').textContent=fmt(myInput);
+  document.getElementById('i-val').textContent=fmt(myValue);
+  document.getElementById('i-gain').textContent=fmt(myProfit);
+  document.getElementById('i-gain').className='kv '+(myProfit>=0?'green':'red');
   document.getElementById('i-eq').textContent=eqP+'%';
 
   const el=document.getElementById('inv-cards');
-  if(!invs.length){ el.innerHTML='<div class="empty"><div class="empty-icon">◈</div><div>No investments recorded yet</div></div>'; return; }
-  const SC={active:'bg',exited:'bm',pending:'by'};
-  el.innerHTML=invs.map(i=>{
-    const gain=i.currentValue-i.amount, ms=i.currentValue*eqF, mg=gain*eqF, mi=i.amount*eqF;
-    const rp=i.amount>0?(gain/i.amount*100):0;
-    return `<div class="card">
+  if(!invs.length){el.innerHTML='<div class="empty"><div class="empty-icon">◈</div><div>No investments recorded yet</div></div>';return;}
+  const SC={open:'bg',closed:'br',funding:'bp'};
+  el.innerHTML=invs.map(inv=>{
+    const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);
+    const myP=rows.reduce((s,r)=>s+r.profit,0);
+    const myI=rows.reduce((s,r)=>s+r.contribution,0);
+    const totalDays=daysBetween(inv.startDate||inv.date||today(),inv.closeDate||today())||1;
+    const gain=inv.currentValue-inv.amount;
+    if(!rows.length){
+      return`<div class="card" style="opacity:.5;">
+        <div class="card-hd">
+          <div><div class="card-title">${inv.name}</div><div style="font-size:9px;color:var(--muted)">${inv.type} · <span class="badge ${SC[inv.status]||'bm'}">${inv.status}</span></div></div>
+        </div>
+        <div class="card-body" style="padding:10px 14px;font-size:11px;color:var(--muted)">You are not a contributor to this investment</div>
+      </div>`;
+    }
+    return`<div class="card">
       <div class="card-hd">
-        <div><div class="card-title">${i.name}</div><div style="font-size:9px;color:var(--muted)">${i.type} · <span class="badge ${SC[i.status]||'bm'}">${i.status}</span></div></div>
-        <div style="text-align:right"><div style="font-family:'DM Serif Display',Georgia,serif;font-size:16px;color:var(--accent)">${fmt(ms)}</div><div style="font-size:9px;color:var(--muted)">my share</div></div>
+        <div><div class="card-title">${inv.name}</div><div style="font-size:9px;color:var(--muted)">${inv.type} · ${totalDays} days · <span class="badge ${SC[inv.status]||'bm'}">${inv.status}</span></div></div>
+        <div style="text-align:right"><div style="font-family:'DM Serif Display',Georgia,serif;font-size:16px;color:${myP>=0?'var(--green)':'var(--red)'}">${myP>=0?'+':''}${fmt(myP)}</div><div style="font-size:9px;color:var(--muted)">my profit</div></div>
       </div>
       <div class="card-body" style="padding:10px 14px;">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center;margin-bottom:8px;">
-          <div><div style="font-size:12px;font-weight:700">${fmt(mi)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">My Input</div></div>
-          <div><div style="font-size:12px;font-weight:700;color:${mg>=0?'var(--green)':'var(--red)'}">${mg>=0?'+':''}${fmt(mg)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">My Gain</div></div>
-          <div><div style="font-size:12px;font-weight:700;color:${rp>=0?'var(--green)':'var(--red)'}">${rp.toFixed(1)}%</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Return</div></div>
+          <div><div style="font-size:12px;font-weight:700">${fmt(myI)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">My Input</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:${myP>=0?'var(--green)':'var(--red)'}">${myP>=0?'+':''}${fmt(myP)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">My Profit</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:${gain>=0?'var(--green)':'var(--red)'}">${gain>=0?'+':''}${fmt(gain)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Group Gain</div></div>
         </div>
-        <div style="font-size:10px;color:var(--muted)">Group total: ${fmtF(i.amount)} → ${fmtF(i.currentValue)} &nbsp;·&nbsp; <span style="color:${gain>=0?'var(--green)':'var(--red)'}">${gain>=0?'+':''}${fmtF(gain)}</span></div>
+        ${rows.map(r=>`<div style="font-size:10px;color:var(--muted2);padding:4px 0;border-top:1px solid var(--border);">
+          Contribution: ${fmtF(r.contribution)} · Joined: ${r.joinDate} · ${r.activeDays} days active · Share at join: ${(r.shareAtJoin*100).toFixed(1)}%
+        </div>`).join('')}
+        <div style="font-size:10px;color:var(--muted);margin-top:6px">Group total: ${fmtF(inv.amount)} → ${fmtF(inv.currentValue)}</div>
       </div>
     </div>`;
   }).join('');
@@ -655,12 +742,12 @@ function renderInvestments(){
 
 function renderTransactions(){
   const myTxs=(GD.transactions||[]).filter(t=>t.memberId===MY_ID).sort((a,b)=>b.date.localeCompare(a.date));
-  const cnt=document.getElementById('tx-cnt'); if(cnt) cnt.textContent=myTxs.length;
+  const cnt=document.getElementById('tx-cnt');if(cnt)cnt.textContent=myTxs.length;
   const tb=document.getElementById('tx-body');
-  if(!myTxs.length){ tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No transactions yet</td></tr>'; return; }
+  if(!myTxs.length){tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No transactions yet</td></tr>';return;}
   tb.innerHTML=myTxs.map(t=>{
     const isIn=IN_T.includes(t.type);
-    return `<tr><td>${t.date}</td><td><span class="badge ${TB[t.type]||'bm'}">${t.type.replace('_',' ')}</span></td>
+    return`<tr><td>${t.date}</td><td><span class="badge ${TB[t.type]||'bm'}">${t.type.replace('_',' ')}</span></td>
     <td>${t.desc}</td><td style="color:${isIn?'var(--green)':'var(--red)'};font-weight:700;white-space:nowrap">${isIn?'+':'−'}${fmtF(t.amount)}</td></tr>`;
   }).join('');
 }
@@ -669,11 +756,11 @@ function renderLoans(){
   const firstName=ME.name.toLowerCase().split(' ')[0];
   const myLoans=(GD.loans||[]).filter(l=>l.borrower&&l.borrower.toLowerCase().includes(firstName));
   const el=document.getElementById('loan-cards');
-  if(!myLoans.length){ el.innerHTML='<div class="empty"><div class="empty-icon">⬕</div><div>No loans recorded for you</div></div>'; return; }
+  if(!myLoans.length){el.innerHTML='<div class="empty"><div class="empty-icon">⬕</div><div>No loans recorded for you</div></div>';return;}
   el.innerHTML=myLoans.map(l=>{
-    const bal=lnOwed(l), tot=lnTot(l), isPaid=bal===0, isOver=!isPaid&&l.dueDate&&l.dueDate<today();
-    const sb=isPaid?'bg':isOver?'br':'by', pct=Math.min(100,(l.repaid/tot)*100);
-    return `<div class="card">
+    const bal=lnBalance(l),tot=lnTotalOwed(l),isPaid=bal===0,isOver=!isPaid&&l.dueDate&&l.dueDate<today();
+    const sb=isPaid?'bg':isOver?'br':'by',pct=Math.min(100,(l.repaid/tot)*100);
+    return`<div class="card">
       <div class="card-hd">
         <div><div class="card-title">Loan — ${fmtF(l.amount)}</div><div style="font-size:9px;color:var(--muted)">Rate: ${l.rate}% · Due: ${l.dueDate||'—'}</div></div>
         <span class="badge ${sb}">${isPaid?'Paid':isOver?'Overdue':'Active'}</span>
@@ -696,68 +783,127 @@ function renderDeposit(){
   const bank=(GD.settings&&GD.settings.bank)||{};
   const el=document.getElementById('bank-card');
   const noteEl=document.getElementById('deposit-note-card');
-
   if(!bank.accountNumber&&!bank.accountName){
     el.innerHTML='<div class="empty"><div class="empty-icon">🏦</div><div>Bank details not set yet.<br>Ask your treasurer to add them.</div></div>';
-    noteEl.style.display='none'; return;
+    noteEl.style.display='none';return;
   }
-
   const ref=bank.reference?bank.reference.replace('Your Name',ME.name):ME.name+' INVEST';
-  const rows=[
-    {l:'Account Name',v:bank.accountName},
-    {l:'Account Number',v:bank.accountNumber},
-    {l:'Bank',v:bank.bankName},
-    {l:'Branch Code',v:bank.branchCode},
-    {l:'Reference',v:ref},
-  ].filter(r=>r.v);
-
+  const rows=[{l:'Account Name',v:bank.accountName},{l:'Account Number',v:bank.accountNumber},{l:'Bank',v:bank.bankName},{l:'Branch Code',v:bank.branchCode},{l:'Reference',v:ref}].filter(r=>r.v);
   el.innerHTML=rows.map(r=>`<div class="deposit-row"><div class="deposit-label">${r.l}</div><div class="deposit-value">${r.v}</div></div>`).join('');
-
-  if(bank.note){ noteEl.style.display='block'; noteEl.innerHTML='<strong>📌 Note:</strong> '+bank.note; }
-  else { noteEl.style.display='none'; }
+  if(bank.note){noteEl.style.display='block';noteEl.innerHTML='<strong>📌 Note:</strong> '+bank.note;}
+  else noteEl.style.display='none';
 }
 
-// ─────────────────────────────────────
+// ════════════════════════════════
+// MESSAGING
+// ════════════════════════════════
+function loadMessages(){
+  if(!fbDB||!MY_ID)return;
+
+  // LIVE announcements listener
+  fbDB.ref('investgroup/announcements').orderByChild('timestamp').limitToLast(20).on('value',snap=>{
+    const items=[];snap.forEach(c=>items.unshift({id:c.key,...c.val()}));
+    const el=document.getElementById('ann-list');
+    if(!el)return;
+    if(!items.length){el.innerHTML='<div class="empty" style="padding:12px"><div>No announcements yet</div></div>';return;}
+    el.innerHTML=items.map(a=>`<div class="announce-card">
+      <div class="announce-title">📢 ${a.title||'Announcement'}</div>
+      <div class="announce-text">${a.text}</div>
+      <div class="announce-time">${new Date(a.timestamp).toLocaleString()}</div>
+    </div>`).join('');
+  });
+
+  // LIVE private thread listener
+  if(msgListener){fbDB.ref(`investgroup/messages/${MY_ID}`).off('value',msgListener);msgListener=null;}
+  msgListener=fbDB.ref(`investgroup/messages/${MY_ID}`).orderByChild('timestamp').on('value',snap=>{
+    const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
+    const el=document.getElementById('thread-messages');
+    if(!el)return;
+    if(!msgs.length){el.innerHTML='<div class="empty" style="padding:12px"><div>No messages yet. Send a message to your treasurer!</div></div>';return;}
+    el.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
+      const isOut=msg.sender==='member';
+      return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
+        <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
+        <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Treasurer'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
+      </div>`;
+    }).join('')+'</div>';
+    el.scrollTop=el.scrollHeight;
+    // Check for new unread from treasurer and update badge
+    checkMsgBadge();
+  });
+}
+
+function sendMessage(){
+  const input=document.getElementById('thread-input');
+  const text=input.value.trim();
+  if(!text||!fbDB||!MY_ID)return;
+  fbDB.ref(`investgroup/messages/${MY_ID}`).push({sender:'member',text,timestamp:Date.now(),read:false})
+    .then(()=>{input.value='';});
+}
+
+function markMessagesRead(){
+  if(!fbDB||!MY_ID)return;
+  fbDB.ref(`investgroup/messages/${MY_ID}`).once('value').then(snap=>{
+    snap.forEach(c=>{
+      if(c.val().sender==='treasurer'&&!c.val().read){
+        fbDB.ref(`investgroup/messages/${MY_ID}/${c.key}/read`).set(true);
+      }
+    });
+    checkMsgBadge();
+  });
+}
+
+function checkMsgBadge(){
+  if(!fbDB||!MY_ID)return;
+  fbDB.ref(`investgroup/messages/${MY_ID}`).once('value').then(snap=>{
+    let count=0;
+    snap.forEach(c=>{if(c.val().sender==='treasurer'&&!c.val().read)count++;});
+    const badge=document.getElementById('msg-badge');
+    if(badge){if(count>0){badge.textContent=count;badge.classList.add('show');}else badge.classList.remove('show');}
+  });
+}
+
+// ════════════════════════════════
 // CHANGE PIN
-// ─────────────────────────────────────
+// ════════════════════════════════
 function changePin(){
   const cur=document.getElementById('pc-cur').value.trim();
   const nw=document.getElementById('pc-new').value.trim();
   const cf=document.getElementById('pc-cf').value.trim();
   const err=document.getElementById('pc-err');
   const localPin=localStorage.getItem('igm_pin_'+MY_ID);
-  const treasurerPin=(GD.memberPins&&GD.memberPins[MY_ID])||'';
+  const treasurerPin=(GD&&GD.memberPins&&GD.memberPins[MY_ID])||'';
   const valid=localPin||treasurerPin;
-  if(cur!==valid){ err.textContent='Current PIN incorrect.'; return; }
-  if(nw.length<4){ err.textContent='New PIN must be at least 4 digits.'; return; }
-  if(nw!==cf){ err.textContent='PINs do not match.'; return; }
+  if(cur!==valid){err.textContent='Current PIN incorrect.';return;}
+  if(nw.length<4){err.textContent='New PIN must be at least 4 digits.';return;}
+  if(nw!==cf){err.textContent='PINs do not match.';return;}
   localStorage.setItem('igm_pin_'+MY_ID,nw);
-  err.textContent=''; closeModal('modal-pin');
+  err.textContent='';closeModal('modal-pin');
   ['pc-cur','pc-new','pc-cf'].forEach(id=>document.getElementById(id).value='');
   alert('✓ PIN updated! Use your new PIN next time you log in.');
 }
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // MODALS
-// ─────────────────────────────────────
-function openModal(id){ document.getElementById(id).classList.add('open'); }
-function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+// ════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+document.getElementById('login-pin').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();});
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // PWA
-// ─────────────────────────────────────
+// ════════════════════════════════
 (function(){
   const m={name:'My Portfolio',short_name:'My Portfolio',display:'standalone',background_color:'#0b0c0e',theme_color:'#0b0c0e',start_url:'.',orientation:'portrait',icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='42' fill='%230b0c0e'/><text y='.85em' font-size='140' x='22' fill='%23c8f04a'>◆</text></svg>",sizes:'192x192',type:'image/svg+xml'}]};
   const blob=new Blob([JSON.stringify(m)],{type:'application/json'});
-  const link=document.createElement('link');link.rel='manifest';link.href=URL.createObjectURL(blob);
-  document.head.appendChild(link);
+  const link=document.createElement('link');link.rel='manifest';link.href=URL.createObjectURL(blob);document.head.appendChild(link);
 })();
 
-// ─────────────────────────────────────
+// ════════════════════════════════
 // INIT
-// ─────────────────────────────────────
-window.addEventListener('DOMContentLoaded',()=>{ checkOnline(); loadFirebase(); });
+// ════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{checkOnline();loadFirebase();});
 </script>
 </body>
 </html>
