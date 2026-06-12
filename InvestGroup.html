@@ -1376,7 +1376,7 @@ function openThread(memberId){
   const m=DB.members.find(x=>x.id===memberId);if(!m)return;
   document.getElementById('tb-title').textContent='💬 '+m.name;
   document.getElementById('back-btn').classList.remove('hidden');
-  // Mark messages as read
+  lastThreadKey=''; // reset so all messages render fresh
   if(fbDB){
     fbDB.ref(`investgroup/messages/${memberId}`).once('value').then(snap=>{
       snap.forEach(c=>{
@@ -1392,38 +1392,48 @@ function openThread(memberId){
   curPage='thread';
   document.getElementById('tb-action').style.display='none';
   loadThreadMessages(memberId);
-  // Live listener
-  if(fbDB) fbDB.ref(`investgroup/messages/${memberId}`).on('value',()=>loadThreadMessages(memberId));
+  if(fbDB)fbDB.ref(`investgroup/messages/${memberId}`).on('value',()=>loadThreadMessages(memberId));
 }
 
 let threadListener=null;
 let lastThreadKey='';
+
 function loadThreadMessages(memberId){
   const el=document.getElementById('thread-messages');
-  if(!fbDB){el.innerHTML='<div class="empty"><div>No connection</div></div>';return;}
-  if(threadListener&&activeMsgMemberId){
-    fbDB.ref(`investgroup/messages/${activeMsgMemberId}`).off('value',threadListener);
+  if(!fbDB){if(el)el.innerHTML='<div class="empty"><div>No connection</div></div>';return;}
+  // Always detach old listener first
+  if(threadListener){
+    fbDB.ref(`investgroup/messages/${activeMsgMemberId||memberId}`).off('value',threadListener);
+    threadListener=null;
   }
   lastThreadKey='';
+  if(el) el.innerHTML='<div class="empty"><div class="spinner"></div></div>';
+
   threadListener=fbDB.ref(`investgroup/messages/${memberId}`).orderByChild('timestamp').on('value',snap=>{
-    const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
+    const el2=document.getElementById('thread-messages');
+    if(!el2) return;
+    const msgs=[];
+    snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
     if(!msgs.length){
-      el.innerHTML='<div class="empty"><div>No messages yet. Send the first one!</div></div>';
-      lastThreadKey='';return;
+      el2.innerHTML='<div class="empty"><div>No messages yet. Send the first one!</div></div>';
+      lastThreadKey='0_none';
+      return;
     }
-    // Use last message id+count as key — only re-render when truly new messages arrive
-    const newKey=msgs.length+'_'+msgs[msgs.length-1].id;
-    if(newKey===lastThreadKey)return; // nothing new — don't touch DOM or input
+    const newKey=msgs.length+'|'+msgs[msgs.length-1].id;
+    if(newKey===lastThreadKey) return;
     lastThreadKey=newKey;
-    const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<80;
-    el.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
+    const wasAtBottom=el2.scrollHeight-el2.scrollTop-el2.clientHeight<80;
+    el2.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
       const isOut=msg.sender==='treasurer';
       return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
         <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
         <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Member'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
       </div>`;
     }).join('')+'</div>';
-    if(wasAtBottom||msgs[msgs.length-1].sender==='treasurer')el.scrollTop=el.scrollHeight;
+    if(wasAtBottom||msgs[msgs.length-1].sender==='treasurer') el2.scrollTop=el2.scrollHeight;
+    // Refocus input without disrupting keyboard
+    const inp=document.getElementById('thread-input');
+    if(inp&&document.activeElement!==inp) inp.focus();
   });
 }
 
