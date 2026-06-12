@@ -1397,34 +1397,33 @@ function openThread(memberId){
 }
 
 let threadListener=null;
-let lastThreadHtml='';
+let lastThreadKey='';
 function loadThreadMessages(memberId){
   const el=document.getElementById('thread-messages');
   if(!fbDB){el.innerHTML='<div class="empty"><div>No connection</div></div>';return;}
   if(threadListener&&activeMsgMemberId){
     fbDB.ref(`investgroup/messages/${activeMsgMemberId}`).off('value',threadListener);
   }
-  lastThreadHtml='';
+  lastThreadKey='';
   threadListener=fbDB.ref(`investgroup/messages/${memberId}`).orderByChild('timestamp').on('value',snap=>{
     const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
     if(!msgs.length){
       el.innerHTML='<div class="empty"><div>No messages yet. Send the first one!</div></div>';
-      return;
+      lastThreadKey='';return;
     }
-    const newHtml='<div class="msg-wrap">'+msgs.map(msg=>{
+    // Use last message id+count as key — only re-render when truly new messages arrive
+    const newKey=msgs.length+'_'+msgs[msgs.length-1].id;
+    if(newKey===lastThreadKey)return; // nothing new — don't touch DOM or input
+    lastThreadKey=newKey;
+    const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<80;
+    el.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
       const isOut=msg.sender==='treasurer';
       return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
         <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
         <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Member'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
       </div>`;
     }).join('')+'</div>';
-    // Only update DOM if content changed — prevents input losing focus
-    if(newHtml!==lastThreadHtml){
-      lastThreadHtml=newHtml;
-      const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;
-      el.innerHTML=newHtml;
-      if(wasAtBottom)el.scrollTop=el.scrollHeight;
-    }
+    if(wasAtBottom||msgs[msgs.length-1].sender==='treasurer')el.scrollTop=el.scrollHeight;
   });
 }
 
@@ -1545,17 +1544,51 @@ function saveEditMember(){
   m.phone=document.getElementById('em-phone').value;m.notes=document.getElementById('em-notes').value;
   closeModal('modal-edit-member');save();
 }
+// Calculate a member's net balance at a specific date (contributions - withdrawals up to that date)
+function memberNetAtDate(memberId, date){
+  const contrib=DB.transactions.filter(t=>t.type==='contribution'&&t.memberId===memberId&&t.date<=date).reduce((s,t)=>s+t.amount,0);
+  const withdr=DB.transactions.filter(t=>(t.type==='withdrawal'||t.type==='profit')&&t.memberId===memberId&&t.date<=date).reduce((s,t)=>s+t.amount,0);
+  return Math.max(0,contrib-withdr);
+}
+
+// Auto-generate contributions from all member net balances at investment start date
+function autoGenContributions(startDate){
+  const contribs=[];
+  DB.members.forEach(m=>{
+    const net=memberNetAtDate(m.id,startDate);
+    if(net>0){
+      contribs.push({id:uid(),memberId:m.id,memberName:m.name,amount:net,date:startDate});
+    }
+  });
+  return contribs;
+}
+
 function saveInvestment(){
   const name=document.getElementById('iv-name').value.trim(),amount=parseFloat(document.getElementById('iv-amt').value)||0;
   if(!name||amount<=0)return alert('Fill name and amount.');
   const cur=parseFloat(document.getElementById('iv-cur').value)||amount;
   const status=document.getElementById('iv-status').value;
   const startDate=document.getElementById('iv-date').value||today();
-  const inv={id:uid(),name,type:document.getElementById('iv-type').value,date:startDate,startDate,amount,currentValue:cur,status,notes:document.getElementById('iv-notes').value,contributions:[],valueHistory:[{date:startDate,value:cur,note:'Initial valuation'}]};
+  // Auto-generate contributions from member net balances at start date
+  const autoContribs=autoGenContributions(startDate);
+  const inv={
+    id:uid(),name,type:document.getElementById('iv-type').value,
+    date:startDate,startDate,amount,currentValue:cur,status,
+    notes:document.getElementById('iv-notes').value,
+    contributions:autoContribs,
+    valueHistory:[{date:startDate,value:cur,note:'Initial valuation'}]
+  };
   if(status==='closed') inv.closeDate=document.getElementById('iv-close-date').value||today();
   DB.investments.push(inv);
   DB.transactions.push({id:uid(),date:startDate,type:'investment',desc:'Investment: '+name,amount,memberId:'',notes:inv.notes});
-  closeModal('modal-add-investment');['iv-name','iv-amt','iv-cur','iv-notes','iv-date','iv-close-date'].forEach(id=>document.getElementById(id).value='');save();
+  closeModal('modal-add-investment');
+  ['iv-name','iv-amt','iv-cur','iv-notes','iv-date','iv-close-date'].forEach(id=>document.getElementById(id).value='');
+  // Show summary of auto-contributions
+  if(autoContribs.length){
+    const summary=autoContribs.map(c=>`${c.memberName}: ${fmtF(c.amount)}`).join('\n');
+    alert(`✓ Investment created!\n\nAuto-contributions from member balances on ${startDate}:\n${summary}`);
+  }
+  save();
 }
 
 function openUpdInv(id){

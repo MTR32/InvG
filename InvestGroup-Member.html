@@ -814,31 +814,28 @@ function loadMessages(){
     </div>`).join('');
   });
 
-  // LIVE private thread listener
-  if(msgListener){fbDB.ref(`investgroup/messages/${MY_ID}`).off('value',msgListener);msgListener=null;}
-  lastMemberThreadHtml='';
+let lastMemberThreadKey='';
   msgListener=fbDB.ref(`investgroup/messages/${MY_ID}`).orderByChild('timestamp').on('value',snap=>{
     const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
     const el=document.getElementById('thread-messages');
     if(!el)return;
     if(!msgs.length){
       el.innerHTML='<div class="empty" style="padding:12px"><div>No messages yet. Send a message to your treasurer!</div></div>';
-      lastMemberThreadHtml='';return;
+      lastMemberThreadKey='';return;
     }
-    const newHtml='<div class="msg-wrap">'+msgs.map(msg=>{
+    // Only re-render when new messages arrive — don't touch DOM otherwise
+    const newKey=msgs.length+'_'+msgs[msgs.length-1].id;
+    if(newKey===lastMemberThreadKey)return;
+    lastMemberThreadKey=newKey;
+    const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<80;
+    el.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
       const isOut=msg.sender==='member';
       return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
         <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
         <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Treasurer'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
       </div>`;
     }).join('')+'</div>';
-    // Only update DOM if content changed — preserves input focus on Android
-    if(newHtml!==lastMemberThreadHtml){
-      lastMemberThreadHtml=newHtml;
-      const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<60;
-      el.innerHTML=newHtml;
-      if(wasAtBottom)el.scrollTop=el.scrollHeight;
-    }
+    if(wasAtBottom||msgs[msgs.length-1].sender==='treasurer')el.scrollTop=el.scrollHeight;
     checkMsgBadge();
   });
 }
