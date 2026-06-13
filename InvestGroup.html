@@ -797,28 +797,25 @@ function getNetEquity(){
 // DAILY PROFIT CALCULATION
 // ════════════════════════════════════════
 function calcInvProfit(inv){
-  // Returns array of {memberId, memberName, contribution, joinDate, activeDays, shareAtJoinDate, profit}
+  // Returns array of {memberId, memberName, contribution, joinDate, activeDays, weightedShare, profit}
+  // Formula: profit = totalGain × (contribution × activeDays) / Σ(contribution × activeDays) for each row
   if(!inv.contributions||!inv.contributions.length) return [];
-  const startDate=inv.startDate||inv.date||today();
   const endDate=inv.closeDate||today();
-  const totalDays=daysBetween(startDate,endDate)||1;
   const totalGain=inv.currentValue-inv.amount;
-  const dailyGain=totalGain/totalDays;
 
-  // Build pool size over time (sorted by date)
-  const sorted=[...inv.contributions].sort((a,b)=>a.date.localeCompare(b.date));
-  let runningPool=0;
-  const contribsWithPool=sorted.map(c=>{
-    runningPool+=c.amount;
-    return{...c,poolAtDate:runningPool};
+  // Compute activeDays for each contribution row
+  const rows=[...inv.contributions].map(c=>{
+    const activeDays=daysBetween(c.date,endDate);
+    return{...c,activeDays,weight:c.amount*activeDays};
   });
 
-  return contribsWithPool.map(c=>{
-    const shareAtJoin=c.amount/c.poolAtDate;
-    const contribEnd=inv.closeDate?inv.closeDate:today();
-    const activeDays=daysBetween(c.date,contribEnd);
-    const profit=dailyGain*shareAtJoin*activeDays;
-    return{memberId:c.memberId,memberName:c.memberName||'Unknown',contribution:c.amount,joinDate:c.date,poolAtDate:c.poolAtDate,shareAtJoinDate:shareAtJoin,activeDays,profit};
+  // Total weight across all rows
+  const totalWeight=rows.reduce((s,r)=>s+r.weight,0)||1;
+
+  return rows.map(r=>{
+    const weightedShare=r.weight/totalWeight;
+    const profit=totalGain*weightedShare;
+    return{memberId:r.memberId,memberName:r.memberName||'Unknown',contribution:r.amount,joinDate:r.date,activeDays:r.activeDays,weightedShare,profit};
   });
 }
 
@@ -1176,7 +1173,7 @@ function renderInvestments(){
     const memRows=rows.length?rows.map(r=>{
       const m=DB.members.find(x=>x.id===r.memberId);
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(35,38,48,.4);font-size:10px;">
-        <span style="color:var(--muted2)">${r.memberName} · ${r.activeDays}d · ${(r.shareAtJoinDate*100).toFixed(1)}%</span>
+        <span style="color:var(--muted2)">${r.memberName} · ${r.activeDays}d · ${(r.weightedShare*100).toFixed(1)}%</span>
         <span style="color:${r.profit>=0?'var(--green)':'var(--red)'};font-weight:700">${r.profit>=0?'+':''}${fmt(r.profit)}</span>
       </div>`;
     }).join(''):`<div style="font-size:10px;color:var(--muted);padding:6px 0">No contributions recorded yet</div>`;
@@ -1376,7 +1373,6 @@ function openThread(memberId){
   const m=DB.members.find(x=>x.id===memberId);if(!m)return;
   document.getElementById('tb-title').textContent='💬 '+m.name;
   document.getElementById('back-btn').classList.remove('hidden');
-  lastThreadKey=''; // reset so all messages render fresh
   if(fbDB){
     fbDB.ref(`investgroup/messages/${memberId}`).once('value').then(snap=>{
       snap.forEach(c=>{
@@ -1392,49 +1388,53 @@ function openThread(memberId){
   curPage='thread';
   document.getElementById('tb-action').style.display='none';
   loadThreadMessages(memberId);
-  if(fbDB)fbDB.ref(`investgroup/messages/${memberId}`).on('value',()=>loadThreadMessages(memberId));
 }
 
 let threadListener=null;
+let threadListenerMemberId=null;
 let lastThreadKey='';
 
 function loadThreadMessages(memberId){
   const el=document.getElementById('thread-messages');
   if(!fbDB){if(el)el.innerHTML='<div class="empty"><div>No connection</div></div>';return;}
-  // Always detach old listener first
-  if(threadListener){
-    fbDB.ref(`investgroup/messages/${activeMsgMemberId||memberId}`).off('value',threadListener);
-    threadListener=null;
-  }
-  lastThreadKey='';
-  if(el) el.innerHTML='<div class="empty"><div class="spinner"></div></div>';
 
-  threadListener=fbDB.ref(`investgroup/messages/${memberId}`).orderByChild('timestamp').on('value',snap=>{
-    const el2=document.getElementById('thread-messages');
-    if(!el2) return;
-    const msgs=[];
-    snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
-    if(!msgs.length){
-      el2.innerHTML='<div class="empty"><div>No messages yet. Send the first one!</div></div>';
-      lastThreadKey='0_none';
-      return;
-    }
-    const newKey=msgs.length+'|'+msgs[msgs.length-1].id;
-    if(newKey===lastThreadKey) return;
-    lastThreadKey=newKey;
-    const wasAtBottom=el2.scrollHeight-el2.scrollTop-el2.clientHeight<80;
-    el2.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
-      const isOut=msg.sender==='treasurer';
-      return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
-        <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
-        <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Member'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
-      </div>`;
-    }).join('')+'</div>';
-    if(wasAtBottom||msgs[msgs.length-1].sender==='treasurer') el2.scrollTop=el2.scrollHeight;
-    // Refocus input without disrupting keyboard
-    const inp=document.getElementById('thread-input');
-    if(inp&&document.activeElement!==inp) inp.focus();
-  });
+  // Detach old listener only if switching to a different member
+  if(threadListener && threadListenerMemberId !== memberId){
+    fbDB.ref(`investgroup/messages/${threadListenerMemberId}`).off('value',threadListener);
+    threadListener=null;
+    threadListenerMemberId=null;
+    lastThreadKey='';
+  }
+
+  if(el && !threadListener) el.innerHTML='<div class="empty"><div class="spinner"></div></div>';
+
+  if(!threadListener){
+    lastThreadKey='';
+    threadListenerMemberId=memberId;
+    threadListener=fbDB.ref(`investgroup/messages/${memberId}`).orderByChild('timestamp').on('value',snap=>{
+      const el2=document.getElementById('thread-messages');
+      if(!el2) return;
+      const msgs=[];
+      snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
+      if(!msgs.length){
+        el2.innerHTML='<div class="empty"><div>No messages yet. Send the first one!</div></div>';
+        lastThreadKey='0_none';
+        return;
+      }
+      const newKey=msgs.length+'|'+msgs[msgs.length-1].id;
+      if(newKey===lastThreadKey) return;
+      lastThreadKey=newKey;
+      const wasAtBottom=el2.scrollHeight-el2.scrollTop-el2.clientHeight<80;
+      el2.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
+        const isOut=msg.sender==='treasurer';
+        return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
+          <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
+          <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Member'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
+        </div>`;
+      }).join('')+'</div>';
+      if(wasAtBottom||msgs[msgs.length-1].sender==='treasurer') el2.scrollTop=el2.scrollHeight;
+    });
+  }
 }
 
 function sendThreadMessage(){
@@ -1581,9 +1581,11 @@ function saveInvestment(){
   const startDate=document.getElementById('iv-date').value||today();
   // Auto-generate contributions from member net balances at start date
   const autoContribs=autoGenContributions(startDate);
+  // If auto-contributions exist, use their total as the deployed amount so profit math is consistent
+  const deployedAmount=autoContribs.length>0?autoContribs.reduce((s,c)=>s+c.amount,0):amount;
   const inv={
     id:uid(),name,type:document.getElementById('iv-type').value,
-    date:startDate,startDate,amount,currentValue:cur,status,
+    date:startDate,startDate,amount:deployedAmount,currentValue:cur,status,
     notes:document.getElementById('iv-notes').value,
     contributions:autoContribs,
     valueHistory:[{date:startDate,value:cur,note:'Initial valuation'}]
@@ -1649,6 +1651,8 @@ function saveInvContribution(){
   const m=DB.members.find(x=>x.id===memberId);
   if(!inv.contributions)inv.contributions=[];
   inv.contributions.push({id:uid(),memberId,memberName:m?m.name:'Unknown',amount,date});
+  // Keep inv.amount in sync with total contributions so profit base is correct
+  inv.amount=inv.contributions.reduce((s,c)=>s+c.amount,0);
   closeModal('modal-inv-contribution');save();
 }
 

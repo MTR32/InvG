@@ -596,22 +596,24 @@ function intEarned(){return(GD.loans||[]).reduce((s,l)=>s+Math.min(Math.max(0,l.
 function lnTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
 function lnBalance(l){return Math.max(0,lnTotalOwed(l)-l.repaid);}
 
-// DAILY PROFIT CALC — same formula as treasurer app
+// PROFIT CALC — matches treasurer app formula exactly
 function calcInvProfit(inv){
+  // Formula: profit = totalGain × (contribution × activeDays) / Σ(contribution × activeDays)
   if(!inv.contributions||!inv.contributions.length)return[];
-  const startDate=inv.startDate||inv.date||today();
   const endDate=inv.closeDate||today();
-  const totalDays=daysBetween(startDate,endDate)||1;
   const totalGain=inv.currentValue-inv.amount;
-  const dailyGain=totalGain/totalDays;
-  const sorted=[...inv.contributions].sort((a,b)=>a.date.localeCompare(b.date));
-  let runningPool=0;
-  const withPool=sorted.map(c=>{runningPool+=c.amount;return{...c,poolAtDate:runningPool};});
-  return withPool.map(c=>{
-    const shareAtJoin=c.amount/c.poolAtDate;
-    const activeDays=daysBetween(c.date,inv.closeDate||today());
-    const profit=dailyGain*shareAtJoin*activeDays;
-    return{memberId:c.memberId,contribution:c.amount,joinDate:c.date,shareAtJoin,activeDays,profit};
+
+  const rows=[...inv.contributions].map(c=>{
+    const activeDays=daysBetween(c.date,endDate);
+    return{...c,activeDays,weight:c.amount*activeDays};
+  });
+
+  const totalWeight=rows.reduce((s,r)=>s+r.weight,0)||1;
+
+  return rows.map(r=>{
+    const weightedShare=r.weight/totalWeight;
+    const profit=totalGain*weightedShare;
+    return{memberId:r.memberId,contribution:r.amount,joinDate:r.date,shareAtJoin:weightedShare,activeDays:r.activeDays,profit};
   });
 }
 
