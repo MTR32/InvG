@@ -307,7 +307,7 @@ input:focus{border-color:var(--accent);}
       <div class="card">
         <div class="card-hd"><div class="card-title">💬 Message Treasurer</div></div>
         <div style="font-size:11px;color:var(--muted);padding:6px 14px;border-bottom:1px solid var(--border);">Private — only you and the treasurer can see this</div>
-        <div id="thread-messages" style="min-height:120px;max-height:260px;overflow-y:auto;padding:10px 14px;"></div>
+        <div id="thread-messages" style="min-height:180px;height:320px;overflow-y:auto;padding:10px 14px;-webkit-overflow-scrolling:touch;"></div>
         <div style="display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surface2);">
           <input type="text" id="thread-input" placeholder="Type your message here…"
             style="flex:1;padding:9px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;"
@@ -803,7 +803,13 @@ function renderDeposit(){
 function loadMessages(){
   if(!fbDB||!MY_ID)return;
 
-  // LIVE announcements listener
+  // Detach old thread listener before re-attaching to prevent duplicate listeners
+  if(msgListener){
+    fbDB.ref(`investgroup/messages/${MY_ID}`).off('value',msgListener);
+    msgListener=null;
+  }
+
+  // LIVE announcements listener (safe to call multiple times — Firebase deduplicates same ref+event)
   fbDB.ref('investgroup/announcements').orderByChild('timestamp').limitToLast(20).on('value',snap=>{
     const items=[];snap.forEach(c=>items.unshift({id:c.key,...c.val()}));
     const el=document.getElementById('ann-list');
@@ -816,20 +822,14 @@ function loadMessages(){
     </div>`).join('');
   });
 
-let lastMemberThreadKey='';
   msgListener=fbDB.ref(`investgroup/messages/${MY_ID}`).orderByChild('timestamp').on('value',snap=>{
     const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
     const el=document.getElementById('thread-messages');
     if(!el)return;
     if(!msgs.length){
       el.innerHTML='<div class="empty" style="padding:12px"><div>No messages yet. Send a message to your treasurer!</div></div>';
-      lastMemberThreadKey='';return;
+      return;
     }
-    // Only re-render when new messages arrive — don't touch DOM otherwise
-    const newKey=msgs.length+'_'+msgs[msgs.length-1].id;
-    if(newKey===lastMemberThreadKey)return;
-    lastMemberThreadKey=newKey;
-    const wasAtBottom=el.scrollHeight-el.scrollTop-el.clientHeight<80;
     el.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
       const isOut=msg.sender==='member';
       return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
@@ -837,7 +837,7 @@ let lastMemberThreadKey='';
         <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Treasurer'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
       </div>`;
     }).join('')+'</div>';
-    if(wasAtBottom||msgs[msgs.length-1].sender==='treasurer')el.scrollTop=el.scrollHeight;
+    el.scrollTop=el.scrollHeight;
     checkMsgBadge();
   });
 }

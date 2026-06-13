@@ -1392,7 +1392,6 @@ function openThread(memberId){
 
 let threadListener=null;
 let threadListenerMemberId=null;
-let lastThreadKey='';
 
 function loadThreadMessages(memberId){
   const el=document.getElementById('thread-messages');
@@ -1403,14 +1402,12 @@ function loadThreadMessages(memberId){
     fbDB.ref(`investgroup/messages/${threadListenerMemberId}`).off('value',threadListener);
     threadListener=null;
     threadListenerMemberId=null;
-    lastThreadKey='';
-  }
+      }
 
   if(el && !threadListener) el.innerHTML='<div class="empty"><div class="spinner"></div></div>';
 
   if(!threadListener){
-    lastThreadKey='';
-    threadListenerMemberId=memberId;
+        threadListenerMemberId=memberId;
     threadListener=fbDB.ref(`investgroup/messages/${memberId}`).orderByChild('timestamp').on('value',snap=>{
       const el2=document.getElementById('thread-messages');
       if(!el2) return;
@@ -1421,9 +1418,6 @@ function loadThreadMessages(memberId){
         lastThreadKey='0_none';
         return;
       }
-      const newKey=msgs.length+'|'+msgs[msgs.length-1].id;
-      if(newKey===lastThreadKey) return;
-      lastThreadKey=newKey;
       const wasAtBottom=el2.scrollHeight-el2.scrollTop-el2.clientHeight<80;
       el2.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
         const isOut=msg.sender==='treasurer';
@@ -1432,7 +1426,7 @@ function loadThreadMessages(memberId){
           <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Member'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
         </div>`;
       }).join('')+'</div>';
-      if(wasAtBottom||msgs[msgs.length-1].sender==='treasurer') el2.scrollTop=el2.scrollHeight;
+      el2.scrollTop=el2.scrollHeight;
     });
   }
 }
