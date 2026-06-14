@@ -149,10 +149,6 @@ input:focus{border-color:var(--accent);}
 .msg-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:20px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;}
 .msg-input:focus{border-color:var(--accent);}
 .msg-send{background:var(--accent);color:#0b0c0e;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-.announce-card{background:rgba(200,240,74,.06);border:1px solid rgba(200,240,74,.2);border-radius:10px;padding:12px;margin-bottom:8px;}
-.announce-title{font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px;color:var(--accent);margin-bottom:4px;}
-.announce-text{font-size:12px;color:var(--text);line-height:1.6;}
-.announce-time{font-size:9px;color:var(--muted);margin-top:4px;}
 
 ::-webkit-scrollbar{width:3px;height:3px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -293,29 +289,7 @@ input:focus{border-color:var(--accent);}
       <div id="deposit-note-card" style="display:none;background:rgba(240,193,74,.07);border:1px solid rgba(240,193,74,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--gold);line-height:1.8;"></div>
     </div>
 
-    <!-- MESSAGES -->
-    <div class="page" id="page-messages">
-      <!-- Announcements -->
-      <div class="card" style="margin-bottom:12px;">
-        <div class="card-hd"><div class="card-title">📢 Announcements</div></div>
-        <div style="font-size:11px;color:var(--muted);padding:6px 14px;border-bottom:1px solid var(--border);">From your treasurer — read only</div>
-        <div id="ann-list" style="max-height:200px;overflow-y:auto;padding:10px 14px;">
-          <div class="empty" style="padding:12px"><span class="spinner"></span></div>
-        </div>
-      </div>
-      <!-- Private thread with treasurer -->
-      <div class="card">
-        <div class="card-hd"><div class="card-title">💬 Message Treasurer</div></div>
-        <div style="font-size:11px;color:var(--muted);padding:6px 14px;border-bottom:1px solid var(--border);">Private — only you and the treasurer can see this</div>
-        <div id="thread-messages" style="min-height:180px;height:320px;overflow-y:auto;padding:10px 14px;-webkit-overflow-scrolling:touch;"></div>
-        <div style="display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surface2);">
-          <input type="text" id="thread-input" placeholder="Type your message here…"
-            style="flex:1;padding:9px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;"
-            onkeydown="if(event.key==='Enter')sendMessage()">
-          <button onclick="sendMessage()" style="background:var(--accent);color:#0b0c0e;border:none;border-radius:50%;width:38px;height:38px;font-size:18px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;">➤</button>
-        </div>
-      </div>
-    </div>
+
 
     <!-- SETTINGS -->
     <div class="page" id="page-settings">
@@ -347,7 +321,6 @@ input:focus{border-color:var(--accent);}
     <button class="nav-tab" id="tab-tx-pg" onclick="showPage('tx-pg')"><span class="ni">≡</span>History</button>
     <button class="nav-tab" id="tab-loans-pg" onclick="showPage('loans-pg')"><span class="ni">⬕</span>Loans</button>
     <button class="nav-tab" id="tab-deposit-pg" onclick="showPage('deposit-pg')"><span class="ni">💰</span>Deposit</button>
-    <button class="nav-tab" id="tab-messages" onclick="showPage('messages')"><span class="ni">💬</span>Messages<span class="nav-badge" id="msg-badge">0</span></button>
   </nav>
 </div>
 
@@ -389,7 +362,6 @@ const FB_CFG={
 let GD=null, ME=null, MY_ID=null;
 let fbApp=null, fbDB=null;
 let pageHistory=[], currentPage='dashboard';
-let msgListener=null, annListener=null;
 let lastMemberThreadHtml='';
 
 const ADMIN_BONUS_PCT=2;
@@ -484,7 +456,6 @@ function startLiveSync(){
   fbDB.ref('investgroup').on('value',snap=>{
     const d=snap.val();if(!d)return;
     saveCache(d);GD=d;
-    if(MY_ID){renderAll();checkMsgBadge();}
     setSyncDot('●','var(--green)');
   });
 }
@@ -537,12 +508,11 @@ function openApp(){
   renderAll();
   startLiveSync();
   checkOnline();
-  loadMessages(); // start live listeners immediately for badge + announcements
 }
 
 function logout(){
   clearSession();
-  if(fbDB){fbDB.ref('investgroup').off();if(msgListener)fbDB.ref(`investgroup/messages/${MY_ID}`).off();}
+  if(fbDB)fbDB.ref('investgroup').off();
   MY_ID=null;ME=null;GD=null;
   document.getElementById('app').classList.add('off');
   document.getElementById('login').classList.remove('off');
@@ -554,7 +524,7 @@ function logout(){
 // ════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════
-const PAGE_TITLES={dashboard:'My Portfolio','invest-pg':'My Investments','tx-pg':'Transactions','loans-pg':'My Loans','deposit-pg':'Deposit','messages':'Messages','settings-pg':'Settings'};
+const PAGE_TITLES={dashboard:'My Portfolio','invest-pg':'My Investments','tx-pg':'Transactions','loans-pg':'My Loans','deposit-pg':'Deposit','settings-pg':'Settings'};
 
 function showPage(pg,addH=true){
   if(addH&&currentPage!==pg)pageHistory.push(currentPage);
@@ -570,7 +540,6 @@ function showPage(pg,addH=true){
   document.getElementById('back-btn').classList.toggle('hidden',pageHistory.length===0);
   document.querySelector('.scroll-area').scrollTop=0;
   if(pg==='settings-pg'){const e=document.getElementById('sett-name');if(e)e.textContent=ME?.name||'--';}
-  if(pg==='messages'){loadMessages();markMessagesRead();}
 }
 
 function goBack(){
@@ -782,6 +751,11 @@ function renderLoans(){
   }).join('');
 }
 
+
+// ════════════════════════════════
+// MESSAGING
+// ════════════════════════════════
+
 function renderDeposit(){
   const bank=(GD.settings&&GD.settings.bank)||{};
   const el=document.getElementById('bank-card');
@@ -800,81 +774,6 @@ function renderDeposit(){
 // ════════════════════════════════
 // MESSAGING
 // ════════════════════════════════
-function loadMessages(){
-  if(!fbDB||!MY_ID)return;
-
-  // Detach old thread listener before re-attaching to prevent duplicate listeners
-  if(msgListener){
-    fbDB.ref(`investgroup/messages/${MY_ID}`).off('value',msgListener);
-    msgListener=null;
-  }
-
-  // LIVE announcements listener (safe to call multiple times — Firebase deduplicates same ref+event)
-  fbDB.ref('investgroup/announcements').orderByChild('timestamp').limitToLast(20).on('value',snap=>{
-    const items=[];snap.forEach(c=>items.unshift({id:c.key,...c.val()}));
-    const el=document.getElementById('ann-list');
-    if(!el)return;
-    if(!items.length){el.innerHTML='<div class="empty" style="padding:12px"><div>No announcements yet</div></div>';return;}
-    el.innerHTML=items.map(a=>`<div class="announce-card">
-      <div class="announce-title">📢 ${a.title||'Announcement'}</div>
-      <div class="announce-text">${a.text}</div>
-      <div class="announce-time">${new Date(a.timestamp).toLocaleString()}</div>
-    </div>`).join('');
-  });
-
-  msgListener=fbDB.ref(`investgroup/messages/${MY_ID}`).orderByChild('timestamp').on('value',snap=>{
-    const msgs=[];snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
-    const el=document.getElementById('thread-messages');
-    if(!el)return;
-    if(!msgs.length){
-      el.innerHTML='<div class="empty" style="padding:12px"><div>No messages yet. Send a message to your treasurer!</div></div>';
-      return;
-    }
-    el.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
-      const isOut=msg.sender==='member';
-      return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
-        <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
-        <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Treasurer'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
-      </div>`;
-    }).join('')+'</div>';
-    el.scrollTop=el.scrollHeight;
-    checkMsgBadge();
-  });
-}
-
-function sendMessage(){
-  const input=document.getElementById('thread-input');
-  if(!input)return;
-  const text=input.value.trim();
-  if(!text||!fbDB||!MY_ID)return;
-  input.value='';
-  input.focus();
-  fbDB.ref(`investgroup/messages/${MY_ID}`).push({
-    sender:'member',text,timestamp:Date.now(),read:false
-  });
-}
-
-function markMessagesRead(){
-  if(!fbDB||!MY_ID)return;
-  fbDB.ref(`investgroup/messages/${MY_ID}`).once('value').then(snap=>{
-    snap.forEach(c=>{
-      if(c.val().sender==='treasurer'&&!c.val().read){
-        fbDB.ref(`investgroup/messages/${MY_ID}/${c.key}/read`).set(true);
-      }
-    });
-    checkMsgBadge();
-  });
-}
-
-function checkMsgBadge(){
-  if(!fbDB||!MY_ID)return;
-  fbDB.ref(`investgroup/messages/${MY_ID}`).once('value').then(snap=>{
-    let count=0;
-    snap.forEach(c=>{if(c.val().sender==='treasurer'&&!c.val().read)count++;});
-    const badge=document.getElementById('msg-badge');
-    if(badge){if(count>0){badge.textContent=count;badge.classList.add('show');}else badge.classList.remove('show');}
-  });
-}
 
 // ════════════════════════════════
 // CHANGE PIN

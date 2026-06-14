@@ -150,23 +150,6 @@ select option{background:var(--surface2);}
 @keyframes spin{to{transform:rotate(360deg);}}
 
 /* MESSAGING */
-.msg-bubble{max-width:80%;padding:9px 12px;border-radius:12px;margin-bottom:6px;font-size:12px;line-height:1.5;word-break:break-word;}
-.msg-out{background:var(--accent);color:#0b0c0e;margin-left:auto;border-bottom-right-radius:3px;}
-.msg-in{background:var(--surface2);color:var(--text);margin-right:auto;border-bottom-left-radius:3px;}
-.msg-time{font-size:9px;color:var(--muted);margin-top:2px;}
-.msg-wrap{display:flex;flex-direction:column;padding:10px;}
-.msg-input-bar{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;}
-.msg-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:20px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;}
-.msg-input:focus{border-color:var(--accent);}
-.msg-send{background:var(--accent);color:#0b0c0e;border:none;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-.announce-card{background:rgba(200,240,74,.06);border:1px solid rgba(200,240,74,.2);border-radius:10px;padding:12px;margin-bottom:8px;}
-.announce-title{font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px;color:var(--accent);margin-bottom:4px;}
-.announce-text{font-size:12px;color:var(--text);line-height:1.6;}
-.announce-time{font-size:9px;color:var(--muted);margin-top:4px;}
-.member-msg-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;}
-.member-msg-row:last-child{border-bottom:none;}
-.member-msg-row:active{background:var(--surface2);}
-.unread-dot{width:8px;height:8px;background:var(--red);border-radius:50%;flex-shrink:0;}
 
 /* SMART HINT */
 .smart-hint{display:none;background:rgba(200,240,74,.07);border:1px solid rgba(200,240,74,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--accent);margin-bottom:8px;}
@@ -356,38 +339,7 @@ select option{background:var(--surface2);}
       </div>
     </div>
 
-    <!-- MESSAGES -->
-    <div class="page" id="page-messages">
-      <div style="margin-bottom:12px;">
-        <!-- ANNOUNCEMENTS -->
-        <div class="card" style="margin-bottom:12px;">
-          <div class="card-hd">
-            <div class="card-title">📢 Announcements</div>
-            <button class="btn-g btn-sm" onclick="openModal('modal-announce')">+ Post</button>
-          </div>
-          <div style="font-size:11px;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--border);">Posts visible to all members in their app</div>
-          <div class="card-body" id="announce-list" style="padding:10px 14px;max-height:200px;overflow-y:auto;"></div>
-        </div>
-        <!-- MEMBER THREADS -->
-        <div class="card">
-          <div class="card-hd"><div class="card-title">💬 Direct Messages</div></div>
-          <div style="font-size:11px;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--border);">Tap a member to open your private conversation with them</div>
-          <div class="card-body" id="msg-member-list" style="padding:10px 14px;"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- THREAD PAGE -->
-    <div class="page" id="page-thread" style="padding:0;">
-      <div id="thread-messages" style="height:calc(100dvh - var(--nav-h) - 120px);overflow-y:auto;padding:10px;-webkit-overflow-scrolling:touch;"></div>
-      <div style="display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:var(--surface);position:sticky;bottom:0;">
-        <input class="msg-input" type="text" id="thread-input" placeholder="Type a message to member…" onkeydown="if(event.key==='Enter')sendThreadMessage()" style="flex:1;border-radius:20px;">
-        <button class="msg-send" onclick="sendThreadMessage()">➤</button>
-      </div>
-    </div>
-
-    <!-- SETTINGS -->
-    <div class="page" id="page-settings">
+    <!-- SETTINGS -->" id="page-settings">
       <div class="section-title">Settings</div>
       <div class="card">
         <div class="card-hd"><div class="card-title">Group</div></div>
@@ -468,7 +420,6 @@ select option{background:var(--surface2);}
     <button class="nav-tab" id="tab-loans" onclick="showPage('loans')"><span class="ni">⬕</span>Loans</button>
     <button class="nav-tab" id="tab-transactions" onclick="showPage('transactions')"><span class="ni">≡</span>Ledger</button>
     <button class="nav-tab" id="tab-reports" onclick="showPage('reports')"><span class="ni">◧</span>Reports</button>
-    <button class="nav-tab" id="tab-messages" onclick="showPage('messages')"><span class="ni">💬</span>Messages<span class="nav-badge" id="msg-badge">0</span></button>
   </nav>
 </div>
 
@@ -678,22 +629,6 @@ select option{background:var(--surface2);}
   </div>
 </div>
 
-<!-- ANNOUNCEMENT -->
-<div class="mo" id="modal-announce">
-  <div class="modal">
-    <div class="mhandle" onclick="closeModal('modal-announce')"></div>
-    <div class="mhd"><div class="mtitle">Post Announcement</div><button class="mclose" onclick="closeModal('modal-announce')">×</button></div>
-    <div class="mbody">
-      <div class="fg"><label>Title</label><input id="ann-title" placeholder="e.g. Contributions Due"></div>
-      <div class="fg"><label>Message</label><textarea id="ann-text" rows="4" placeholder="Type your announcement…"></textarea></div>
-    </div>
-    <div class="mfoot">
-      <button class="btn" onclick="postAnnouncement()">Post to All Members</button>
-      <button class="btn-g" onclick="closeModal('modal-announce')">Cancel</button>
-    </div>
-  </div>
-</div>
-
 <!-- CHANGE PASSWORD -->
 <div class="mo" id="modal-change-pw">
   <div class="modal">
@@ -736,7 +671,6 @@ let DB={
 let cfFilter='all', repFilter='thisyear';
 let pageHistory=[], curPage='dashboard';
 let fbApp=null, fbDB=null;
-let activeMsgMemberId=null;
 
 const SECOND_ADMIN_PIN='7391';
 const ADMIN_BONUS_PCT=2;
@@ -885,7 +819,7 @@ function savePw(){
 // ════════════════════════════════════════
 // NAVIGATION
 // ════════════════════════════════════════
-const PT={dashboard:'Dashboard',cashflow:'Cash Flow',members:'Members',investments:'Investments',loans:'Loans',transactions:'Ledger',reports:'Reports',messages:'Messages',settings:'Settings','member-portfolio':'Member Portfolio',thread:'Messages'};
+const PT={dashboard:'Dashboard',cashflow:'Cash Flow',members:'Members',investments:'Investments',loans:'Loans',transactions:'Ledger',reports:'Reports',settings:'Settings','member-portfolio':'Member Portfolio'};
 const PA={
   dashboard:{l:'+ Add',f:'openMainModal()'},cashflow:{l:'+ Add',f:'openMainModal()'},
   members:{l:'+ Member',f:"openModal('modal-add-member')"},
@@ -893,10 +827,8 @@ const PA={
   loans:{l:'+ Loan',f:"openModal('modal-add-loan')"},
   transactions:{l:'+ Add',f:'openMainModal()'},
   reports:{l:'PDF',f:'exportPDF()'},
-  messages:{l:'+ Announce',f:"openModal('modal-announce')"},
   settings:{l:'↑ Sync',f:'syncToFirebase()'},
   'member-portfolio':{l:'Message',f:'msgActiveMember()'},
-  thread:{l:'',f:''}
 };
 
 function showPage(page,addH=true){
@@ -914,7 +846,6 @@ function showPage(page,addH=true){
   document.getElementById('back-btn').classList.toggle('hidden',pageHistory.length===0);
   document.querySelector('.scroll-area').scrollTop=0;
   if(page==='settings'){loadSettingsForm();}
-  if(page==='messages'){renderMessages();}
   renderAll();
 }
 
@@ -925,7 +856,6 @@ function goBack(){
 }
 
 function msgActiveMember(){
-  if(activeMsgMemberId) openThread(activeMsgMemberId);
 }
 
 // ════════════════════════════════════════
@@ -1064,7 +994,6 @@ function renderMembers(){
 
 // ── MEMBER PORTFOLIO ──
 function openMemberPortfolio(id){
-  activeMsgMemberId=id;
   const m=DB.members.find(x=>x.id===id);if(!m)return;
   const{nbm,tnp}=getNetEquity();
   const x=nbm.find(n=>n.id===id)||{net:0};
@@ -1318,148 +1247,6 @@ function renderReports(){
 }
 function setRep(el,f){document.querySelectorAll('#page-reports .chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');repFilter=f;renderReports();}
 
-// ── MESSAGING ──
-// ── ANNOUNCEMENT LIVE LISTENER ──
-let annListener=null;
-function startAnnListener(){
-  if(!fbDB||annListener)return;
-  annListener=fbDB.ref('investgroup/announcements').orderByChild('timestamp').limitToLast(20).on('value',snap=>{
-    const annEl=document.getElementById('announce-list');
-    if(!annEl)return;
-    const items=[];snap.forEach(c=>items.unshift({id:c.key,...c.val()}));
-    if(!items.length){annEl.innerHTML='<div class="empty" style="padding:12px"><div>No announcements yet</div></div>';return;}
-    annEl.innerHTML=items.map(a=>`<div class="announce-card">
-      <div class="announce-title">📢 ${a.title||'Announcement'}</div>
-      <div class="announce-text">${a.text}</div>
-      <div class="announce-time">${new Date(a.timestamp).toLocaleString()}</div>
-    </div>`).join('');
-  });
-}
-
-function renderMessages(){
-  if(!fbDB){
-    const annEl=document.getElementById('announce-list');
-    if(annEl)annEl.innerHTML='<div style="font-size:11px;color:var(--muted)">Connect to Firebase to use messaging.</div>';
-    return;
-  }
-  startAnnListener();
-  // Member threads list
-  const memEl=document.getElementById('msg-member-list');
-  if(!memEl)return;
-  if(!DB.members.length){memEl.innerHTML='<div class="empty" style="padding:12px"><div>No members yet</div></div>';return;}
-  memEl.innerHTML=DB.members.map(m=>`
-    <div class="member-msg-row" onclick="openThread('${m.id}')">
-      <div class="avatar">${m.name.substring(0,2).toUpperCase()}</div>
-      <div style="flex:1"><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">${m.name}</div>
-      <div style="font-size:10px;color:var(--muted)">Tap to open thread</div></div>
-      <div class="unread-dot" id="unread-${m.id}" style="display:none"></div>
-      <span style="color:var(--muted);font-size:16px">›</span>
-    </div>`).join('');
-  DB.members.forEach(m=>{
-    fbDB.ref(`investgroup/messages/${m.id}`).orderByChild('read').equalTo(false).once('value').then(snap=>{
-      let hasUnread=false;
-      snap.forEach(c=>{if(c.val().sender==='member')hasUnread=true;});
-      const dot=document.getElementById('unread-'+m.id);
-      if(dot)dot.style.display=hasUnread?'block':'none';
-      updateMsgBadge();
-    });
-  });
-}
-
-function updateMsgBadge(){
-  if(!fbDB) return;
-  let count=0;
-  const badge=document.getElementById('msg-badge');
-  DB.members.forEach(m=>{
-    fbDB.ref(`investgroup/messages/${m.id}`).orderByChild('read').equalTo(false).once('value').then(snap=>{
-      snap.forEach(c=>{if(c.val().sender==='member')count++;});
-      if(count>0){badge.textContent=count;badge.classList.add('show');}
-      else{badge.classList.remove('show');}
-    });
-  });
-}
-
-function openThread(memberId){
-  activeMsgMemberId=memberId;
-  const m=DB.members.find(x=>x.id===memberId);if(!m)return;
-  document.getElementById('tb-title').textContent='💬 '+m.name;
-  document.getElementById('back-btn').classList.remove('hidden');
-  if(fbDB){
-    fbDB.ref(`investgroup/messages/${memberId}`).once('value').then(snap=>{
-      snap.forEach(c=>{
-        if(c.val().sender==='member'&&!c.val().read){
-          fbDB.ref(`investgroup/messages/${memberId}/${c.key}/read`).set(true);
-        }
-      });
-    });
-  }
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-thread').classList.add('active');
-  pageHistory.push('messages');
-  curPage='thread';
-  document.getElementById('tb-action').style.display='none';
-  loadThreadMessages(memberId);
-}
-
-let threadListener=null;
-let threadListenerMemberId=null;
-
-function loadThreadMessages(memberId){
-  const el=document.getElementById('thread-messages');
-  if(!fbDB){if(el)el.innerHTML='<div class="empty"><div>No connection</div></div>';return;}
-  // Detach old listener if switching member
-  if(threadListener){
-    fbDB.ref(`investgroup/messages/${threadListenerMemberId}`).off('value',threadListener);
-    threadListener=null;
-    threadListenerMemberId=null;
-  }
-  if(el)el.innerHTML='<div class="empty"><div class="spinner"></div></div>';
-  threadListenerMemberId=memberId;
-  threadListener=fbDB.ref(`investgroup/messages/${memberId}`).orderByChild('timestamp').on('value',snap=>{
-    const el2=document.getElementById('thread-messages');
-    if(!el2)return;
-    const msgs=[];
-    snap.forEach(c=>msgs.push({id:c.key,...c.val()}));
-    if(!msgs.length){
-      el2.innerHTML='<div class="empty"><div>No messages yet. Send the first one!</div></div>';
-      return;
-    }
-    el2.innerHTML='<div class="msg-wrap">'+msgs.map(msg=>{
-      const isOut=msg.sender==='treasurer';
-      return`<div style="display:flex;flex-direction:column;align-items:${isOut?'flex-end':'flex-start'};margin-bottom:8px;">
-        <div class="msg-bubble ${isOut?'msg-out':'msg-in'}">${msg.text}</div>
-        <div class="msg-time" style="${isOut?'text-align:right':''}">${isOut?'You':'Member'} · ${new Date(msg.timestamp).toLocaleTimeString()}</div>
-      </div>`;
-    }).join('')+'</div>';
-    el2.scrollTop=el2.scrollHeight;
-  });
-}
-
-function sendThreadMessage(){
-  const input=document.getElementById('thread-input');
-  if(!input)return;
-  const text=input.value.trim();
-  if(!text||!activeMsgMemberId||!fbDB)return;
-  input.value='';
-  input.focus();
-  fbDB.ref(`investgroup/messages/${activeMsgMemberId}`).push({
-    sender:'treasurer',text,timestamp:Date.now(),read:false
-  });
-}
-
-function postAnnouncement(){
-  const title=document.getElementById('ann-title').value.trim();
-  const text=document.getElementById('ann-text').value.trim();
-  if(!text){alert('Please enter a message.');return;}
-  if(!fbDB){alert('Not connected to Firebase.');return;}
-  fbDB.ref('investgroup/announcements').push({title,text,timestamp:Date.now()}).then(()=>{
-    closeModal('modal-announce');
-    document.getElementById('ann-title').value='';
-    document.getElementById('ann-text').value='';
-    renderMessages();
-    alert('✓ Announcement posted to all members!');
-  });
-}
 
 // ── SETTINGS ──
 function loadSettingsForm(){
@@ -1971,7 +1758,6 @@ function initFirebase(){
     fbDB=firebase.database(fbApp);
     firebase.auth(fbApp).signInAnonymously().then(()=>{
       setSyncStatus('✓ Ready','var(--green)');
-      startAnnListener();
       const t=localStorage.getItem('ig_last_sync');
       if(t)document.getElementById('sync-last').textContent='Last synced: '+t;
       const isEmpty=!DB.members.length&&!DB.transactions.length&&!DB.investments.length;
