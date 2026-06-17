@@ -210,17 +210,17 @@ input:focus{border-color:var(--accent);}
       </div>
 
       <div class="kpi-grid">
-        <div class="kpi-card yellow"><div class="kl">Contributed</div><div class="kv" id="m-in">--</div><div class="ks">Total paid in</div></div>
-        <div class="kpi-card red"><div class="kl">Withdrawn</div><div class="kv red" id="m-out">--</div><div class="ks">Total taken out</div></div>
-        <div class="kpi-card green"><div class="kl">Net Capital</div><div class="kv green" id="m-net">--</div><div class="ks">In the pool</div></div>
+        <div class="kpi-card yellow"><div class="kl">Capital Account</div><div class="kv" id="m-ca">--</div><div class="ks">Rolling balance</div></div>
+        <div class="kpi-card green"><div class="kl">Contributed</div><div class="kv green" id="m-in">--</div><div class="ks">Total paid in</div></div>
         <div class="kpi-card blue"><div class="kl">Inv. Profit</div><div class="kv" id="m-iprofit">--</div><div class="ks" id="m-iret">daily weighted</div></div>
+        <div class="kpi-card red"><div class="kl">Withdrawn</div><div class="kv red" id="m-out">--</div><div class="ks">Total taken out</div></div>
       </div>
 
       <div class="card">
         <div class="card-hd"><div class="card-title">Net Worth Breakdown</div></div>
         <div class="card-body">
           <div style="display:flex;flex-direction:column;gap:8px;">
-            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Net Capital in Pool</span><span id="sw-net" style="font-weight:700">--</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Capital Account Balance</span><span id="sw-net" style="font-weight:700;color:var(--accent)">--</span></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Investment Profit (daily)</span><span id="sw-igain" style="font-weight:700">--</span></div>
             <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Loan Interest Share</span><span id="sw-linc" style="color:var(--gold);font-weight:700">--</span></div>
             <div id="sw-bonus-row" style="display:none;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">★ Management Bonus (2%)</span><span id="sw-bonus" style="color:var(--gold);font-weight:700">--</span></div>
@@ -231,6 +231,13 @@ input:focus{border-color:var(--accent);}
             </div>
             <div style="display:flex;justify-content:space-between;font-size:11px;"><span style="color:var(--muted)">Overall ROI</span><span id="sw-roi" style="font-weight:700">--</span></div>
           </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><div class="card-title">📅 Year-End Withdrawal Allowance</div></div>
+        <div class="card-body" id="yea-card-body">
+          <div class="empty"><span class="spinner"></span></div>
         </div>
       </div>
 
@@ -251,10 +258,20 @@ input:focus{border-color:var(--accent);}
     <div class="page" id="page-invest">
       <div class="section-title">My Investments</div>
       <div class="kpi-grid">
+        <div class="kpi-card yellow"><div class="kl">Capital Account</div><div class="kv" id="i-ca">--</div></div>
         <div class="kpi-card blue"><div class="kl">My Input</div><div class="kv" id="i-in">--</div></div>
-        <div class="kpi-card green"><div class="kl">My Value Now</div><div class="kv green" id="i-val">--</div></div>
-        <div class="kpi-card yellow"><div class="kl">My Profit</div><div class="kv" id="i-gain">--</div></div>
+        <div class="kpi-card green"><div class="kl">My Profit</div><div class="kv green" id="i-gain">--</div></div>
         <div class="kpi-card gold"><div class="kl">My Equity</div><div class="kv gold" id="i-eq">--</div></div>
+      </div>
+      <!-- Capital Account History -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-hd">
+          <div class="card-title">◆ Capital Account History</div>
+          <div id="i-ca-bal" style="font-family:'DM Serif Display',Georgia,serif;font-size:16px;color:var(--accent)">--</div>
+        </div>
+        <div class="card-body" style="padding:10px 14px;" id="ca-history-list">
+          <div class="empty"><div>No activity yet</div></div>
+        </div>
       </div>
       <div id="inv-cards"></div>
     </div>
@@ -586,6 +603,39 @@ function calcInvProfit(inv){
   });
 }
 
+// ── YEAR-END WITHDRAWAL ALLOWANCE ──
+// Amount = 20% of (capital account balance minus contributions currently tied up in OPEN investments)
+// Window: accessible Jan 2 – Jan 10 each year
+function memberOpenInvContribution(){
+  return(GD.investments||[]).filter(i=>i.status!=='closed').reduce((sum,inv)=>{
+    const rows=(inv.contributions||[]).filter(c=>c.memberId===MY_ID);
+    return sum+rows.reduce((s,c)=>s+c.amount,0);
+  },0);
+}
+
+function yearEndAllowance(){
+  const bal=ME.capitalAccount?ME.capitalAccount.balance:0;
+  const tiedUp=memberOpenInvContribution();
+  const free=Math.max(0,bal-tiedUp);
+  return+(free*0.20).toFixed(2);
+}
+
+function yearEndWindowStatus(){
+  const now=new Date();
+  const y=now.getFullYear();
+  const start=new Date(y,0,2);
+  const end=new Date(y,0,10,23,59,59);
+  let inWindow=now>=start&&now<=end;
+  let nextOpen=now>end?new Date(y+1,0,2):start;
+  const fmtDate=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  return{
+    inWindow,
+    label:inWindow?`Open now — closes ${fmtDate(end)}`:`Locked — opens ${fmtDate(nextOpen)}`,
+    windowStart:fmtDate(start),
+    windowEnd:fmtDate(end)
+  };
+}
+
 function myInvProfit(){
   return(GD.investments||[]).reduce((s,inv)=>{
     const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);
@@ -634,7 +684,8 @@ function renderDash(){
   // KPIs
   document.getElementById('m-in').textContent=fmt(totalIn);
   document.getElementById('m-out').textContent=fmt(totalOut);
-  document.getElementById('m-net').textContent=fmt(mNet);
+  const caEl=document.getElementById('m-ca');
+  if(caEl){const caBal=ME.capitalAccount?ME.capitalAccount.balance:0;caEl.textContent=fmt(caBal);caEl.className='kv '+(caBal>=0?'':'red');}
   document.getElementById('m-iprofit').textContent=fmt(invProfit);
   document.getElementById('m-iprofit').className='kv '+(invProfit>=0?'green':'red');
 
@@ -648,6 +699,21 @@ function renderDash(){
   }
   const nw=document.getElementById('sw-nw');nw.textContent=fmtF(netWorth);nw.style.color=netWorth>=0?'var(--green)':'var(--red)';
   const r=document.getElementById('sw-roi');r.textContent=(roi>=0?'+':'')+roi.toFixed(2)+'%';r.style.color=roi>=0?'var(--green)':'var(--red)';
+
+  // Year-End Withdrawal Allowance
+  const yeaBody=document.getElementById('yea-card-body');
+  if(yeaBody){
+    const allowance=yearEndAllowance();
+    const tiedUp=memberOpenInvContribution();
+    const win=yearEndWindowStatus();
+    yeaBody.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:var(--gold)">${fmtF(allowance)}</span>
+      <span class="badge ${win.inWindow?'bg':'bm'}" style="font-size:9px;">${win.inWindow?'Window Open':'Locked'}</span>
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">20% of your capital account, excluding ${fmtF(tiedUp)} currently tied up in open investments.</div>
+    <div style="font-size:10px;color:${win.inWindow?'var(--green)':'var(--muted)'};">${win.label}</div>
+    <div style="font-size:9px;color:var(--muted);margin-top:4px;">Window: ${win.windowStart} – ${win.windowEnd} each year. Jan 2 is the primary release date; the remaining days allow for late withdrawal.</div>`;
+  }
 
   // Recent
   const myTxs=(GD.transactions||[]).filter(t=>t.memberId===MY_ID).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
@@ -670,10 +736,38 @@ function renderInvestments(){
   const myProfit=myInvs.reduce((s,inv)=>{const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
   const myValue=myInput+myProfit;
   document.getElementById('i-in').textContent=fmt(myInput);
-  document.getElementById('i-val').textContent=fmt(myValue);
-  document.getElementById('i-gain').textContent=fmt(myProfit);
-  document.getElementById('i-gain').className='kv '+(myProfit>=0?'green':'red');
-  document.getElementById('i-eq').textContent=eqP+'%';
+  const iGain=document.getElementById('i-gain');if(iGain){iGain.textContent=fmt(myProfit);iGain.className='kv '+(myProfit>=0?'green':'red');}
+  const iEq=document.getElementById('i-eq');if(iEq)iEq.textContent=eqP+'%';
+
+  // Capital account KPIs
+  const caBal=ME.capitalAccount?ME.capitalAccount.balance:0;
+  const caEl=document.getElementById('i-ca');
+  if(caEl){caEl.textContent=fmt(caBal);caEl.className='kv '+(caBal>=0?'':'red');}
+  const caBal2=document.getElementById('i-ca-bal');
+  if(caBal2){caBal2.textContent=fmt(caBal);caBal2.style.color=caBal>=0?'var(--accent)':'var(--red)';}
+
+  // Capital account history
+  const caHist=document.getElementById('ca-history-list');
+  if(caHist){
+    const hist=ME.capitalAccount&&ME.capitalAccount.history?ME.capitalAccount.history:[];
+    if(!hist.length){
+      caHist.innerHTML='<div style="font-size:11px;color:var(--muted)">No capital account activity yet. Your balance builds as you make deposits and earn investment profits.</div>';
+    } else {
+      caHist.innerHTML=[...hist].reverse().map(h=>{
+        const isPos=h.amount>=0;
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:11px">${h.note}</div>
+            <div style="font-size:9px;color:var(--muted)">${h.date}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:12px">
+            <div style="color:${isPos?'var(--green)':'var(--red)'};font-weight:700;font-size:12px">${isPos?'+':''}${fmtF(h.amount)}</div>
+            <div style="font-size:9px;color:var(--muted)">bal: ${fmtF(h.balance)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
 
   const el=document.getElementById('inv-cards');
   if(!invs.length){el.innerHTML='<div class="empty"><div class="empty-icon">◈</div><div>No investments recorded yet</div></div>';return;}
@@ -704,7 +798,7 @@ function renderInvestments(){
           <div><div style="font-size:12px;font-weight:700;color:${gain>=0?'var(--green)':'var(--red)'}">${gain>=0?'+':''}${fmt(gain)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Group Gain</div></div>
         </div>
         ${rows.map(r=>`<div style="font-size:10px;color:var(--muted2);padding:4px 0;border-top:1px solid var(--border);">
-          Contribution: ${fmtF(r.contribution)} · Joined: ${r.joinDate} · ${r.activeDays} days active · Share at join: ${(r.shareAtJoin*100).toFixed(1)}%
+          Contribution: ${fmtF(r.contribution)} · Joined: ${r.joinDate} · ${r.activeDays} days active · ${(r.weightedShare*100).toFixed(1)}% weighted share
         </div>`).join('')}
         <div style="font-size:10px;color:var(--muted);margin-top:6px">Group total: ${fmtF(inv.amount)} → ${fmtF(inv.currentValue)}</div>
       </div>

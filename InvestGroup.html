@@ -534,7 +534,7 @@ select option{background:var(--surface2);}
       <div class="fg"><label>Notes</label><input id="iv-notes" placeholder="optional"></div>
     </div>
     <div class="mfoot">
-      <button class="btn" onclick="saveInvestment()">Save Investment</button>
+      <button class="btn" onclick="if(previewInvestment())saveInvestment()">Save Investment</button>
       <button class="btn-g" onclick="closeModal('modal-add-investment')">Cancel</button>
     </div>
   </div>
@@ -555,6 +555,7 @@ select option{background:var(--surface2);}
         </div>
       </div>
       <div class="fg" id="ui-close-wrap" style="display:none;"><label>Close Date</label><input type="date" id="ui-close-date"></div>
+      <div id="ui-closed-lock-msg" style="display:none;font-size:11px;color:var(--gold);background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.25);border-radius:8px;padding:8px 10px;margin-bottom:10px;">⚠ This investment is closed and profits have been distributed. It can no longer be reopened — its status is locked. You can still adjust the value for record-keeping if needed.</div>
       <div class="fg"><label>Update Note</label><input id="ui-note" placeholder="e.g. Q2 valuation"></div>
     </div>
     <div class="mfoot">
@@ -694,7 +695,13 @@ function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r
     if(!i.contributions) i.contributions=[];
     if(!i.valueHistory) i.valueHistory=[];
     if(!i.status) i.status='open';
+    if(!i.startDate) i.startDate=i.date||today();
     return i;
+  });
+  // Ensure every member has a capitalAccount object
+  DB.members=DB.members.map(m=>{
+    if(!m.capitalAccount) m.capitalAccount={balance:0,history:[]};
+    return m;
   });
 }
 function save(){saveDB();renderAll();}
@@ -975,9 +982,9 @@ function renderMembers(){
         <span class="badge ${RB[m.role]||'bm'}">${p}% equity</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;text-align:center;margin-bottom:8px;">
+        <div><div style="font-size:11px;font-weight:700;color:var(--accent)">${fmt(caBalance(m.id))}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Capital Acct</div></div>
         <div><div style="font-size:11px;font-weight:700;color:var(--green)">${fmt(c)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Paid In</div></div>
-        <div><div style="font-size:11px;font-weight:700;color:var(--red)">${fmt(w)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Withdrawn</div></div>
-        <div><div style="font-size:11px;font-weight:700;color:${invProfit>=0?'var(--accent)':'var(--red)'}">${fmt(invProfit)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Inv. Profit</div></div>
+        <div><div style="font-size:11px;font-weight:700;color:${invProfit>=0?'var(--green)':'var(--red)'}">${fmt(invProfit)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Inv. Profit</div></div>
         <div><div style="font-size:11px;font-weight:700;color:${netWorth>=0?'var(--green)':'var(--red)'}">${fmt(netWorth)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Net Worth</div></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:3px"><span>Net Equity (after withdrawals)</span><span>${p}%</span></div>
@@ -1066,8 +1073,73 @@ function openMemberPortfolio(id){
       </div></div>
     </div>
     <div class="card" style="margin-bottom:12px;">
-      <div class="card-hd"><div class="card-title">📈 Investments (daily profit)</div></div>
-      <div class="card-body" style="padding:10px 14px;">${invRows}</div>
+      <div class="card-hd"><div class="card-title">◆ Capital Account</div><div style="font-family:'DM Serif Display',Georgia,serif;font-size:16px;color:var(--accent)">${fmtF(caBalance(id))}</div></div>
+      <div class="card-body" style="padding:10px 14px;">
+        ${(()=>{
+          const ca=m.capitalAccount;
+          if(!ca||!ca.history||!ca.history.length) return '<div style="font-size:11px;color:var(--muted)">No capital account activity yet.</div>';
+          return ca.history.map(h=>{
+            const isPos=h.amount>=0;
+            return \`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;">
+              <div><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700">\${h.note}</div>
+              <div style="font-size:9px;color:var(--muted)">\${h.date}</div></div>
+              <div style="text-align:right;flex-shrink:0;margin-left:8px">
+                <div style="color:\${isPos?'var(--green)':'var(--red)'};font-weight:700">\${isPos?'+':''}\${fmtF(h.amount)}</div>
+                <div style="font-size:9px;color:var(--muted)">bal: \${fmtF(h.balance)}</div>
+              </div>
+            </div>\`;
+          }).join('');
+        })()}
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-hd"><div class="card-title">📅 Year-End Withdrawal Allowance</div></div>
+      <div class="card-body" style="padding:10px 14px;">
+        ${(()=>{
+          const allowance=yearEndAllowance(id);
+          const tiedUp=memberOpenInvContribution(id);
+          const win=yearEndWindowStatus();
+          return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:var(--gold)">${fmtF(allowance)}</span>
+            <span class="badge ${win.inWindow?'bg':'bm'}" style="font-size:9px;">${win.inWindow?'Window Open':'Locked'}</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">20% of capital account balance, excluding ${fmtF(tiedUp)} currently tied up in open investments.</div>
+          <div style="font-size:10px;color:${win.inWindow?'var(--green)':'var(--muted)'};">${win.label}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:4px;">Window: ${win.windowStart} – ${win.windowEnd} each year. Jan 2 is the primary release date; the remaining days allow for late withdrawal.</div>`;
+        })()}
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-hd"><div class="card-title">📈 Investments</div></div>
+      <div class="card-body" style="padding:10px 14px;">
+        ${(()=>{
+          // Show % share per investment
+          const myInvs=DB.investments.filter(inv=>inv.contributions&&inv.contributions.some(c=>c.memberId===id));
+          if(!myInvs.length) return '<div class="empty"><div>No investments yet</div></div>';
+          return myInvs.map(inv=>{
+            const rows=calcInvProfit(inv).filter(r=>r.memberId===id);
+            const myProfit=rows.reduce((s,r)=>s+r.profit,0);
+            const myShare=rows.reduce((s,r)=>s+r.weightedShare,0);
+            const myContrib=rows.reduce((s,r)=>s+r.contribution,0);
+            const poolTotal=inv.amount||1;
+            const SC={open:'bg',closed:'br',funding:'bp'};
+            return \`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">\${inv.name}</div>
+                <div style="font-size:9px;color:var(--muted)">\${inv.type} · <span class="badge \${SC[inv.status]||'bm'}">\${inv.status}</span></div></div>
+                <div style="text-align:right">
+                  <div style="font-size:13px;font-weight:700;color:\${myProfit>=0?'var(--green)':'var(--red)'}">\${myProfit>=0?'+':''}\${fmt(myProfit)}</div>
+                  <div style="font-size:9px;color:var(--accent)">\${(myShare*100).toFixed(1)}% of pool</div>
+                </div>
+              </div>
+              \${rows.map(r=>\`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);padding:3px 0;border-top:1px solid var(--border);">
+                <span>\${fmtF(r.contribution)} · \${r.activeDays} days · \${(r.weightedShare*100).toFixed(2)}%</span>
+                <span style="color:\${r.profit>=0?'var(--green)':'var(--red)'}">\${r.profit>=0?'+':''}\${fmtF(r.profit)}</span>
+              </div>\`).join('')}
+            </div>\`;
+          }).join('');
+        })()}
+      </div>
     </div>
     <div class="card" style="margin-bottom:12px;">
       <div class="card-hd"><div class="card-title">≡ Transactions</div><span class="badge bm">${myTxs.length}</span></div>
@@ -1323,7 +1395,10 @@ function saveMember(){
   const op=parseFloat(document.getElementById('am-open').value)||0;
   const m={id:uid(),name,role:document.getElementById('am-role').value,email:document.getElementById('am-email').value,phone:document.getElementById('am-phone').value,notes:document.getElementById('am-notes').value};
   DB.members.push(m);
-  if(op>0)DB.transactions.push({id:uid(),date:today(),type:'contribution',desc:'Opening balance — '+name,amount:op,memberId:m.id,notes:'Initial'});
+  if(op>0){
+    DB.transactions.push({id:uid(),date:today(),type:'contribution',desc:'Opening balance — '+name,amount:op,memberId:m.id,notes:'Initial'});
+    caPost(m.id, op, 'Opening balance', today());
+  }
   closeModal('modal-add-member');['am-name','am-email','am-phone','am-open','am-notes'].forEach(id=>document.getElementById(id).value='');save();
 }
 function openEditMember(id){
@@ -1340,23 +1415,101 @@ function saveEditMember(){
   m.phone=document.getElementById('em-phone').value;m.notes=document.getElementById('em-notes').value;
   closeModal('modal-edit-member');save();
 }
-// Calculate a member's net balance at a specific date (contributions - withdrawals up to that date)
-function memberNetAtDate(memberId, date){
-  const contrib=DB.transactions.filter(t=>t.type==='contribution'&&t.memberId===memberId&&t.date<=date).reduce((s,t)=>s+t.amount,0);
-  const withdr=DB.transactions.filter(t=>(t.type==='withdrawal'||t.type==='profit')&&t.memberId===memberId&&t.date<=date).reduce((s,t)=>s+t.amount,0);
-  return Math.max(0,contrib-withdr);
+// ── CAPITAL ACCOUNT HELPERS ──
+// Post an entry to a member's capital account
+function caPost(memberId, amount, note, date){
+  const m=DB.members.find(x=>x.id===memberId);if(!m)return;
+  if(!m.capitalAccount) m.capitalAccount={balance:0,history:[]};
+  m.capitalAccount.balance=+(m.capitalAccount.balance+amount).toFixed(2);
+  m.capitalAccount.history.push({date:date||today(),amount,note,balance:m.capitalAccount.balance});
 }
 
-// Auto-generate contributions from all member net balances at investment start date
-function autoGenContributions(startDate){
-  const contribs=[];
-  DB.members.forEach(m=>{
-    const net=memberNetAtDate(m.id,startDate);
-    if(net>0){
-      contribs.push({id:uid(),memberId:m.id,memberName:m.name,amount:net,date:startDate});
-    }
+// Get a member's capital account balance
+function caBalance(memberId){
+  const m=DB.members.find(x=>x.id===memberId);
+  return m&&m.capitalAccount?m.capitalAccount.balance:0;
+}
+
+// ── YEAR-END WITHDRAWAL ALLOWANCE ──
+// Amount = 20% of (capital account balance minus contributions currently tied up in OPEN investments)
+// Window: accessible Jan 2 – Jan 10 each year (Jan 2 is the primary date; 3rd–10th covers late withdrawal allowance)
+function memberOpenInvContribution(memberId){
+  return DB.investments.filter(i=>i.status!=='closed').reduce((sum,inv)=>{
+    const rows=(inv.contributions||[]).filter(c=>c.memberId===memberId);
+    return sum+rows.reduce((s,c)=>s+c.amount,0);
+  },0);
+}
+
+function yearEndAllowance(memberId){
+  const bal=caBalance(memberId);
+  const tiedUp=memberOpenInvContribution(memberId);
+  const free=Math.max(0,bal-tiedUp);
+  return +(free*0.20).toFixed(2);
+}
+
+// Returns the window status: {inWindow, label, windowStart, windowEnd}
+function yearEndWindowStatus(){
+  const now=new Date();
+  const y=now.getFullYear();
+  const start=new Date(y,0,2); // Jan 2
+  const end=new Date(y,0,10,23,59,59); // Jan 10 end of day
+  let inWindow=now>=start&&now<=end;
+  let nextOpen;
+  if(now>end){
+    nextOpen=new Date(y+1,0,2);
+  } else if(now<start){
+    nextOpen=start;
+  } else {
+    nextOpen=start; // currently in window
+  }
+  const fmtDate=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  return{
+    inWindow,
+    isPrimaryDay:now.getFullYear()===y&&now.getMonth()===0&&now.getDate()===2,
+    label:inWindow?`Open now — withdrawal window closes ${fmtDate(end)}`:`Locked — opens ${fmtDate(nextOpen)}`,
+    windowStart:fmtDate(start),
+    windowEnd:fmtDate(end)
+  };
+}
+
+// Auto-generate contributions from capital account balances (called when creating new investment)
+// Generate contributions for a new investment using % EQUITY scaling.
+// Each member's contribution = (their capital account balance / total of all balances) × deployedAmount.
+// This ensures the investment never deploys more than what's actually being invested,
+// while still splitting it fairly according to each member's relative capital share.
+function autoGenContributions(startDate, deployedAmount){
+  const date=startDate||today();
+  const balances=DB.members.map(m=>({m,bal:caBalance(m.id)})).filter(x=>x.bal>0);
+  const totalBal=balances.reduce((s,x)=>s+x.bal,0);
+  if(totalBal<=0||!deployedAmount)return[];
+  return balances.map(({m,bal})=>{
+    const pctEquity=bal/totalBal;
+    const amount=+(pctEquity*deployedAmount).toFixed(2);
+    return{id:uid(),memberId:m.id,memberName:m.name,amount,date,pctEquity};
   });
-  return contribs;
+}
+
+// Distribute profits from a closed investment to capital accounts
+function distributeInvProfits(inv){
+  const rows=calcInvProfit(inv);
+  if(!rows.length)return;
+  rows.forEach(r=>{
+    if(r.profit===0)return;
+    caPost(r.memberId, r.profit, `Profit: ${inv.name}`, inv.closeDate||today());
+    DB.transactions.push({id:uid(),date:inv.closeDate||today(),type:'profit',
+      desc:`Profit distribution — ${inv.name}`,amount:Math.abs(r.profit),memberId:r.memberId,
+      notes:`${(r.weightedShare*100).toFixed(2)}% share · ${r.activeDays} days active`});
+  });
+}
+
+function previewInvestment(){
+  const startDate=document.getElementById('iv-date').value||today();
+  const deployedAmount=parseFloat(document.getElementById('iv-amt').value)||0;
+  if(deployedAmount<=0){alert('Enter the investment amount first.');return false;}
+  const contribs=autoGenContributions(startDate,deployedAmount);
+  if(!contribs.length){alert('No members have a capital account balance yet.\nRecord member contributions via Ledger first.');return false;}
+  const lines=contribs.map(c=>`${c.memberName}: ${fmtF(c.amount)} (${(c.pctEquity*100).toFixed(1)}% equity)`).join('\n');
+  return safeConfirm(`% Equity Preview — Investment Pool:\n\n${lines}\n\nTotal deployed: ${fmtF(deployedAmount)}\n\nEach member's contribution is their current % share of total group capital, applied to this investment amount.\n\nProceed to create investment?`);
 }
 
 function saveInvestment(){
@@ -1365,10 +1518,11 @@ function saveInvestment(){
   const cur=parseFloat(document.getElementById('iv-cur').value)||amount;
   const status=document.getElementById('iv-status').value;
   const startDate=document.getElementById('iv-date').value||today();
-  // Auto-generate contributions from member net balances at start date
-  const autoContribs=autoGenContributions(startDate);
-  // If auto-contributions exist, use their total as the deployed amount so profit math is consistent
-  const deployedAmount=autoContribs.length>0?autoContribs.reduce((s,c)=>s+c.amount,0):amount;
+
+  // Build contributions using % equity scaled to the actual deployed amount
+  const autoContribs=autoGenContributions(startDate,amount);
+  const deployedAmount=amount;
+
   const inv={
     id:uid(),name,type:document.getElementById('iv-type').value,
     date:startDate,startDate,amount:deployedAmount,currentValue:cur,status,
@@ -1376,16 +1530,13 @@ function saveInvestment(){
     contributions:autoContribs,
     valueHistory:[{date:startDate,value:cur,note:'Initial valuation'}]
   };
-  if(status==='closed') inv.closeDate=document.getElementById('iv-close-date').value||today();
+  if(status==='closed'){
+    inv.closeDate=document.getElementById('iv-close-date').value||today();
+  }
   DB.investments.push(inv);
-  DB.transactions.push({id:uid(),date:startDate,type:'investment',desc:'Investment: '+name,amount,memberId:'',notes:inv.notes});
+  DB.transactions.push({id:uid(),date:startDate,type:'investment',desc:'Investment: '+name,amount:deployedAmount,memberId:'',notes:inv.notes});
   closeModal('modal-add-investment');
   ['iv-name','iv-amt','iv-cur','iv-notes','iv-date','iv-close-date'].forEach(id=>document.getElementById(id).value='');
-  // Show summary of auto-contributions
-  if(autoContribs.length){
-    const summary=autoContribs.map(c=>`${c.memberName}: ${fmtF(c.amount)}`).join('\n');
-    alert(`✓ Investment created!\n\nAuto-contributions from member balances on ${startDate}:\n${summary}`);
-  }
   save();
 }
 
@@ -1396,6 +1547,16 @@ function openUpdInv(id){
   document.getElementById('ui-close-wrap').style.display=i.status==='closed'?'':'none';
   document.getElementById('ui-close-date').value=i.closeDate||today();
   document.getElementById('ui-note').value='';
+  const statusSel=document.getElementById('ui-status');
+  const lockMsg=document.getElementById('ui-closed-lock-msg');
+  if(i.status==='closed'){
+    // Investment is closed permanently — disable status changes, profits already distributed
+    statusSel.disabled=true;
+    if(lockMsg)lockMsg.style.display='block';
+  } else {
+    statusSel.disabled=false;
+    if(lockMsg)lockMsg.style.display='none';
+  }
   openModal('modal-upd-inv');
 }
 document.getElementById('ui-status')?.addEventListener('change',function(){
@@ -1408,13 +1569,25 @@ document.getElementById('iv-status')?.addEventListener('change',function(){
 function updateInv(){
   const id=document.getElementById('ui-id').value,i=DB.investments.find(x=>x.id===id);if(!i)return;
   const val=parseFloat(document.getElementById('ui-val').value);if(isNaN(val))return alert('Enter valid value.');
-  const newStatus=document.getElementById('ui-status').value;
+  const wasAlreadyClosed=i.status==='closed';
+  // Hard guard: once closed, an investment can never be reopened. Profits are already final.
+  const newStatus=wasAlreadyClosed?'closed':document.getElementById('ui-status').value;
   const note=document.getElementById('ui-note').value||'Value update';
   i.currentValue=val;i.status=newStatus;
   if(!i.valueHistory)i.valueHistory=[];
   i.valueHistory.push({date:today(),value:val,note});
-  if(newStatus==='closed') i.closeDate=document.getElementById('ui-close-date').value||today();
-  else if(newStatus==='open'||newStatus==='funding') delete i.closeDate;
+  if(newStatus==='closed'){
+    i.closeDate=i.closeDate||document.getElementById('ui-close-date').value||today();
+    // Auto-distribute profits to capital accounts (only first time closing)
+    if(!wasAlreadyClosed){
+      distributeInvProfits(i);
+      const rows=calcInvProfit(i);
+      const summary=rows.map(r=>`${r.memberName}: +${fmtF(r.profit)}`).join('\n');
+      alert(`✓ Investment closed!\n\nProfits distributed to capital accounts:\n${summary||'No contributions to distribute.'}\n\nThis investment is now permanently closed.`);
+    }
+  } else if(newStatus==='open'||newStatus==='funding'){
+    delete i.closeDate;
+  }
   closeModal('modal-upd-inv');save();
 }
 
@@ -1492,6 +1665,8 @@ function saveTx(){
   const type=document.getElementById('tx-type').value,desc=document.getElementById('tx-desc').value.trim();
   const amt=parseFloat(document.getElementById('tx-amt').value),date=document.getElementById('tx-date').value||today();
   if(!desc||isNaN(amt)||amt<=0)return alert('Fill description and amount.');
+  const memId=document.getElementById('tx-mem').value||'';
+
   const repayKeys=['repay','repaid','pay back','paying back','loan payment','installment','instalment','settl','brought back','bring back'];
   const descLow=desc.toLowerCase();
   const hasRepay=repayKeys.some(k=>descLow.includes(k));
@@ -1504,7 +1679,12 @@ function saveTx(){
       }
     }
   }
-  DB.transactions.push({id:uid(),date,type,desc,amount:amt,memberId:document.getElementById('tx-mem').value||'',notes:document.getElementById('tx-notes').value});
+  DB.transactions.push({id:uid(),date,type,desc,amount:amt,memberId:memId,notes:document.getElementById('tx-notes').value});
+  // Update capital account for contributions and withdrawals
+  if(memId){
+    if(type==='contribution') caPost(memId, amt, desc, date);
+    else if(type==='withdrawal') caPost(memId, -amt, desc, date);
+  }
   closeModal('modal-tx');['tx-desc','tx-amt','tx-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('smart-hint').classList.remove('show');
   save();
@@ -1515,6 +1695,7 @@ function smartHint(){
   const amt=parseFloat(document.getElementById('tx-amt')?.value)||0;
   const hintEl=document.getElementById('smart-hint'),msgEl=document.getElementById('smart-msg');
   if(!hintEl||!msgEl)return;
+
   const repayKeys=['repay','repaid','pay back','loan payment','installment','settl','brought back'];
   const hasRepay=repayKeys.some(k=>desc.includes(k));
   if(hasRepay){
@@ -1772,7 +1953,7 @@ function syncToFirebase(){
   setSyncStatus('⟳ Syncing…','var(--gold)');
   const payload={
     settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate},
-    members:DB.members.map(m=>({id:m.id,name:m.name,role:m.role,email:m.email||'',phone:m.phone||''})),
+    members:DB.members.map(m=>({id:m.id,name:m.name,role:m.role,email:m.email||'',phone:m.phone||'',capitalAccount:m.capitalAccount||{balance:0,history:[]}})),
     investments:DB.investments,loans:DB.loans,transactions:DB.transactions,
     memberPins:DB.memberPins||{},lastUpdated:new Date().toISOString()
   };
@@ -1799,6 +1980,8 @@ function loadFromFirebase(){
     if(data.memberPins)DB.memberPins=data.memberPins;
     // Migrate investments
     DB.investments=DB.investments.map(i=>{if(!i.contributions)i.contributions=[];if(!i.valueHistory)i.valueHistory=[];if(!i.status)i.status='open';if(!i.startDate)i.startDate=i.date||today();return i;});
+    // Migrate members — ensure capitalAccount exists
+    DB.members=DB.members.map(m=>{if(!m.capitalAccount)m.capitalAccount={balance:0,history:[]};return m;});
     saveDB();renderAll();
     const t=new Date().toLocaleTimeString();
     setSyncStatus('✓ Loaded','var(--green)');
