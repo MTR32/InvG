@@ -1080,14 +1080,13 @@ function openMemberPortfolio(id){
           if(!ca||!ca.history||!ca.history.length) return '<div style="font-size:11px;color:var(--muted)">No capital account activity yet.</div>';
           return ca.history.map(h=>{
             const isPos=h.amount>=0;
-            return \`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;">
-              <div><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700">\${h.note}</div>
-              <div style="font-size:9px;color:var(--muted)">\${h.date}</div></div>
-              <div style="text-align:right;flex-shrink:0;margin-left:8px">
-                <div style="color:\${isPos?'var(--green)':'var(--red)'};font-weight:700">\${isPos?'+':''}\${fmtF(h.amount)}</div>
-                <div style="font-size:9px;color:var(--muted)">bal: \${fmtF(h.balance)}</div>
-              </div>
-            </div>\`;
+            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;">'
+              +'<div><div style="font-family:Syne,ui-sans-serif,sans-serif;font-weight:700">'+h.note+'</div>'
+              +'<div style="font-size:9px;color:var(--muted)">'+h.date+'</div></div>'
+              +'<div style="text-align:right;flex-shrink:0;margin-left:8px">'
+              +'<div style="color:'+(isPos?'var(--green)':'var(--red)')+';font-weight:700">'+(isPos?'+':'')+fmtF(h.amount)+'</div>'
+              +'<div style="font-size:9px;color:var(--muted)">bal: '+fmtF(h.balance)+'</div>'
+              +'</div></div>';
           }).join('');
         })()}
       </div>
@@ -1123,20 +1122,20 @@ function openMemberPortfolio(id){
             const myContrib=rows.reduce((s,r)=>s+r.contribution,0);
             const poolTotal=inv.amount||1;
             const SC={open:'bg',closed:'br',funding:'bp'};
-            return \`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
+            return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <div><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">\${inv.name}</div>
-                <div style="font-size:9px;color:var(--muted)">\${inv.type} · <span class="badge \${SC[inv.status]||'bm'}">\${inv.status}</span></div></div>
+                <div><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">${inv.name}</div>
+                <div style="font-size:9px;color:var(--muted)">${inv.type} · <span class="badge ${SC[inv.status]||'bm'}">${inv.status}</span></div></div>
                 <div style="text-align:right">
-                  <div style="font-size:13px;font-weight:700;color:\${myProfit>=0?'var(--green)':'var(--red)'}">\${myProfit>=0?'+':''}\${fmt(myProfit)}</div>
-                  <div style="font-size:9px;color:var(--accent)">\${(myShare*100).toFixed(1)}% of pool</div>
+                  <div style="font-size:13px;font-weight:700;color:${myProfit>=0?'var(--green)':'var(--red)'}">${myProfit>=0?'+':''}${fmt(myProfit)}</div>
+                  <div style="font-size:9px;color:var(--accent)">${(myShare*100).toFixed(1)}% of pool</div>
                 </div>
               </div>
-              \${rows.map(r=>\`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);padding:3px 0;border-top:1px solid var(--border);">
-                <span>\${fmtF(r.contribution)} · \${r.activeDays} days · \${(r.weightedShare*100).toFixed(2)}%</span>
-                <span style="color:\${r.profit>=0?'var(--green)':'var(--red)'}">\${r.profit>=0?'+':''}\${fmtF(r.profit)}</span>
-              </div>\`).join('')}
-            </div>\`;
+              ${rows.map(r=>`<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);padding:3px 0;border-top:1px solid var(--border);">
+                <span>${fmtF(r.contribution)} · ${r.activeDays} days · ${(r.weightedShare*100).toFixed(2)}%</span>
+                <span style="color:${r.profit>=0?'var(--green)':'var(--red)'}">${r.profit>=0?'+':''}${fmtF(r.profit)}</span>
+              </div>`).join('')}
+            </div>`;
           }).join('');
         })()}
       </div>
