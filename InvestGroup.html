@@ -708,7 +708,7 @@ function save(){saveDB();renderAll();}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
 function today(){return new Date().toISOString().split('T')[0];}
 function C(){return DB.settings.currency||'$';}
-function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(1)+'k':a.toFixed(2);return(n<0?'-':'')+c+s;}
+function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(a/1e6).toFixed(2)+'M':a.toLocaleString('en',{maximumFractionDigits:0});return(n<0?'-':'')+c+s;}
 function fmtF(n){return(n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(d1))/(1000*60*60*24)));}
 
@@ -1620,7 +1620,31 @@ function safeConfirm(msg){
   catch(e){ return true; } // if confirm is blocked, proceed
 }
 
-function delMember(id){if(!safeConfirm('Remove member? Their transactions will remain.'))return;DB.members=DB.members.filter(m=>m.id!==id);save();}
+function delMember(id){
+  const m=DB.members.find(x=>x.id===id);if(!m)return;
+  const openInvs=DB.investments.filter(i=>i.status!=='closed'&&i.contributions&&i.contributions.some(c=>c.memberId===id));
+  const warnExtra=openInvs.length?`\n\nThey will also be removed from ${openInvs.length} open investment(s); those pools will be reduced accordingly.`:'';
+  if(!safeConfirm(`Remove ${m.name}?\n\nTheir capital account and contributions to OPEN investments will be removed. Historical transactions and CLOSED investment records stay for audit purposes, but no longer count toward live totals.${warnExtra}`))return;
+
+  // Remove their contribution rows from any OPEN investment and shrink that investment's deployed amount accordingly
+  DB.investments.forEach(inv=>{
+    if(inv.status==='closed')return; // closed investments are final history — leave untouched
+    if(!inv.contributions||!inv.contributions.length)return;
+    const removedTotal=inv.contributions.filter(c=>c.memberId===id).reduce((s,c)=>s+c.amount,0);
+    if(removedTotal>0){
+      inv.contributions=inv.contributions.filter(c=>c.memberId!==id);
+      inv.amount=Math.max(0,inv.amount-removedTotal);
+    }
+  });
+
+  // Mark their past transactions as belonging to a removed member (keeps audit trail, stops live counting)
+  DB.transactions.forEach(t=>{
+    if(t.memberId===id){t.memberId='';t.desc=(t.desc||'')+' (member removed)';}
+  });
+
+  DB.members=DB.members.filter(x=>x.id!==id);
+  save();
+}
 function delInv(id){
   const inv=DB.investments.find(i=>i.id===id);if(!inv)return;
   if(!safeConfirm('Delete investment "'+inv.name+'"?'))return;

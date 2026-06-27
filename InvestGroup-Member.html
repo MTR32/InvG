@@ -389,7 +389,7 @@ const TB={contribution:'bg',withdrawal:'br',investment:'bb',return:'bg',loan_out
 // UTILS
 // ════════════════════════════════
 function C(){return(GD&&GD.settings&&GD.settings.currency)||'$';}
-function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(1)+'k':a.toFixed(2);return(n<0?'-':'')+c+s;}
+function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(a/1e6).toFixed(2)+'M':a.toLocaleString('en',{maximumFractionDigits:0});return(n<0?'-':'')+c+s;}
 function fmtF(n){return(n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function today(){return new Date().toISOString().split('T')[0];}
 function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(d1))/(1000*60*60*24)));}
