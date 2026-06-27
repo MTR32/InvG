@@ -569,12 +569,19 @@ function goBack(){
 // AGGREGATES
 // ════════════════════════════════
 function mCon(id){return(GD.transactions||[]).filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
-function mWit(id){return(GD.transactions||[]).filter(t=>(t.type==='withdrawal'||t.type==='profit')&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+function mWit(id){return(GD.transactions||[]).filter(t=>t.type==='withdrawal'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+
+function caBalanceOf(memberId){
+  const m=(GD.members||[]).find(x=>x.id===memberId);
+  return m&&m.capitalAccount?m.capitalAccount.balance:0;
+}
 
 function getEq(){
-  const nbm=(GD.members||[]).map(x=>({id:x.id,net:Math.max(0,mCon(x.id)-mWit(x.id))}));
+  // Equity % is based on each member's real capital account balance — the single source of truth
+  // that already includes deposits, withdrawals, investment profit, loan interest, and admin bonus.
+  const nbm=(GD.members||[]).map(x=>({id:x.id,net:Math.max(0,caBalanceOf(x.id))}));
   const tnp=nbm.reduce((s,x)=>s+x.net,0)||1;
-  const mNet=Math.max(0,mCon(MY_ID)-mWit(MY_ID));
+  const mNet=Math.max(0,caBalanceOf(MY_ID));
   return{mNet,eqF:mNet/tnp,eqP:(mNet/tnp*100).toFixed(2)};
 }
 

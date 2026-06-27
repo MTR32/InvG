@@ -748,11 +748,13 @@ function memberPendingLoanInterest(memberId){
 
 function reserve(){return capPool()-totInv()-lnOut()-sumTx('withdrawal')-sumTx('expense')-sumTx('profit')+sumTx('return')+lnRepaid();}
 function mCon(id){return DB.transactions.filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
-function mWit(id){return DB.transactions.filter(t=>(t.type==='withdrawal'||t.type==='profit')&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+function mWit(id){return DB.transactions.filter(t=>t.type==='withdrawal'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
 
 // NET EQUITY (after withdrawals)
 function getNetEquity(){
-  const nbm=DB.members.map(x=>({id:x.id,name:x.name,role:x.role,net:Math.max(0,mCon(x.id)-mWit(x.id))}));
+  // Equity % is based on each member's real capital account balance — the single source of truth
+  // that already includes deposits, withdrawals, investment profit, loan interest, and admin bonus.
+  const nbm=DB.members.map(x=>({id:x.id,name:x.name,role:x.role,net:Math.max(0,caBalance(x.id))}));
   const tnp=nbm.reduce((s,x)=>s+x.net,0)||1;
   return{nbm,tnp};
 }
