@@ -334,7 +334,7 @@ select option{background:var(--surface2);}
       <div class="card"><div class="card-hd"><div class="card-title">Income Statement</div></div><div class="card-body" id="rp-income"></div></div>
       <div class="card"><div class="card-hd"><div class="card-title">Balance Sheet</div></div><div class="card-body" id="rp-balance"></div></div>
       <div class="card">
-        <div class="card-hd"><div class="card-title">Member P&amp;L (incl. 2% mgmt bonus)</div></div>
+        <div class="card-hd"><div class="card-title">Member P&amp;L (incl. 10% mgmt bonus)</div></div>
         <div class="tw"><table><thead><tr><th>Member</th><th>Contributed</th><th>Mgmt Bonus</th><th>Inv. Profit</th><th>Total</th><th>ROI</th></tr></thead><tbody id="rp-mem"></tbody></table></div>
       </div>
     </div>
@@ -675,7 +675,7 @@ let pageHistory=[], curPage='dashboard';
 let fbApp=null, fbDB=null;
 
 const SECOND_ADMIN_PIN='7391';
-const ADMIN_BONUS_PCT=2;
+const ADMIN_BONUS_PCT=10;
 
 const IN_T=['contribution','return','loan_repayment'];
 const OUT_T=['withdrawal','investment','loan_out','expense','profit'];
@@ -708,7 +708,7 @@ function save(){saveDB();renderAll();}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
 function today(){return new Date().toISOString().split('T')[0];}
 function C(){return DB.settings.currency||'$';}
-function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(a/1e6).toFixed(2)+'M':a.toLocaleString('en',{maximumFractionDigits:0});return(n<0?'-':'')+c+s;}
+function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(Math.floor(a/1e4)/100).toFixed(2)+'M':a>=1e3?(Math.floor(a/100)/10).toFixed(1)+'k':a.toFixed(0);return(n<0?'-':'')+c+s;}
 function fmtF(n){return(n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(d1))/(1000*60*60*24)));}
 
@@ -769,19 +769,32 @@ function memberTotalInvProfit(memberId){
   },0);
 }
 
-// ADMIN BONUS CALCULATION
+// ADMIN BONUS — now reflects ACTUAL POSTED bonuses (permanent transaction records),
+// not a live recalculation. This means if someone is removed from admin/treasurer role,
+// whatever they already earned and had posted to their capital account stays untouched —
+// it's real transaction history, not a formula that re-evaluates their current role.
 function calcAdminBonus(){
-  const totalInvProfit=DB.investments.reduce((s,inv)=>{
+  // Only investments not yet closed still have a "pending/projected" bonus —
+  // closed investments already posted their bonus permanently via distributeInvProfits().
+  const pendingInvProfit=DB.investments.filter(i=>i.status!=='closed').reduce((s,inv)=>{
     const rows=calcInvProfit(inv);
     return s+rows.reduce((ss,r)=>ss+r.profit,0);
   },0);
-  const totalIncome=totalInvProfit+intEarned();
-  const bonusPool=totalIncome*(ADMIN_BONUS_PCT/100);
+  const pendingIncome=Math.max(0,pendingInvProfit);
+  const bonusPool=pendingIncome*(ADMIN_BONUS_PCT/100);
   const admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
   const bonusPerAdmin=admins.length>0?bonusPool/admins.length:0;
-  return{bonusPool,bonusPerAdmin,admins,totalIncome};
+  return{bonusPool,bonusPerAdmin,admins,totalIncome:pendingIncome};
 }
 
+// Total bonus a member has actually earned and had posted to their capital account (permanent, historical)
+function memberPostedBonus(memberId){
+  return DB.transactions.filter(t=>t.memberId===memberId&&t.type==='profit'&&(t.desc||'').toLowerCase().includes('management bonus'))
+    .reduce((s,t)=>s+t.amount,0);
+}
+
+// Live "projected" bonus from any still-open investments — only relevant if member is currently admin/treasurer.
+// This is NOT yet posted; it only becomes real and locked-in once those investments close.
 function memberBonus(memberId){
   const{bonusPerAdmin,admins}=calcAdminBonus();
   const isAdmin=admins.some(a=>a.id===memberId);
@@ -1064,7 +1077,7 @@ function openMemberPortfolio(id){
         <div class="divider"></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Investment Profit (daily weighted)</span><span style="color:${invProfit>=0?'var(--green)':'var(--red)'};font-weight:700">${invProfit>=0?'+':''}${fmtF(invProfit)}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loan Interest Share</span><span style="color:var(--gold);font-weight:700">+${fmtF(loanInc)}</span></div>
-        ${bonus>0?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Management Bonus (2%)</span><span style="color:var(--gold);font-weight:700">+${fmtF(bonus)}</span></div>`:''}
+        ${bonus>0?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Management Bonus (${ADMIN_BONUS_PCT}%)</span><span style="color:var(--gold);font-weight:700">+${fmtF(bonus)}</span></div>`:''}
         <div class="divider"></div>
         <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px">Final Net Worth</span>
         <span style="font-family:'DM Serif Display',Georgia,serif;font-size:20px;color:${netWorth>=0?'var(--green)':'var(--red)'}">${fmtF(netWorth)}</span></div>
@@ -1283,7 +1296,7 @@ function renderReports(){
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Investment Profit (daily weighted)</span><span style="color:${totalInvProfit>=0?'var(--green)':'var(--red)'}">${totalInvProfit>=0?'+':''}${fmtF(totalInvProfit)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loan Interest Earned</span><span style="color:var(--green)">+${fmtF(int)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Expenses</span><span style="color:var(--red)">−${fmtF(exp)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Mgmt Bonus Pool (2%)</span><span style="color:var(--gold)">−${fmtF(bonusPool)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Mgmt Bonus Pool (${ADMIN_BONUS_PCT}%)</span><span style="color:var(--gold)">−${fmtF(bonusPool)}</span></div>
       <div class="divider"></div>
       <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700">Net Income</span>
       <span style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:${netIncome>=0?'var(--green)':'var(--red)'}">${fmtF(netIncome)}</span></div>
@@ -1488,16 +1501,44 @@ function autoGenContributions(startDate, deployedAmount){
   });
 }
 
-// Distribute profits from a closed investment to capital accounts
+// Distribute profits from a closed investment to capital accounts.
+// 10% of the investment's profit is taken off the top as a management bonus,
+// split among whoever holds Admin/Treasurer role AT THIS MOMENT, and posted
+// PERMANENTLY to their capital accounts. This locks in their earned bonus —
+// if they're later removed from the admin role, this already-posted amount
+// is untouched since it's a real capital account entry, not a live calculation.
+// The remaining 90% of profit is split among members by time-weighted contribution.
 function distributeInvProfits(inv){
   const rows=calcInvProfit(inv);
   if(!rows.length)return;
+  const totalProfit=rows.reduce((s,r)=>s+r.profit,0);
+  const closeDate=inv.closeDate||today();
+
+  // Take management bonus off the top (only if there's a positive profit to take it from)
+  let bonusPool=0,bonusPerAdmin=0,admins=[];
+  if(totalProfit>0){
+    bonusPool=+(totalProfit*(ADMIN_BONUS_PCT/100)).toFixed(2);
+    admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
+    bonusPerAdmin=admins.length>0?+(bonusPool/admins.length).toFixed(2):0;
+    admins.forEach(a=>{
+      if(bonusPerAdmin===0)return;
+      caPost(a.id, bonusPerAdmin, `Mgmt Bonus (${ADMIN_BONUS_PCT}%): ${inv.name}`, closeDate);
+      DB.transactions.push({id:uid(),date:closeDate,type:'profit',
+        desc:`Management bonus — ${inv.name}`,amount:bonusPerAdmin,memberId:a.id,
+        notes:`${ADMIN_BONUS_PCT}% management bonus, split among ${admins.length} admin(s)`});
+    });
+  }
+
+  // Remaining profit (after bonus) split among members by their time-weighted share
+  const remainingProfit=totalProfit-bonusPool;
+  const scale=totalProfit!==0?remainingProfit/totalProfit:1;
   rows.forEach(r=>{
-    if(r.profit===0)return;
-    caPost(r.memberId, r.profit, `Profit: ${inv.name}`, inv.closeDate||today());
-    DB.transactions.push({id:uid(),date:inv.closeDate||today(),type:'profit',
-      desc:`Profit distribution — ${inv.name}`,amount:Math.abs(r.profit),memberId:r.memberId,
-      notes:`${(r.weightedShare*100).toFixed(2)}% share · ${r.activeDays} days active`});
+    const adjustedProfit=+(r.profit*scale).toFixed(2);
+    if(adjustedProfit===0)return;
+    caPost(r.memberId, adjustedProfit, `Profit: ${inv.name}`, closeDate);
+    DB.transactions.push({id:uid(),date:closeDate,type:'profit',
+      desc:`Profit distribution — ${inv.name}`,amount:Math.abs(adjustedProfit),memberId:r.memberId,
+      notes:`${(r.weightedShare*100).toFixed(2)}% share · ${r.activeDays} days active${bonusPool>0?` · after ${ADMIN_BONUS_PCT}% mgmt bonus`:''}`});
   });
 }
 
@@ -1579,10 +1620,14 @@ function updateInv(){
     i.closeDate=i.closeDate||document.getElementById('ui-close-date').value||today();
     // Auto-distribute profits to capital accounts (only first time closing)
     if(!wasAlreadyClosed){
+      const totalProfit=calcInvProfit(i).reduce((s,r)=>s+r.profit,0);
+      const admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
+      const bonusPool=totalProfit>0?+(totalProfit*(ADMIN_BONUS_PCT/100)).toFixed(2):0;
+      const scale=totalProfit!==0?(totalProfit-bonusPool)/totalProfit:1;
+      const memberRowsPreview=calcInvProfit(i).map(r=>`${r.memberName}: +${fmtF(+(r.profit*scale).toFixed(2))}`).join('\n');
       distributeInvProfits(i);
-      const rows=calcInvProfit(i);
-      const summary=rows.map(r=>`${r.memberName}: +${fmtF(r.profit)}`).join('\n');
-      alert(`✓ Investment closed!\n\nProfits distributed to capital accounts:\n${summary||'No contributions to distribute.'}\n\nThis investment is now permanently closed.`);
+      const bonusLine=bonusPool>0&&admins.length>0?`\n\nManagement bonus (${ADMIN_BONUS_PCT}%): ${fmtF(bonusPool)} split among ${admins.map(a=>a.name).join(', ')}`:'';
+      alert(`✓ Investment closed!\n\nProfits distributed to capital accounts:\n${memberRowsPreview||'No contributions to distribute.'}${bonusLine}\n\nThis investment is now permanently closed.`);
     }
   } else if(newStatus==='open'||newStatus==='funding'){
     delete i.closeDate;
@@ -1860,7 +1905,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
   <div class="kpi-row">
     <div class="kpi green"><div class="kpi-label">Investment Profit</div><div class="kpi-value green">${fmtF(totalInvProfit)}</div></div>
     <div class="kpi gold"><div class="kpi-label">Interest Earned</div><div class="kpi-value gold">${fmtF(int)}</div></div>
-    <div class="kpi"><div class="kpi-label">Mgmt Bonus (2%)</div><div class="kpi-value">${fmtF(bonusPool)}</div></div>
+    <div class="kpi"><div class="kpi-label">Mgmt Bonus (${ADMIN_BONUS_PCT}%)</div><div class="kpi-value">${fmtF(bonusPool)}</div></div>
     <div class="kpi ${roi>=0?'green':'red'}"><div class="kpi-label">Group ROI</div><div class="kpi-value ${roi>=0?'green':'red'}">${roi.toFixed(2)}%</div></div>
   </div>
 
@@ -1869,7 +1914,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
       <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:#111827">Income Statement</div>
       <div class="summary-row"><span style="color:#6b7280">Investment Profit (daily weighted)</span><span style="color:${totalInvProfit>=0?'#059669':'#dc2626'};font-weight:600">${totalInvProfit>=0?'+':''}${fmtF(totalInvProfit)}</span></div>
       <div class="summary-row"><span style="color:#6b7280">Loan Interest Earned</span><span style="color:#059669;font-weight:600">+${fmtF(int)}</span></div>
-      <div class="summary-row"><span style="color:#6b7280">★ Management Bonus Pool (2%)</span><span style="color:#d97706;font-weight:600">−${fmtF(bonusPool)}</span></div>
+      <div class="summary-row"><span style="color:#6b7280">★ Management Bonus Pool (${ADMIN_BONUS_PCT}%)</span><span style="color:#d97706;font-weight:600">−${fmtF(bonusPool)}</span></div>
       <div class="summary-total"><span>Net Income</span><span style="color:${netIncome>=0?'#059669':'#dc2626'}">${netIncome>=0?'+':''}${fmtF(netIncome)}</span></div>
     </div>
     <div>
@@ -1886,7 +1931,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 <div class="section page-break">
   <div class="section-title">Member Summary</div>
   <div class="section-sub">Individual member positions including daily-weighted investment profits and management bonus</div>
-  <div class="note">★ Management Bonus: 2% of total income (${fmtF(bonusPool)}) is split equally among Admin/Treasurer roles. Net equity is calculated after withdrawals.</div>
+  <div class="note">★ Management Bonus: ${ADMIN_BONUS_PCT}% of total income (${fmtF(bonusPool)}) is split equally among Admin/Treasurer roles. Net equity is calculated after withdrawals.</div>
   <br>
   <table>
     <thead><tr><th>Member</th><th>Role</th><th>Contributed</th><th>Withdrawn</th><th>Net Capital</th><th>Equity%</th><th>Inv. Profit</th><th>Mgmt Bonus</th><th>Total Profit</th><th>ROI%</th></tr></thead>
