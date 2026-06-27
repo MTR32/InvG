@@ -1376,7 +1376,9 @@ function loadSettingsForm(){
   loadBankForm();
   renderPinList();
   const t=localStorage.getItem('ig_last_sync');
-  if(t){document.getElementById('sync-last').textContent='Last synced: '+t;setSyncStatus('✓ Connected','var(--green)');}
+  if(t)document.getElementById('sync-last').textContent='Last synced: '+t;
+  // Reflect the REAL current connection state, not just whether we've ever synced before
+  setSyncStatus(fbDB?'✓ Ready':'✗ Not connected', fbDB?'var(--green)':'var(--red)');
 }
 function saveSettings(){
   DB.settings.groupName=document.getElementById('s-name').value||'My Investment Group';
@@ -2077,7 +2079,7 @@ function initFirebase(){
 }
 
 function syncToFirebase(){
-  if(!fbDB){alert('Not connected to Firebase. Check your internet connection.');return;}
+  if(!fbDB){alert('Not connected to Firebase yet.\n\nThis usually means the Firebase scripts are still loading, or failed to load. Wait a few seconds and try again — if it persists, check that nothing is blocking gstatic.com/firebaseio.com (ad-blocker, restrictive network, etc).');return;}
   setSyncStatus('⟳ Syncing…','var(--gold)');
   const payload={
     settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate},
