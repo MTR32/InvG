@@ -578,7 +578,7 @@ function getEq(){
   return{mNet,eqF:mNet/tnp,eqP:(mNet/tnp*100).toFixed(2)};
 }
 
-function intEarned(){return(GD.loans||[]).reduce((s,l)=>s+Math.min(Math.max(0,l.repaid-l.amount),(l.amount*l.rate)/100),0);}
+function intEarned(){return(GD.loans||[]).reduce((s,l)=>s+(l.interestDistributed||0),0);}
 function lnTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
 function lnBalance(l){return Math.max(0,lnTotalOwed(l)-l.repaid);}
 
@@ -637,7 +637,9 @@ function yearEndWindowStatus(){
 }
 
 function myInvProfit(){
-  return(GD.investments||[]).reduce((s,inv)=>{
+  // Only profit from still-OPEN investments — closed investments already posted
+  // their profit permanently to the capital account, so this avoids double counting.
+  return(GD.investments||[]).filter(i=>i.status!=='closed').reduce((s,inv)=>{
     const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);
     return s+rows.reduce((ss,r)=>ss+r.profit,0);
   },0);
@@ -656,6 +658,20 @@ function myBonus(){
   return isAdmin&&admins.length>0?bonusPool/admins.length:0;
 }
 
+// My share of interest not yet realized on loans still active, based on my locked equity
+// snapshot from when each specific loan was issued (only present members at that time qualify).
+function myPendingLoanInterest(){
+  return(GD.loans||[]).reduce((s,l)=>{
+    if(!l.equitySnapshot||!l.equitySnapshot.length)return s;
+    const snap=l.equitySnapshot.find(e=>e.memberId===MY_ID);
+    if(!snap)return s;
+    const totalInterest=(l.amount*l.rate)/100;
+    const realized=Math.min(Math.max(0,l.repaid-l.amount),totalInterest);
+    const notYetRealized=Math.max(0,totalInterest-realized);
+    return s+notYetRealized*snap.pctEquity;
+  },0);
+}
+
 // ════════════════════════════════
 // RENDER
 // ════════════════════════════════
@@ -668,9 +684,10 @@ function renderDash(){
   const{mNet,eqF,eqP}=getEq();
   const totalIn=mCon(MY_ID),totalOut=mWit(MY_ID);
   const invProfit=myInvProfit();
-  const loanInc=intEarned()*eqF;
+  const loanInc=myPendingLoanInterest();
   const bonus=myBonus();
-  const netWorth=mNet+invProfit+loanInc+bonus;
+  const caBal=ME.capitalAccount?ME.capitalAccount.balance:0;
+  const netWorth=caBal+invProfit+loanInc+bonus;
   const roi=totalIn>0?((netWorth-totalIn)/totalIn*100):0;
   const invDep=(GD.investments||[]).reduce((s,i)=>{
     const rows=calcInvProfit(i).filter(r=>r.memberId===MY_ID);

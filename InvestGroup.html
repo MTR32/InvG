@@ -723,7 +723,29 @@ function lnRepaid(){return DB.loans.reduce((s,l)=>s+l.repaid,0);}
 function lnTotal(){return DB.loans.reduce((s,l)=>s+l.amount,0);}
 function loanTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
 function loanBalance(l){return Math.max(0,loanTotalOwed(l)-l.repaid);}
-function intEarned(){return DB.loans.reduce((s,l)=>s+Math.min(Math.max(0,l.repaid-l.amount),(l.amount*l.rate)/100),0);}
+// Total interest already permanently posted to members' capital accounts via distributeLoanInterest()
+function intEarned(){return DB.loans.reduce((s,l)=>s+(l.interestDistributed||0),0);}
+// Interest still pending — realized by repayments but not yet distributed (safety net for legacy loans)
+function intPending(){return DB.loans.reduce((s,l)=>{
+  const totalInterest=(l.amount*l.rate)/100;
+  const realized=Math.min(Math.max(0,l.repaid-l.amount),totalInterest);
+  return s+Math.max(0,realized-(l.interestDistributed||0));
+},0);}
+
+// A member's share of interest not yet realized (loan not yet repaid past principal) — purely projected,
+// based on their locked equity snapshot from when each specific loan was issued.
+function memberPendingLoanInterest(memberId){
+  return DB.loans.reduce((s,l)=>{
+    if(!l.equitySnapshot||!l.equitySnapshot.length)return s;
+    const snap=l.equitySnapshot.find(e=>e.memberId===memberId);
+    if(!snap)return s;
+    const totalInterest=(l.amount*l.rate)/100;
+    const realized=Math.min(Math.max(0,l.repaid-l.amount),totalInterest);
+    const notYetRealized=Math.max(0,totalInterest-realized);
+    return s+notYetRealized*snap.pctEquity;
+  },0);
+}
+
 function reserve(){return capPool()-totInv()-lnOut()-sumTx('withdrawal')-sumTx('expense')-sumTx('profit')+sumTx('return')+lnRepaid();}
 function mCon(id){return DB.transactions.filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
 function mWit(id){return DB.transactions.filter(t=>(t.type==='withdrawal'||t.type==='profit')&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
@@ -763,6 +785,17 @@ function calcInvProfit(inv){
 
 function memberTotalInvProfit(memberId){
   return DB.investments.reduce((s,inv)=>{
+    const rows=calcInvProfit(inv);
+    const memberRows=rows.filter(r=>r.memberId===memberId);
+    return s+memberRows.reduce((ss,r)=>ss+r.profit,0);
+  },0);
+}
+
+// Only profit projected from still-OPEN investments — closed investments already posted
+// their profit permanently to the capital account via distributeInvProfits(), so counting
+// them here again would double-count against caBalance().
+function memberPendingInvProfit(memberId){
+  return DB.investments.filter(i=>i.status!=='closed').reduce((s,inv)=>{
     const rows=calcInvProfit(inv);
     const memberRows=rows.filter(r=>r.memberId===memberId);
     return s+memberRows.reduce((ss,r)=>ss+r.profit,0);
@@ -982,9 +1015,9 @@ function renderMembers(){
   el.innerHTML=DB.members.map(m=>{
     const x=nbm.find(n=>n.id===m.id)||{net:0};
     const c=mCon(m.id),w=mWit(m.id),p=(x.net/tnp*100).toFixed(1);
-    const invProfit=memberTotalInvProfit(m.id);
+    const invProfit=memberPendingInvProfit(m.id);
     const bonus=memberBonus(m.id);
-    const netWorth=x.net+invProfit+intEarned()*(x.net/tnp)+bonus;
+    const netWorth=caBalance(m.id)+invProfit+bonus;
     return `<div class="card"><div class="card-body" style="padding:12px 14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -1020,10 +1053,10 @@ function openMemberPortfolio(id){
   const x=nbm.find(n=>n.id===id)||{net:0};
   const eqF=x.net/tnp,eqP=(eqF*100).toFixed(2);
   const totalIn=mCon(id),totalOut=mWit(id);
-  const invProfit=memberTotalInvProfit(id);
-  const loanInc=intEarned()*eqF;
+  const invProfit=memberPendingInvProfit(id);
+  const loanInc=memberPendingLoanInterest(id);
   const bonus=memberBonus(id);
-  const netWorth=x.net+invProfit+loanInc+bonus;
+  const netWorth=caBalance(id)+invProfit+loanInc+bonus;
   const roi=totalIn>0?((netWorth-totalIn)/totalIn*100):0;
   const SC={open:'bg',closed:'br',funding:'bp'};
 
@@ -1241,6 +1274,7 @@ function renderLoans(){
         </div>
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px"><span>Repayment progress</span><span>${pct.toFixed(0)}%</span></div>
         <div class="prog-wrap"><div class="prog-fill" style="background:${isPaid?'var(--green)':isOver?'var(--red)':'var(--accent)'};width:${pct}%"></div></div>
+        ${l.equitySnapshot&&l.equitySnapshot.length?`<div style="font-size:9px;color:var(--muted);margin-top:6px">💡 Interest split among ${l.equitySnapshot.length} member(s) present at loan issue, by their capital account % at that time. No mgmt bonus applies.</div>`:''}
         ${l.notes?`<div style="font-size:11px;color:var(--muted);margin-top:6px">${l.notes}</div>`:''}
         <div class="brow">
           ${bal>0?`<button class="btn-g btn-sm" onclick="openRepay('${l.id}')">Record Repayment</button>`:''}
@@ -1317,8 +1351,8 @@ function renderReports(){
   rb.innerHTML=DB.members.map(m=>{
     const x=nbm.find(n=>n.id===m.id)||{net:0};
     const c=mCon(m.id),w=mWit(m.id);
-    const invP=memberTotalInvProfit(m.id);
-    const loanI=int*(x.net/tnp);
+    const invP=memberPendingInvProfit(m.id);
+    const loanI=memberPendingLoanInterest(m.id);
     const bonus=memberBonus(m.id);
     const total=invP+loanI+bonus;
     const roi2=c>0?(total/c*100):0;
@@ -1709,7 +1743,12 @@ function clearAll(){
 function saveLoan(){
   const bor=document.getElementById('ln-bor').value.trim(),amt=parseFloat(document.getElementById('ln-amt').value)||0;
   if(!bor||amt<=0)return alert('Fill borrower and amount.');
-  const loan={id:uid(),borrower:bor,amount:amt,rate:parseFloat(document.getElementById('ln-rate').value)||DB.settings.defaultRate||10,date:document.getElementById('ln-date').value||today(),dueDate:document.getElementById('ln-due').value||'',notes:document.getElementById('ln-notes').value,repaid:0};
+  // Snapshot each member's % equity (of capital account balances) at the moment this loan is issued.
+  // Only members present now get a share of THIS loan's interest — new members later won't retroactively qualify.
+  const balances=DB.members.map(m=>({memberId:m.id,bal:caBalance(m.id)})).filter(x=>x.bal>0);
+  const totalBal=balances.reduce((s,x)=>s+x.bal,0);
+  const equitySnapshot=totalBal>0?balances.map(x=>({memberId:x.memberId,pctEquity:x.bal/totalBal})):[];
+  const loan={id:uid(),borrower:bor,amount:amt,rate:parseFloat(document.getElementById('ln-rate').value)||DB.settings.defaultRate||10,date:document.getElementById('ln-date').value||today(),dueDate:document.getElementById('ln-due').value||'',notes:document.getElementById('ln-notes').value,repaid:0,interestDistributed:0,equitySnapshot};
   DB.loans.push(loan);
   DB.transactions.push({id:uid(),date:loan.date,type:'loan_out',desc:'Loan to '+bor,amount:amt,memberId:'',notes:loan.notes});
   closeModal('modal-add-loan');['ln-bor','ln-amt','ln-rate','ln-date','ln-due','ln-notes'].forEach(id=>document.getElementById(id).value='');save();
@@ -1721,11 +1760,32 @@ function openRepay(id){
   document.getElementById('rp-date').value=today();document.getElementById('rp-amt').value='';
   openModal('modal-repay');
 }
+// Distribute any newly-realized interest from a repayment to the loan's locked equity snapshot.
+// Interest is only "realized" once repayments exceed the principal — same logic as intEarned().
+// No admin/management bonus is taken from this pool.
+function distributeLoanInterest(l, date){
+  if(!l.equitySnapshot||!l.equitySnapshot.length)return;
+  const totalInterest=(l.amount*l.rate)/100;
+  const interestRealizedSoFar=Math.min(Math.max(0,l.repaid-l.amount),totalInterest);
+  const newlyRealized=+(interestRealizedSoFar-(l.interestDistributed||0)).toFixed(2);
+  if(newlyRealized<=0)return;
+  l.equitySnapshot.forEach(e=>{
+    const share=+(newlyRealized*e.pctEquity).toFixed(2);
+    if(share===0)return;
+    const m=DB.members.find(x=>x.id===e.memberId);
+    caPost(e.memberId, share, `Loan interest: ${l.borrower}`, date);
+    DB.transactions.push({id:uid(),date,type:'profit',desc:`Loan interest — ${l.borrower}`,amount:share,memberId:e.memberId,
+      notes:`${(e.pctEquity*100).toFixed(2)}% equity share at loan issue · no mgmt bonus applied`});
+  });
+  l.interestDistributed=interestRealizedSoFar;
+}
 function saveRepay(){
   const id=document.getElementById('rp-id').value,amt=parseFloat(document.getElementById('rp-amt').value);
   const l=DB.loans.find(x=>x.id===id);if(!l||isNaN(amt)||amt<=0)return alert('Invalid amount.');
+  const date=document.getElementById('rp-date').value||today();
   l.repaid+=amt;
-  DB.transactions.push({id:uid(),date:document.getElementById('rp-date').value||today(),type:'loan_repayment',desc:'Repayment — '+l.borrower,amount:amt,memberId:'',notes:document.getElementById('rp-notes').value});
+  distributeLoanInterest(l, date);
+  DB.transactions.push({id:uid(),date,type:'loan_repayment',desc:'Repayment — '+l.borrower,amount:amt,memberId:'',notes:document.getElementById('rp-notes').value});
   closeModal('modal-repay');save();
 }
 
@@ -1798,8 +1858,8 @@ function exportPDF(){
   const memberRows=DB.members.map(m=>{
     const x=nbm.find(n=>n.id===m.id)||{net:0};
     const c=mCon(m.id),w=mWit(m.id);
-    const invP=memberTotalInvProfit(m.id);
-    const loanI=int*(x.net/tnp);
+    const invP=memberPendingInvProfit(m.id);
+    const loanI=memberPendingLoanInterest(m.id);
     const bonus=memberBonus(m.id);
     const total=invP+loanI+bonus;
     const roi2=c>0?(total/c*100):0;
