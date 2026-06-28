@@ -382,7 +382,7 @@ let pageHistory=[], currentPage='dashboard';
 let lastMemberThreadHtml='';
 
 const ADMIN_BONUS_PCT=10;
-const IN_T=['contribution','return','loan_repayment'];
+const IN_T=['contribution','return','loan_repayment','profit'];
 const TB={contribution:'bg',withdrawal:'br',investment:'bb',return:'bg',loan_out:'bgold',loan_repayment:'bb',expense:'br',profit:'by'};
 
 // ════════════════════════════════
@@ -391,6 +391,15 @@ const TB={contribution:'bg',withdrawal:'br',investment:'bb',return:'bg',loan_out
 function C(){return(GD&&GD.settings&&GD.settings.currency)||'$';}
 function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(Math.floor(a/1e4)/100).toFixed(2)+'M':a>=1e3?(Math.floor(a/100)/10).toFixed(1)+'k':a.toFixed(0);return(n<0?'-':'')+c+s;}
 function fmtF(n){return(n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
+// Renders a transaction's amount with the correct sign and color.
+// 'profit' can be negative (an investment loss charged to a member), so its
+// sign must come from the actual amount, not a fixed type-based assumption.
+function txSignDisplay(t){
+  let isIn;
+  if(t.type==='profit') isIn=t.amount>=0;
+  else isIn=IN_T.includes(t.type);
+  return{isIn,sign:isIn?'+':'−',color:isIn?'var(--green)':'var(--red)',abs:fmtF(Math.abs(t.amount))};
+}
 function today(){return new Date().toISOString().split('T')[0];}
 function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(d1))/(1000*60*60*24)));}
 function setSyncDot(s,c){const e=document.getElementById('sync-dot');if(e){e.textContent=s;e.style.color=c;e.title=s;}}
@@ -746,10 +755,10 @@ function renderDash(){
   const el=document.getElementById('m-recent');
   if(!myTxs.length){el.innerHTML='<div class="empty"><div>No transactions yet</div></div>';return;}
   el.innerHTML='<div class="tl">'+myTxs.map(t=>{
-    const isIn=IN_T.includes(t.type),cls=isIn?'in':t.type==='loan_out'?'loan':'out';
+    const sd=txSignDisplay(t),cls=sd.isIn?'in':t.type==='loan_out'?'loan':'out';
     return`<div class="tl-item ${cls}"><div class="tl-date">${t.date}</div>
     <div class="tl-desc">${t.desc}</div>
-    <div class="tl-amt" style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'+':'−'}${fmtF(t.amount)}</div></div>`;
+    <div class="tl-amt" style="color:${sd.color}">${sd.sign}${sd.abs}</div></div>`;
   }).join('')+'</div>';
 }
 
@@ -838,9 +847,9 @@ function renderTransactions(){
   const tb=document.getElementById('tx-body');
   if(!myTxs.length){tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:16px">No transactions yet</td></tr>';return;}
   tb.innerHTML=myTxs.map(t=>{
-    const isIn=IN_T.includes(t.type);
+    const sd=txSignDisplay(t);
     return`<tr><td>${t.date}</td><td><span class="badge ${TB[t.type]||'bm'}">${t.type.replace('_',' ')}</span></td>
-    <td>${t.desc}</td><td style="color:${isIn?'var(--green)':'var(--red)'};font-weight:700;white-space:nowrap">${isIn?'+':'−'}${fmtF(t.amount)}</td></tr>`;
+    <td>${t.desc}</td><td style="color:${sd.color};font-weight:700;white-space:nowrap">${sd.sign}${sd.abs}</td></tr>`;
   }).join('');
 }
 
