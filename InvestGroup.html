@@ -837,6 +837,22 @@ function memberPostedBonus(memberId){
     .reduce((s,t)=>s+t.amount,0);
 }
 
+// Total profit a member has actually had POSTED to their capital account from CLOSED investments
+// (real, historical, settled — not a live projection). Used for reports showing actual realized earnings.
+function memberRealizedInvProfit(memberId){
+  return DB.transactions.filter(t=>t.memberId===memberId&&t.type==='profit'
+    &&(t.desc||'').toLowerCase().startsWith('profit distribution'))
+    .reduce((s,t)=>s+t.amount,0);
+}
+
+// Total loan interest a member has actually had POSTED to their capital account (real, historical)
+function memberRealizedLoanInterest(memberId){
+  return DB.transactions.filter(t=>t.memberId===memberId&&t.type==='profit'
+    &&(t.desc||'').toLowerCase().startsWith('loan interest'))
+    .reduce((s,t)=>s+t.amount,0);
+}
+
+
 // Live "projected" bonus from any still-open investments — only relevant if member is currently admin/treasurer.
 // This is NOT yet posted; it only becomes real and locked-in once those investments close.
 function memberBonus(memberId){
@@ -1329,7 +1345,7 @@ function renderReports(){
   const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const int=intEarned();
   const totalInvProfit=DB.investments.reduce((s,inv)=>{const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
-  const{bonusPool}=calcAdminBonus();
+  const bonusPool=totalInvProfit>0?+(totalInvProfit*(ADMIN_BONUS_PCT/100)).toFixed(2):0;
   const netIncome=totalInvProfit+int-exp;
   const roi=cap>0?(netIncome/cap*100):0;
   document.getElementById('rp-cap').textContent=fmtF(cap);
@@ -1362,9 +1378,9 @@ function renderReports(){
   rb.innerHTML=DB.members.map(m=>{
     const x=nbm.find(n=>n.id===m.id)||{net:0};
     const c=mCon(m.id),w=mWit(m.id);
-    const invP=memberPendingInvProfit(m.id);
-    const loanI=memberPendingLoanInterest(m.id);
-    const bonus=memberBonus(m.id);
+    const invP=memberRealizedInvProfit(m.id);
+    const loanI=memberRealizedLoanInterest(m.id);
+    const bonus=memberPostedBonus(m.id);
     const total=invP+loanI+bonus;
     const roi2=c>0?(total/c*100):0;
     return `<tr><td><strong>${m.name}</strong><br><span style="font-size:9px;color:var(--muted)">${(x.net/tnp*100).toFixed(1)}% equity</span></td>
@@ -1871,9 +1887,9 @@ function exportPDF(){
   const memberRows=DB.members.map(m=>{
     const x=nbm.find(n=>n.id===m.id)||{net:0};
     const c=mCon(m.id),w=mWit(m.id);
-    const invP=memberPendingInvProfit(m.id);
-    const loanI=memberPendingLoanInterest(m.id);
-    const bonus=memberBonus(m.id);
+    const invP=memberRealizedInvProfit(m.id);
+    const loanI=memberRealizedLoanInterest(m.id);
+    const bonus=memberPostedBonus(m.id);
     const total=invP+loanI+bonus;
     const roi2=c>0?(total/c*100):0;
     return `<tr style="border-bottom:1px solid #e5e7eb;">
