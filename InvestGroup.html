@@ -474,7 +474,10 @@ select option{background:var(--surface2);}
         <div class="fg"><label>Email</label><input type="email" id="am-email" placeholder="optional"></div>
         <div class="fg"><label>Phone</label><input id="am-phone" placeholder="optional"></div>
       </div>
-      <div class="fg"><label>Opening Balance</label><input type="number" id="am-open" min="0" placeholder="0.00"></div>
+      <div class="frow">
+        <div class="fg"><label>Opening Balance</label><input type="number" id="am-open" min="0" placeholder="0.00"></div>
+        <div class="fg"><label>Contribution Date</label><input type="date" id="am-open-date"></div>
+      </div>
       <div class="fg"><label>Notes</label><textarea id="am-notes" rows="2"></textarea></div>
     </div>
     <div class="mfoot">
@@ -1485,13 +1488,14 @@ function updateMemSel(){
 function saveMember(){
   const name=document.getElementById('am-name').value.trim();if(!name)return alert('Enter a name.');
   const op=parseFloat(document.getElementById('am-open').value)||0;
+  const openDate=document.getElementById('am-open-date').value||today();
   const m={id:uid(),name,role:document.getElementById('am-role').value,email:document.getElementById('am-email').value,phone:document.getElementById('am-phone').value,notes:document.getElementById('am-notes').value};
   DB.members.push(m);
   if(op>0){
-    DB.transactions.push({id:uid(),date:today(),type:'contribution',desc:'Opening balance — '+name,amount:op,memberId:m.id,notes:'Initial'});
-    caPost(m.id, op, 'Opening balance', today());
+    DB.transactions.push({id:uid(),date:openDate,type:'contribution',desc:'Opening balance — '+name,amount:op,memberId:m.id,notes:'Initial'});
+    caPost(m.id, op, 'Opening balance', openDate);
   }
-  closeModal('modal-add-member');['am-name','am-email','am-phone','am-open','am-notes'].forEach(id=>document.getElementById(id).value='');save();
+  closeModal('modal-add-member');['am-name','am-email','am-phone','am-open','am-open-date','am-notes'].forEach(id=>document.getElementById(id).value='');save();
 }
 function openEditMember(id){
   const m=DB.members.find(x=>x.id===id);if(!m)return;
@@ -1569,16 +1573,50 @@ function yearEndWindowStatus(){
 // Each member's contribution = (their capital account balance / total of all balances) × deployedAmount.
 // This ensures the investment never deploys more than what's actually being invested,
 // while still splitting it fairly according to each member's relative capital share.
+// Builds contribution rows for a new investment using % EQUITY scaling, but — critically —
+// splits each member's contribution into dated chunks that mirror their REAL capital account
+// history up to the investment's start date. This way, money a member added long ago is
+// weighted with more active days than money they added more recently, instead of every
+// member's entire balance being lumped under one shared date.
 function autoGenContributions(startDate, deployedAmount){
   const date=startDate||today();
   const balances=DB.members.map(m=>({m,bal:caBalance(m.id)})).filter(x=>x.bal>0);
   const totalBal=balances.reduce((s,x)=>s+x.bal,0);
   if(totalBal<=0||!deployedAmount)return[];
-  return balances.map(({m,bal})=>{
+
+  const rows=[];
+  balances.forEach(({m,bal})=>{
     const pctEquity=bal/totalBal;
-    const amount=+(pctEquity*deployedAmount).toFixed(2);
-    return{id:uid(),memberId:m.id,memberName:m.name,amount,date,pctEquity};
+    const memberDeployed=+(pctEquity*deployedAmount).toFixed(2);
+    if(memberDeployed<=0)return;
+
+    // Pull this member's capital account history up to (and including) the investment's start date,
+    // oldest first, to reconstruct WHEN each portion of their current balance actually arrived.
+    const hist=(m.capitalAccount&&m.capitalAccount.history?m.capitalAccount.history:[])
+      .filter(h=>h.date<=date)
+      .sort((a,b)=>a.date.localeCompare(b.date));
+
+    if(!hist.length){
+      // No history (legacy/edge case) — fall back to a single row dated at investment start
+      rows.push({id:uid(),memberId:m.id,memberName:m.name,amount:memberDeployed,date,pctEquity});
+      return;
+    }
+
+    // Walk through history chronologically, allocating the member's deployed amount
+    // proportionally across each dated chunk, scaled to their balance at start date.
+    let remaining=memberDeployed;
+    const scale=bal>0?memberDeployed/bal:0;
+    hist.forEach((h,idx)=>{
+      if(h.amount<=0)return; // only positive additions create a "joined on this date" row; withdrawals/negative entries don't add new weighted capital
+      const isLast=idx===hist.length-1;
+      let chunk=+(h.amount*scale).toFixed(2);
+      if(isLast)chunk=+remaining.toFixed(2); // last chunk soaks up any rounding remainder
+      remaining=+(remaining-chunk).toFixed(2);
+      if(chunk<=0)return;
+      rows.push({id:uid(),memberId:m.id,memberName:m.name,amount:chunk,date:h.date,pctEquity});
+    });
   });
+  return rows;
 }
 
 // Distribute profits from a closed investment to capital accounts.
