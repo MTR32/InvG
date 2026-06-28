@@ -201,7 +201,7 @@ select option{background:var(--surface2);}
     <div class="page active" id="page-dashboard">
       <div id="d-alerts"></div>
       <div class="kpi-grid">
-        <div class="kpi-card yellow"><div class="kl">Capital Pool</div><div class="kv" id="d-cap">--</div><div class="ks">All contributions</div></div>
+        <div class="kpi-card yellow"><div class="kl">Capital Pool</div><div class="kv" id="d-cap">--</div><div class="ks">Total member balances</div></div>
         <div class="kpi-card green"><div class="kl">Reserve</div><div class="kv green" id="d-res">--</div><div class="ks" id="d-res-pct">0% of capital</div></div>
         <div class="kpi-card blue"><div class="kl">Invested</div><div class="kv" id="d-inv">--</div><div class="ks" id="d-inv-c">0 positions</div></div>
         <div class="kpi-card gold"><div class="kl">Loans Out</div><div class="kv gold" id="d-ln">--</div><div class="ks" id="d-ln-c">0 active</div></div>
@@ -725,9 +725,23 @@ function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(
 // AGGREGATES
 // ════════════════════════════════════════
 function sumTx(type){return DB.transactions.filter(t=>t.type===type).reduce((s,t)=>s+t.amount,0);}
-function capPool(){return sumTx('contribution');}
-function totInv(){return DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+i.amount,0);}
+// Total Assets = sum of all members' real capital account balances (which already includes
+// contributions + investment profit + loan interest + admin bonus, minus withdrawals)
+// + current value of still-open investments + loans outstanding (principal + interest owed).
+function capPool(){return DB.members.reduce((s,m)=>s+caBalance(m.id),0);}
+
+// Current value of investments still open (using live currentValue, not just the original deployed amount,
+// so an open investment that has appreciated/depreciated is reflected accurately)
+function totInv(){return DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+i.currentValue,0);}
+
+// Total outstanding on loans — principal + interest still owed, across all loans
 function lnOut(){return DB.loans.reduce((s,l)=>s+Math.max(0,loanTotalOwed(l)-l.repaid),0);}
+
+// Cash Reserve = the liquid portion of members' total balances — what's left after
+// subtracting whatever is currently tied up in open investments or out on loan.
+// This is real, available cash; it does not subtract posted profit/bonus since that money
+// hasn't left the bank, it's just been credited to a member's capital account.
+function reserve(){return capPool()-totInv()-lnOut();}
 function lnRepaid(){return DB.loans.reduce((s,l)=>s+l.repaid,0);}
 function lnTotal(){return DB.loans.reduce((s,l)=>s+l.amount,0);}
 function loanTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
@@ -759,7 +773,6 @@ function memberPendingLoanInterest(memberId){
 // Posted profit (investment profit, mgmt bonus, loan interest) is NOT subtracted here —
 // it's been credited to a member's capital account, but that money hasn't left the bank.
 // It only actually leaves when a real 'withdrawal' transaction happens (Jan 2–10 window).
-function reserve(){return capPool()-totInv()-lnOut()-sumTx('withdrawal')-sumTx('expense')+sumTx('return')+lnRepaid();}
 function mCon(id){return DB.transactions.filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
 function mWit(id){return DB.transactions.filter(t=>t.type==='withdrawal'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
 
