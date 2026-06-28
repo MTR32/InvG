@@ -755,7 +755,11 @@ function memberPendingLoanInterest(memberId){
   },0);
 }
 
-function reserve(){return capPool()-totInv()-lnOut()-sumTx('withdrawal')-sumTx('expense')-sumTx('profit')+sumTx('return')+lnRepaid();}
+// Cash Reserve = uncommitted cash still physically in the group's account.
+// Posted profit (investment profit, mgmt bonus, loan interest) is NOT subtracted here —
+// it's been credited to a member's capital account, but that money hasn't left the bank.
+// It only actually leaves when a real 'withdrawal' transaction happens (Jan 2–10 window).
+function reserve(){return capPool()-totInv()-lnOut()-sumTx('withdrawal')-sumTx('expense')+sumTx('return')+lnRepaid();}
 function mCon(id){return DB.transactions.filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
 function mWit(id){return DB.transactions.filter(t=>t.type==='withdrawal'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
 
