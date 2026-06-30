@@ -530,10 +530,8 @@ select option{background:var(--surface2);}
         <div class="fg"><label>Amount Deployed</label><input type="number" id="iv-amt" min="0" placeholder="0.00"></div>
         <div class="fg"><label>Current Value</label><input type="number" id="iv-cur" min="0" placeholder="0.00"></div>
       </div>
-      <div class="fg"><label>Status</label>
-        <select id="iv-status"><option value="open">Open</option><option value="closed">Closed</option><option value="funding">Funding (Accepting contributions)</option></select>
-      </div>
-      <div class="fg" id="iv-close-date-wrap" style="display:none;"><label>Close Date</label><input type="date" id="iv-close-date"></div>
+      <div class="fg"><label>End Date (leave blank if still running)</label><input type="date" id="iv-close-date" onchange="document.getElementById('iv-status-hint').textContent=this.value&&this.value<=new Date().toISOString().split('T')[0]?'Will be created as CLOSED — profit distributed to capital accounts immediately.':'Will be created as OPEN.'"></div>
+      <div id="iv-status-hint" style="font-size:10px;color:var(--muted);margin:-6px 0 10px 2px;">Will be created as OPEN.</div>
       <div class="fg"><label>Notes</label><input id="iv-notes" placeholder="optional"></div>
     </div>
     <div class="mfoot">
@@ -675,9 +673,9 @@ let DB={
 };
 let cfFilter='all', repFilter='thisyear';
 let pageHistory=[], curPage='dashboard';
+let activeMemberPortfolioId=null;
 let fbApp=null, fbDB=null;
 
-const SECOND_ADMIN_PIN='7391';
 const ADMIN_BONUS_PCT=10;
 
 const IN_T=['contribution','return','loan_repayment','profit'];
@@ -804,11 +802,17 @@ function calcInvProfit(inv){
     return{...c,activeDays,weight:c.amount*activeDays};
   });
 
-  // Total weight across all rows
-  const totalWeight=rows.reduce((s,r)=>s+r.weight,0)||1;
+  // Total weight across all rows. Edge case: if the investment had zero duration (opened and
+  // closed same day, or all contributions landed exactly on the close date), every weight is 0.
+  // Fall back to splitting purely by contribution amount so profit still distributes correctly
+  // instead of silently going to nobody.
+  const rawTotalWeight=rows.reduce((s,r)=>s+r.weight,0);
+  const totalAmount=rows.reduce((s,r)=>s+r.amount,0)||1;
+  const useAmountFallback=rawTotalWeight<=0;
+  const totalWeight=useAmountFallback?totalAmount:rawTotalWeight;
 
   return rows.map(r=>{
-    const weightedShare=r.weight/totalWeight;
+    const weightedShare=useAmountFallback?(r.amount/totalWeight):(r.weight/totalWeight);
     const profit=totalGain*weightedShare;
     return{memberId:r.memberId,memberName:r.memberName||'Unknown',contribution:r.amount,joinDate:r.date,activeDays:r.activeDays,weightedShare,profit};
   });
@@ -889,7 +893,7 @@ function setPW(p){localStorage.setItem('ig_pw',p);}
 
 function tryUnlock(){
   const v=document.getElementById('lk-in').value;
-  if(v===getPW()||v===SECOND_ADMIN_PIN){
+  if(v===getPW()){
     document.getElementById('lock').classList.add('off');
     document.getElementById('app').classList.remove('off');
     document.getElementById('lk-in').value='';
@@ -907,7 +911,7 @@ function lockApp(){
   document.getElementById('lk-in').value='';
   document.getElementById('lk-err').textContent='';
 }
-function openChangePw(){openModal('modal-change-pw');document.getElementById('lock').classList.add('off');document.getElementById('app').classList.remove('off');}
+function openChangePw(){openModal('modal-change-pw');}
 function savePw(){
   const cur=document.getElementById('pw-cur').value,nw=document.getElementById('pw-new').value,cf=document.getElementById('pw-cf').value;
   const err=document.getElementById('pw-err');
@@ -929,7 +933,7 @@ const PA={
   transactions:{l:'+ Add',f:'openMainModal()'},
   reports:{l:'PDF',f:'exportPDF()'},
   settings:{l:'↑ Sync',f:'syncToFirebase()'},
-  'member-portfolio':{l:'Message',f:'msgActiveMember()'},
+  'member-portfolio':{l:'+ Transaction',f:'quickAddTxForActiveMember()'},
 };
 
 function showPage(page,addH=true){
@@ -956,7 +960,11 @@ function goBack(){
   showPage(prev,false);
 }
 
-function msgActiveMember(){
+function quickAddTxForActiveMember(){
+  if(!activeMemberPortfolioId)return;
+  openMainModal();
+  const sel=document.getElementById('tx-mem');
+  if(sel)sel.value=activeMemberPortfolioId;
 }
 
 // ════════════════════════════════════════
@@ -996,18 +1004,21 @@ function renderDash(){
   el('d-alerts').innerHTML=alerts.map(a=>`<div style="background:rgba(240,193,74,.08);border:1px solid rgba(240,193,74,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--gold);margin-bottom:8px;display:flex;gap:8px;">⚠ <span>${a}</span></div>`).join('');
   // member equity
   const me=el('d-mem');
-  if(!DB.members.length){me.innerHTML='<div class="empty"><div class="empty-icon">◉</div><div>No members yet</div></div>';return;}
-  const{nbm,tnp}=getNetEquity();
-  me.innerHTML=nbm.map(x=>{
-    const p=(x.net/tnp*100).toFixed(1);
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-      <div class="avatar">${x.name.substring(0,2).toUpperCase()}</div>
-      <div style="flex:1"><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">${x.name}</div>
-      <div class="prog-wrap" style="width:100%;margin-top:3px"><div class="prog-fill" style="background:var(--accent);width:${p}%"></div></div></div>
-      <div style="text-align:right"><div style="font-family:'DM Serif Display',Georgia,serif;font-size:13px;color:var(--green)">${fmt(x.net)}</div>
-      <div style="font-size:9px;color:var(--muted)">${p}%</div></div>
-    </div>`;
-  }).join('');
+  if(!DB.members.length){
+    me.innerHTML='<div class="empty"><div class="empty-icon">◉</div><div>No members yet</div></div>';
+  } else {
+    const{nbm,tnp}=getNetEquity();
+    me.innerHTML=nbm.map(x=>{
+      const p=(x.net/tnp*100).toFixed(1);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div class="avatar">${x.name.substring(0,2).toUpperCase()}</div>
+        <div style="flex:1"><div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px">${x.name}</div>
+        <div class="prog-wrap" style="width:100%;margin-top:3px"><div class="prog-fill" style="background:var(--accent);width:${p}%"></div></div></div>
+        <div style="text-align:right"><div style="font-family:'DM Serif Display',Georgia,serif;font-size:13px;color:var(--green)">${fmt(x.net)}</div>
+        <div style="font-size:9px;color:var(--muted)">${p}%</div></div>
+      </div>`;
+    }).join('');
+  }
   // recent
   const re=el('d-recent');
   const rec=[...DB.transactions].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
@@ -1077,10 +1088,10 @@ function renderMembers(){
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;text-align:center;margin-bottom:8px;">
         <div><div style="font-size:11px;font-weight:700;color:var(--accent)">${fmt(caBalance(m.id))}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Capital Acct</div></div>
         <div><div style="font-size:11px;font-weight:700;color:var(--green)">${fmt(c)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Paid In</div></div>
-        <div><div style="font-size:11px;font-weight:700;color:${invProfit>=0?'var(--green)':'var(--red)'}">${fmt(invProfit)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Inv. Profit</div></div>
+        <div><div style="font-size:11px;font-weight:700;color:${invProfit>=0?'var(--green)':'var(--red)'}">${fmt(invProfit)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Pending Profit</div></div>
         <div><div style="font-size:11px;font-weight:700;color:${netWorth>=0?'var(--green)':'var(--red)'}">${fmt(netWorth)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Net Worth</div></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:3px"><span>Net Equity (after withdrawals)</span><span>${p}%</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:3px"><span>Capital account share</span><span>${p}%</span></div>
       <div class="prog-wrap"><div class="prog-fill" style="background:var(--accent);width:${p}%"></div></div>
       ${m.notes?`<div style="margin-top:8px;font-size:11px;color:var(--muted)">${m.notes}</div>`:''}
       ${bonus>0?`<div style="margin-top:6px;font-size:10px;color:var(--gold)">★ Admin bonus: +${fmtF(bonus)}</div>`:''}
@@ -1096,6 +1107,7 @@ function renderMembers(){
 // ── MEMBER PORTFOLIO ──
 function openMemberPortfolio(id){
   const m=DB.members.find(x=>x.id===id);if(!m)return;
+  activeMemberPortfolioId=id;
   const{nbm,tnp}=getNetEquity();
   const x=nbm.find(n=>n.id===id)||{net:0};
   const eqF=x.net/tnp,eqP=(eqF*100).toFixed(2);
@@ -1143,9 +1155,9 @@ function openMemberPortfolio(id){
       <div style="font-size:10px;color:var(--muted)">${m.role}${m.email?' · '+m.email:''}${m.phone?' · '+m.phone:''}</div></div>
     </div>
     <div class="kpi-grid" style="margin-bottom:14px;">
-      <div class="kpi-card yellow"><div class="kl">Net Equity</div><div class="kv">${eqP}%</div><div class="ks">${fmt(x.net)} in pool</div></div>
+      <div class="kpi-card yellow"><div class="kl">Capital Share</div><div class="kv">${eqP}%</div><div class="ks">${fmt(x.net)} balance</div></div>
       <div class="kpi-card ${netWorth>=0?'green':'red'}"><div class="kl">Net Worth</div><div class="kv ${netWorth>=0?'green':'red'}">${fmt(netWorth)}</div><div class="ks">all included</div></div>
-      <div class="kpi-card blue"><div class="kl">Inv. Profit</div><div class="kv ${invProfit>=0?'green':'red'}">${fmt(invProfit)}</div><div class="ks">daily weighted</div></div>
+      <div class="kpi-card blue"><div class="kl">Pending Profit</div><div class="kv ${invProfit>=0?'green':'red'}">${fmt(invProfit)}</div><div class="ks">from open investments</div></div>
       <div class="kpi-card gold"><div class="kl">${bonus>0?'Mgmt Bonus':'Loan Income'}</div><div class="kv">${fmt(bonus>0?bonus:loanInc)}</div></div>
     </div>
     <div class="card" style="margin-bottom:12px;">
@@ -1306,7 +1318,7 @@ function renderLoans(){
   if(!DB.loans.length){el.innerHTML='<div class="empty"><div class="empty-icon">⬕</div><div>No loans recorded</div></div>';return;}
   const t2=today();
   el.innerHTML=DB.loans.map(l=>{
-    const bal=loanBalance(l),tot=loanTotalOwed(l),isPaid=bal===0,isOver=!isPaid&&l.dueDate&&l.dueDate<t2;
+    const bal=loanBalance(l),tot=loanTotalOwed(l),isPaid=bal<0.01,isOver=!isPaid&&l.dueDate&&l.dueDate<t2;
     const sb=isPaid?'bg':isOver?'br':'by',pct=Math.min(100,(l.repaid/tot)*100);
     return `<div class="card${isOver?' overdue-row':''}">
       <div class="card-hd">
@@ -1361,7 +1373,7 @@ function getRepRange(){
 function renderReports(){
   const{from,to}=getRepRange();
   const txs=DB.transactions.filter(t=>{if(from&&t.date<from)return false;if(to&&t.date>to)return false;return true;});
-  const cap=txs.filter(t=>t.type==='contribution').reduce((s,t)=>s+t.amount,0);
+  const cap=capPool();
   const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const int=intEarned();
   const totalInvProfit=DB.investments.reduce((s,inv)=>{const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
@@ -1604,13 +1616,17 @@ function autoGenContributions(startDate, deployedAmount){
 
     // Walk through history chronologically, allocating the member's deployed amount
     // proportionally across each dated chunk, scaled to their balance at start date.
+    const positiveEntries=hist.filter(h=>h.amount>0);
+    if(!positiveEntries.length){
+      rows.push({id:uid(),memberId:m.id,memberName:m.name,amount:memberDeployed,date,pctEquity});
+      return;
+    }
     let remaining=memberDeployed;
     const scale=bal>0?memberDeployed/bal:0;
-    hist.forEach((h,idx)=>{
-      if(h.amount<=0)return; // only positive additions create a "joined on this date" row; withdrawals/negative entries don't add new weighted capital
-      const isLast=idx===hist.length-1;
+    positiveEntries.forEach((h,idx)=>{
+      const isLast=idx===positiveEntries.length-1;
       let chunk=+(h.amount*scale).toFixed(2);
-      if(isLast)chunk=+remaining.toFixed(2); // last chunk soaks up any rounding remainder
+      if(isLast)chunk=+remaining.toFixed(2); // last positive chunk soaks up any rounding remainder
       remaining=+(remaining-chunk).toFixed(2);
       if(chunk<=0)return;
       rows.push({id:uid(),memberId:m.id,memberName:m.name,amount:chunk,date:h.date,pctEquity});
@@ -1674,27 +1690,39 @@ function saveInvestment(){
   const name=document.getElementById('iv-name').value.trim(),amount=parseFloat(document.getElementById('iv-amt').value)||0;
   if(!name||amount<=0)return alert('Fill name and amount.');
   const cur=parseFloat(document.getElementById('iv-cur').value)||amount;
-  const status=document.getElementById('iv-status').value;
   const startDate=document.getElementById('iv-date').value||today();
+  const endDateInput=document.getElementById('iv-close-date').value;
+  // Auto-derive status: an End Date in the past (or today) means this investment is already
+  // finished — create it directly as Closed with profit distributed. No end date, or a future
+  // one, means it's still running — create it Open.
+  const isAlreadyClosed=!!endDateInput&&endDateInput<=today();
+  const status=isAlreadyClosed?'closed':'open';
 
   // Build contributions using % equity scaled to the actual deployed amount
   const autoContribs=autoGenContributions(startDate,amount);
-  const deployedAmount=amount;
 
   const inv={
     id:uid(),name,type:document.getElementById('iv-type').value,
-    date:startDate,startDate,amount:deployedAmount,currentValue:cur,status,
+    date:startDate,startDate,amount,currentValue:cur,status,
     notes:document.getElementById('iv-notes').value,
     contributions:autoContribs,
     valueHistory:[{date:startDate,value:cur,note:'Initial valuation'}]
   };
-  if(status==='closed'){
-    inv.closeDate=document.getElementById('iv-close-date').value||today();
+  if(isAlreadyClosed){
+    inv.closeDate=endDateInput;
   }
   DB.investments.push(inv);
-  DB.transactions.push({id:uid(),date:startDate,type:'investment',desc:'Investment: '+name,amount:deployedAmount,memberId:'',notes:inv.notes});
+  DB.transactions.push({id:uid(),date:startDate,type:'investment',desc:'Investment: '+name,amount,memberId:'',notes:inv.notes,investmentId:inv.id});
+
+  if(isAlreadyClosed){
+    // This is historical data already finished — distribute profit to capital accounts immediately,
+    // exactly as if you had closed it via the Update modal, but in one step.
+    distributeInvProfits(inv);
+  }
+
   closeModal('modal-add-investment');
   ['iv-name','iv-amt','iv-cur','iv-notes','iv-date','iv-close-date'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('iv-status-hint').textContent='Will be created as OPEN.';
   save();
 }
 
@@ -1719,9 +1747,6 @@ function openUpdInv(id){
 }
 document.getElementById('ui-status')?.addEventListener('change',function(){
   document.getElementById('ui-close-wrap').style.display=this.value==='closed'?'':'none';
-});
-document.getElementById('iv-status')?.addEventListener('change',function(){
-  document.getElementById('iv-close-date-wrap').style.display=this.value==='closed'?'':'none';
 });
 
 function updateInv(){
@@ -1812,7 +1837,13 @@ function delInv(id){
   const inv=DB.investments.find(i=>i.id===id);if(!inv)return;
   if(!safeConfirm('Delete investment "'+inv.name+'"?'))return;
   DB.investments=DB.investments.filter(i=>i.id!==id);
-  DB.transactions=DB.transactions.filter(t=>!(t.type==='investment'&&t.desc==='Investment: '+inv.name));
+  // Prefer matching by investmentId (reliable); fall back to name match for legacy transactions
+  // created before this link existed, so old records still get cleaned up correctly.
+  DB.transactions=DB.transactions.filter(t=>{
+    if(t.type!=='investment')return true;
+    if(t.investmentId)return t.investmentId!==id;
+    return t.desc!=='Investment: '+inv.name;
+  });
   save();
 }
 function delLoan(id){if(!safeConfirm('Delete this loan?'))return;DB.loans=DB.loans.filter(l=>l.id!==id);save();}
@@ -1866,6 +1897,10 @@ function distributeLoanInterest(l, date){
 function saveRepay(){
   const id=document.getElementById('rp-id').value,amt=parseFloat(document.getElementById('rp-amt').value);
   const l=DB.loans.find(x=>x.id===id);if(!l||isNaN(amt)||amt<=0)return alert('Invalid amount.');
+  const owed=loanBalance(l);
+  if(amt>owed+0.01){
+    if(!safeConfirm(`This repayment of ${fmtF(amt)} is more than the ${fmtF(owed)} still owed on this loan.\n\nProceed anyway? (the extra amount will be recorded but won't generate additional interest)`))return;
+  }
   const date=document.getElementById('rp-date').value||today();
   l.repaid+=amt;
   distributeLoanInterest(l, date);
@@ -1887,7 +1922,10 @@ function saveTx(){
       if(loanBalance(l)<=0)continue;
       const words=l.borrower.toLowerCase().split(' ').filter(w=>w.length>2);
       if(descLow.includes(l.borrower.toLowerCase())||words.some(w=>descLow.includes(w))){
-        if(safeConfirm(`Auto-link this as repayment from ${l.borrower}?`)){l.repaid+=amt;}
+        if(safeConfirm(`Auto-link this as repayment from ${l.borrower}?`)){
+          l.repaid+=amt;
+          distributeLoanInterest(l, date);
+        }
       }
     }
   }
@@ -1933,7 +1971,7 @@ function exportPDF(){
   const cap=capPool(),res=reserve(),inv=totInv(),lo=lnOut();
   const int=intEarned();
   const totalInvProfit=DB.investments.reduce((s,inv2)=>{const rows=calcInvProfit(inv2);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
-  const{bonusPool}=calcAdminBonus();
+  const bonusPool=totalInvProfit>0?+(totalInvProfit*(ADMIN_BONUS_PCT/100)).toFixed(2):0;
   const netIncome=totalInvProfit+int;
   const roi=cap>0?(netIncome/cap*100):0;
   const gname=DB.settings.groupName||'Investment Group';
@@ -1983,7 +2021,7 @@ function exportPDF(){
   }).join('');
 
   const loanRows=DB.loans.map(l=>{
-    const bal=loanBalance(l),isPaid=bal===0,isOver=!isPaid&&l.dueDate&&l.dueDate<today();
+    const bal=loanBalance(l),isPaid=bal<0.01,isOver=!isPaid&&l.dueDate&&l.dueDate<today();
     const status=isPaid?'Paid':isOver?'Overdue':'Active';
     const color=isPaid?'#059669':isOver?'#dc2626':'#d97706';
     return `<tr style="border-bottom:1px solid #e5e7eb;">
@@ -2165,7 +2203,7 @@ function syncToFirebase(){
   setSyncStatus('⟳ Syncing…','var(--gold)');
   const payload={
     settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate},
-    members:DB.members.map(m=>({id:m.id,name:m.name,role:m.role,email:m.email||'',phone:m.phone||'',capitalAccount:m.capitalAccount||{balance:0,history:[]}})),
+    members:DB.members.map(m=>({id:m.id,name:m.name,role:m.role,email:m.email||'',phone:m.phone||'',notes:m.notes||'',capitalAccount:m.capitalAccount||{balance:0,history:[]}})),
     investments:DB.investments,loans:DB.loans,transactions:DB.transactions,
     memberPins:DB.memberPins||{},lastUpdated:new Date().toISOString()
   };
@@ -2185,6 +2223,7 @@ function loadFromFirebase(){
     const data=snap.val();
     if(!data){alert('No data found on Firebase. Make sure the primary admin has synced first.');setSyncStatus('✗ No data','var(--red)');return;}
     if(data.settings)DB.settings={...DB.settings,...data.settings};
+    if(!DB.settings.bank)DB.settings.bank={};
     if(data.members)DB.members=data.members;
     if(data.investments)DB.investments=data.investments;
     if(data.loans)DB.loans=data.loans;
