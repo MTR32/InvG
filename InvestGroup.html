@@ -1525,6 +1525,32 @@ function saveEditMember(){
 }
 // ── CAPITAL ACCOUNT HELPERS ──
 // Post an entry to a member's capital account
+// Rebuilds every member's capital account from scratch by replaying all
+// remaining transactions in date order. Called after any deletion so the
+// capital account always reflects exactly what's in the transaction ledger —
+// no ghost money from deleted records.
+function rebuildCapitalAccounts(){
+  DB.members.forEach(m=>{
+    m.capitalAccount={balance:0,history:[]};
+  });
+  // Sort all transactions chronologically for accurate running balance
+  const sorted=[...DB.transactions].sort((a,b)=>a.date.localeCompare(b.date)||(a.id>b.id?1:-1));
+  sorted.forEach(t=>{
+    if(!t.memberId)return; // group-level transactions (investments, expenses) don't affect individual accounts
+    const m=DB.members.find(x=>x.id===t.memberId);
+    if(!m)return;
+    let delta=0;
+    if(t.type==='contribution')delta=t.amount;
+    else if(t.type==='withdrawal')delta=-t.amount;
+    else if(t.type==='profit')delta=t.amount; // profit, bonus, loan interest — all signed correctly
+    if(delta===0)return;
+    if(!m.capitalAccount)m.capitalAccount={balance:0,history:[]};
+    m.capitalAccount.balance=+(m.capitalAccount.balance+delta).toFixed(2);
+    m.capitalAccount.history.push({date:t.date,amount:delta,note:t.desc,balance:m.capitalAccount.balance});
+  });
+}
+
+
 function caPost(memberId, amount, note, date){
   const m=DB.members.find(x=>x.id===memberId);if(!m)return;
   if(!m.capitalAccount) m.capitalAccount={balance:0,history:[]};
@@ -1590,50 +1616,24 @@ function yearEndWindowStatus(){
 // history up to the investment's start date. This way, money a member added long ago is
 // weighted with more active days than money they added more recently, instead of every
 // member's entire balance being lumped under one shared date.
+// Generates ONE contribution row per member at investment creation, using their
+// total capital account balance at that moment as a single lump sum dated at
+// the investment's start date. This is correct — all money in a member's account
+// before an investment starts has the same effective active-days from the
+// investment's perspective. Separate rows with different dates only arise from
+// MANUAL top-ups added AFTER the investment is already open (via "Add Contribution").
 function autoGenContributions(startDate, deployedAmount){
   const date=startDate||today();
   const balances=DB.members.map(m=>({m,bal:caBalance(m.id)})).filter(x=>x.bal>0);
   const totalBal=balances.reduce((s,x)=>s+x.bal,0);
   if(totalBal<=0||!deployedAmount)return[];
-
-  const rows=[];
-  balances.forEach(({m,bal})=>{
+  return balances.map(({m,bal})=>{
     const pctEquity=bal/totalBal;
-    const memberDeployed=+(pctEquity*deployedAmount).toFixed(2);
-    if(memberDeployed<=0)return;
-
-    // Pull this member's capital account history up to (and including) the investment's start date,
-    // oldest first, to reconstruct WHEN each portion of their current balance actually arrived.
-    const hist=(m.capitalAccount&&m.capitalAccount.history?m.capitalAccount.history:[])
-      .filter(h=>h.date<=date)
-      .sort((a,b)=>a.date.localeCompare(b.date));
-
-    if(!hist.length){
-      // No history (legacy/edge case) — fall back to a single row dated at investment start
-      rows.push({id:uid(),memberId:m.id,memberName:m.name,amount:memberDeployed,date,pctEquity});
-      return;
-    }
-
-    // Walk through history chronologically, allocating the member's deployed amount
-    // proportionally across each dated chunk, scaled to their balance at start date.
-    const positiveEntries=hist.filter(h=>h.amount>0);
-    if(!positiveEntries.length){
-      rows.push({id:uid(),memberId:m.id,memberName:m.name,amount:memberDeployed,date,pctEquity});
-      return;
-    }
-    let remaining=memberDeployed;
-    const scale=bal>0?memberDeployed/bal:0;
-    positiveEntries.forEach((h,idx)=>{
-      const isLast=idx===positiveEntries.length-1;
-      let chunk=+(h.amount*scale).toFixed(2);
-      if(isLast)chunk=+remaining.toFixed(2); // last positive chunk soaks up any rounding remainder
-      remaining=+(remaining-chunk).toFixed(2);
-      if(chunk<=0)return;
-      rows.push({id:uid(),memberId:m.id,memberName:m.name,amount:chunk,date:h.date,pctEquity});
-    });
-  });
-  return rows;
+    const amount=+(pctEquity*deployedAmount).toFixed(2);
+    return{id:uid(),memberId:m.id,memberName:m.name,amount,date,pctEquity};
+  }).filter(r=>r.amount>0);
 }
+
 
 // Distribute profits from a closed investment to capital accounts.
 // 10% of the investment's profit is taken off the top as a management bonus,
@@ -1831,23 +1831,58 @@ function delMember(id){
   });
 
   DB.members=DB.members.filter(x=>x.id!==id);
+  rebuildCapitalAccounts();
   save();
 }
 function delInv(id){
   const inv=DB.investments.find(i=>i.id===id);if(!inv)return;
-  if(!safeConfirm('Delete investment "'+inv.name+'"?'))return;
+  const wasClosed=inv.status==='closed';
+  const warningExtra=wasClosed?'\n\nThis investment was closed — its distributed profits and management bonuses will also be reversed from members\' capital accounts.':'';
+  if(!safeConfirm('Delete investment "'+inv.name+'"?'+warningExtra))return;
   DB.investments=DB.investments.filter(i=>i.id!==id);
-  // Prefer matching by investmentId (reliable); fall back to name match for legacy transactions
-  // created before this link existed, so old records still get cleaned up correctly.
+  // Remove the investment's own transaction record
   DB.transactions=DB.transactions.filter(t=>{
-    if(t.type!=='investment')return true;
-    if(t.investmentId)return t.investmentId!==id;
-    return t.desc!=='Investment: '+inv.name;
+    if(t.type==='investment'){
+      if(t.investmentId)return t.investmentId!==id;
+      return t.desc!=='Investment: '+inv.name;
+    }
+    // If closed: also remove the profit distributions and mgmt bonus records tied to this investment
+    if(wasClosed&&t.type==='profit'){
+      const desc=(t.desc||'').toLowerCase();
+      if(desc.startsWith('profit distribution')&&desc.includes(inv.name.toLowerCase()))return false;
+      if(desc.startsWith('management bonus')&&desc.includes(inv.name.toLowerCase()))return false;
+    }
+    return true;
   });
+  if(wasClosed)rebuildCapitalAccounts();
   save();
 }
-function delLoan(id){if(!safeConfirm('Delete this loan?'))return;DB.loans=DB.loans.filter(l=>l.id!==id);save();}
-function delTx(id){if(!safeConfirm('Delete this transaction?'))return;DB.transactions=DB.transactions.filter(t=>t.id!==id);save();}
+function delLoan(id){
+  const l=DB.loans.find(x=>x.id===id);if(!l)return;
+  if(!safeConfirm(`Delete loan for "${l.borrower}"?\n\nThis will also remove any associated repayment and interest transactions from the ledger and reverse the interest already distributed to members' capital accounts.`))return;
+  DB.loans=DB.loans.filter(x=>x.id!==id);
+  // Remove the loan's associated transactions from the ledger:
+  // - The original loan_out record
+  // - Any loan_repayment records for this borrower (matched by desc)
+  // - Any profit/interest records distributed from this loan (matched by desc)
+  const borrowerLower=l.borrower.toLowerCase();
+  DB.transactions=DB.transactions.filter(t=>{
+    if(t.type==='loan_out'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
+    if(t.type==='loan_repayment'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
+    if(t.type==='profit'&&(t.desc||'').toLowerCase().startsWith('loan interest')&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
+    return true;
+  });
+  rebuildCapitalAccounts();
+  save();
+}
+function delTx(id){
+  const t=DB.transactions.find(x=>x.id===id);if(!t)return;
+  const affects=t.memberId&&['contribution','withdrawal','profit'].includes(t.type);
+  if(!safeConfirm('Delete this transaction?'))return;
+  DB.transactions=DB.transactions.filter(x=>x.id!==id);
+  if(affects)rebuildCapitalAccounts();
+  save();
+}
 function clearPin(id){if(!safeConfirm('Clear this PIN?'))return;delete DB.memberPins[id];saveDB();renderPinList();}
 function clearAll(){
   if(!safeConfirm('Delete ALL data permanently?'))return;
