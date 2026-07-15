@@ -281,7 +281,10 @@ select option{background:var(--surface2);}
     <div class="page" id="page-loans">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <div class="section-title" style="margin:0">Loan Book</div>
-        <button class="tb-btn" onclick="openModal('modal-add-loan')">+ Loan</button>
+        <div style="display:flex;gap:8px;">
+          <button class="tb-btn" style="background:var(--surface2);font-size:10px;" onclick="fixLoanRates()">⚙ Fix Rates</button>
+          <button class="tb-btn" onclick="openAddLoanModal()">+ Loan</button>
+        </div>
       </div>
       <div class="kpi-grid">
         <div class="kpi-card gold"><div class="kl">Lent Out</div><div class="kv gold" id="ln-tot">--</div></div>
@@ -929,7 +932,7 @@ const PA={
   dashboard:{l:'+ Add',f:'openMainModal()'},cashflow:{l:'+ Add',f:'openMainModal()'},
   members:{l:'+ Member',f:"openModal('modal-add-member')"},
   investments:{l:'+ Invest',f:"openModal('modal-add-investment')"},
-  loans:{l:'+ Loan',f:"openModal('modal-add-loan')"},
+  loans:{l:'+ Loan',f:'openAddLoanModal()'},
   transactions:{l:'+ Add',f:'openMainModal()'},
   reports:{l:'PDF',f:'exportPDF()'},
   settings:{l:'↑ Sync',f:'syncToFirebase()'},
@@ -1888,6 +1891,53 @@ function clearAll(){
   if(!safeConfirm('Delete ALL data permanently?'))return;
   if(!safeConfirm('This cannot be undone. Are you absolutely sure?'))return;
   DB={settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}},members:[],investments:[],loans:[],transactions:[],memberPins:{}};save();
+}
+
+function openAddLoanModal(){
+  // Pre-fill the rate field with the current default rate so it's never accidentally blank or wrong
+  const rateField=document.getElementById('ln-rate');
+  if(rateField&&!rateField.value) rateField.value=DB.settings.defaultRate||10;
+  openModal('modal-add-loan');
+}
+
+// Migrate ALL existing loans to the current defaultRate.
+// Also reverses any interest already distributed at the old rate and recalculates
+// at the new rate, so capital accounts stay accurate.
+function fixLoanRates(){
+  const newRate=DB.settings.defaultRate||10;
+  let changed=0;
+  DB.loans.forEach(l=>{
+    if(l.rate===newRate)return;
+    const oldRate=l.rate;
+    // Reverse any interest already distributed at the old rate
+    if(l.interestDistributed&&l.interestDistributed>0){
+      // Remove the old interest transactions from the ledger
+      const borrowerLower=l.borrower.toLowerCase();
+      DB.transactions=DB.transactions.filter(t=>!(
+        t.type==='profit'&&
+        (t.desc||'').toLowerCase().startsWith('loan interest')&&
+        (t.desc||'').toLowerCase().includes(borrowerLower)
+      ));
+      l.interestDistributed=0;
+    }
+    // Update the rate
+    l.rate=newRate;
+    // Re-distribute interest at the new rate based on what's been repaid so far
+    if(l.repaid>l.amount){
+      const lastRepayDate=DB.transactions
+        .filter(t=>t.type==='loan_repayment'&&(t.desc||'').toLowerCase().includes(l.borrower.toLowerCase()))
+        .sort((a,b)=>b.date.localeCompare(a.date))[0];
+      distributeLoanInterest(l, lastRepayDate?lastRepayDate.date:today());
+    }
+    changed++;
+  });
+  if(changed>0){
+    rebuildCapitalAccounts();
+    save();
+    alert(`✓ Updated ${changed} loan(s) to ${newRate}% interest rate. Capital accounts have been recalculated.`);
+  } else {
+    alert(`All loans are already at ${newRate}%.`);
+  }
 }
 
 function saveLoan(){
