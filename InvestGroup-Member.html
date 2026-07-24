@@ -174,6 +174,9 @@ input:focus{border-color:var(--accent);}
     <button class="lk-btn" onclick="tryLogin()">Access My Portfolio →</button>
     <div class="lk-err" id="login-err"></div>
     <div class="lk-info" id="login-info"></div>
+    <div style="text-align:center;margin-top:10px;">
+      <a onclick="openForgotPin()" style="font-size:11px;color:var(--muted);text-decoration:underline;cursor:pointer;">Forgot PIN?</a>
+    </div>
   </div>
 </div>
 
@@ -347,14 +350,81 @@ input:focus{border-color:var(--accent);}
     <div class="mhandle" onclick="closeModal('modal-pin')"></div>
     <div class="mhd"><div class="mtitle">Change My PIN</div><button class="mclose" onclick="closeModal('modal-pin')">×</button></div>
     <div class="mbody">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Your PIN is stored privately on this device only. Even if the treasurer clears the app data, your PIN stays.</div>
       <div class="fg"><label>Current PIN</label><input type="password" id="pc-cur" placeholder="••••" inputmode="numeric" maxlength="10"></div>
       <div class="fg"><label>New PIN</label><input type="password" id="pc-new" placeholder="Min 4 digits" inputmode="numeric" maxlength="10"></div>
       <div class="fg"><label>Confirm New PIN</label><input type="password" id="pc-cf" placeholder="Repeat new PIN" inputmode="numeric" maxlength="10"></div>
+      <div style="border-top:1px solid var(--border);margin:10px 0;padding-top:10px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Security question (used if you forget your PIN):</div>
+        <div class="fg"><label>Question</label>
+          <select id="pc-sq">
+            <option value="">-- Choose a question --</option>
+            <option>What is your mother's maiden name?</option>
+            <option>What was the name of your first school?</option>
+            <option>What is your childhood nickname?</option>
+            <option>What is your favourite food?</option>
+            <option>What city were you born in?</option>
+          </select>
+        </div>
+        <div class="fg"><label>Answer</label><input type="text" id="pc-sa" placeholder="Your answer (case sensitive)"></div>
+      </div>
       <div style="color:var(--red);font-size:11px;min-height:16px;" id="pc-err"></div>
     </div>
     <div class="mfoot">
       <button class="btn" onclick="changePin()">Update PIN</button>
       <button class="btn-g" onclick="closeModal('modal-pin')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORGOT PIN MODAL -->
+<div class="mo" id="modal-forgot-pin">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-forgot-pin')"></div>
+    <div class="mhd"><div class="mtitle">Forgot PIN</div><button class="mclose" onclick="closeModal('modal-forgot-pin')">×</button></div>
+    <div class="mbody">
+      <div id="fp-question" style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text);"></div>
+      <div class="fg"><label>Your Answer</label><input type="text" id="fp-answer" placeholder="Case sensitive"></div>
+      <div id="fp-new-wrap" style="display:none;">
+        <div class="fg"><label>New PIN</label><input type="password" id="fp-new" placeholder="Min 4 digits" inputmode="numeric" maxlength="10"></div>
+        <div class="fg"><label>Confirm New PIN</label><input type="password" id="fp-cf" placeholder="Repeat" inputmode="numeric" maxlength="10"></div>
+      </div>
+      <div style="color:var(--red);font-size:11px;min-height:16px;" id="fp-err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" id="fp-btn" onclick="verifySecurityAnswer()">Verify Answer</button>
+      <button class="btn-g" onclick="closeModal('modal-forgot-pin')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- FIRST LOGIN - SET OWN PIN MODAL -->
+<div class="mo" id="modal-first-pin">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd"><div class="mtitle">🔐 Set Your Private PIN</div></div>
+    <div class="mbody">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">You're logged in with a temporary PIN from your treasurer. Set your own private PIN now — it will be stored only on this device and the treasurer cannot see or reset it.</div>
+      <div class="fg"><label>New PIN</label><input type="password" id="fp1-new" placeholder="Min 4 digits" inputmode="numeric" maxlength="10"></div>
+      <div class="fg"><label>Confirm PIN</label><input type="password" id="fp1-cf" placeholder="Repeat" inputmode="numeric" maxlength="10"></div>
+      <div style="border-top:1px solid var(--border);margin:10px 0;padding-top:10px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Set a security question in case you forget:</div>
+        <div class="fg"><label>Question</label>
+          <select id="fp1-sq">
+            <option value="">-- Choose a question --</option>
+            <option>What is your mother's maiden name?</option>
+            <option>What was the name of your first school?</option>
+            <option>What is your childhood nickname?</option>
+            <option>What is your favourite food?</option>
+            <option>What city were you born in?</option>
+          </select>
+        </div>
+        <div class="fg"><label>Answer</label><input type="text" id="fp1-sa" placeholder="Your answer (case sensitive)"></div>
+      </div>
+      <div style="color:var(--red);font-size:11px;min-height:16px;" id="fp1-err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="saveFirstPin()">Save My PIN</button>
     </div>
   </div>
 </div>
@@ -534,6 +604,12 @@ function openApp(){
   renderAll();
   startLiveSync();
   checkOnline();
+  // Detect first login: member has no self-set PIN yet (only the treasurer-assigned one)
+  const hasOwnPin=!!localStorage.getItem('igm_pin_'+MY_ID);
+  if(!hasOwnPin){
+    // Prompt them to set their own private PIN after a short delay so the app renders first
+    setTimeout(()=>openModal('modal-first-pin'),600);
+  }
 }
 
 function logout(){
@@ -911,6 +987,8 @@ function changePin(){
   const cur=document.getElementById('pc-cur').value.trim();
   const nw=document.getElementById('pc-new').value.trim();
   const cf=document.getElementById('pc-cf').value.trim();
+  const sq=document.getElementById('pc-sq').value;
+  const sa=document.getElementById('pc-sa').value.trim();
   const err=document.getElementById('pc-err');
   const localPin=localStorage.getItem('igm_pin_'+MY_ID);
   const treasurerPin=(GD&&GD.memberPins&&GD.memberPins[MY_ID])||'';
@@ -918,10 +996,84 @@ function changePin(){
   if(cur!==valid){err.textContent='Current PIN incorrect.';return;}
   if(nw.length<4){err.textContent='New PIN must be at least 4 digits.';return;}
   if(nw!==cf){err.textContent='PINs do not match.';return;}
+  if(!sq){err.textContent='Please choose a security question.';return;}
+  if(!sa){err.textContent='Please enter an answer to your security question.';return;}
   localStorage.setItem('igm_pin_'+MY_ID,nw);
+  localStorage.setItem('igm_sq_'+MY_ID,sq);
+  localStorage.setItem('igm_sa_'+MY_ID,sa);
   err.textContent='';closeModal('modal-pin');
-  ['pc-cur','pc-new','pc-cf'].forEach(id=>document.getElementById(id).value='');
-  alert('✓ PIN updated! Use your new PIN next time you log in.');
+  ['pc-cur','pc-new','pc-cf','pc-sa'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pc-sq').value='';
+  alert('✓ PIN updated! Only you know it — use your new PIN next time you log in.');
+}
+
+// First-login: member has only a treasurer-assigned PIN, no self-set PIN yet
+function saveFirstPin(){
+  const nw=document.getElementById('fp1-new').value.trim();
+  const cf=document.getElementById('fp1-cf').value.trim();
+  const sq=document.getElementById('fp1-sq').value;
+  const sa=document.getElementById('fp1-sa').value.trim();
+  const err=document.getElementById('fp1-err');
+  if(nw.length<4){err.textContent='PIN must be at least 4 digits.';return;}
+  if(nw!==cf){err.textContent='PINs do not match.';return;}
+  if(!sq){err.textContent='Please choose a security question.';return;}
+  if(!sa){err.textContent='Please provide an answer.';return;}
+  localStorage.setItem('igm_pin_'+MY_ID,nw);
+  localStorage.setItem('igm_sq_'+MY_ID,sq);
+  localStorage.setItem('igm_sa_'+MY_ID,sa);
+  closeModal('modal-first-pin');
+  ['fp1-new','fp1-cf','fp1-sa'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fp1-sq').value='';
+  alert('✓ Your private PIN is set! The treasurer cannot see or reset it.');
+}
+
+// Forgot PIN — open the security question modal pre-filled for the selected member
+function openForgotPin(){
+  const id=document.getElementById('login-name').value;
+  if(!id){document.getElementById('login-err').textContent='Please select your name first.';return;}
+  const sq=localStorage.getItem('igm_sq_'+id);
+  if(!sq){
+    document.getElementById('login-err').textContent='No security question set. Ask your treasurer to reset your PIN.';
+    return;
+  }
+  document.getElementById('fp-question').textContent=sq;
+  document.getElementById('fp-answer').value='';
+  document.getElementById('fp-err').textContent='';
+  document.getElementById('fp-new-wrap').style.display='none';
+  document.getElementById('fp-btn').textContent='Verify Answer';
+  document.getElementById('fp-btn').onclick=verifySecurityAnswer;
+  openModal('modal-forgot-pin');
+}
+
+let fpVerified=false;
+function verifySecurityAnswer(){
+  const id=document.getElementById('login-name').value;
+  const answer=document.getElementById('fp-answer').value.trim();
+  const stored=localStorage.getItem('igm_sa_'+id)||'';
+  if(answer!==stored){
+    document.getElementById('fp-err').textContent='Incorrect answer. Try again.';
+    return;
+  }
+  // Answer correct — show new PIN fields
+  fpVerified=true;
+  document.getElementById('fp-new-wrap').style.display='block';
+  document.getElementById('fp-err').textContent='✓ Answer correct! Now set a new PIN.';
+  document.getElementById('fp-err').style.color='var(--green)';
+  document.getElementById('fp-btn').textContent='Save New PIN';
+  document.getElementById('fp-btn').onclick=resetForgottenPin;
+}
+
+function resetForgottenPin(){
+  const id=document.getElementById('login-name').value;
+  const nw=document.getElementById('fp-new').value.trim();
+  const cf=document.getElementById('fp-cf').value.trim();
+  const err=document.getElementById('fp-err');
+  if(nw.length<4){err.textContent='PIN must be at least 4 digits.';err.style.color='var(--red)';return;}
+  if(nw!==cf){err.textContent='PINs do not match.';err.style.color='var(--red)';return;}
+  localStorage.setItem('igm_pin_'+id,nw);
+  closeModal('modal-forgot-pin');
+  fpVerified=false;
+  alert('✓ PIN reset! Use your new PIN to log in.');
 }
 
 // ════════════════════════════════
