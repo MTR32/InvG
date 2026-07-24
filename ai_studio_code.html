@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Portfolio">
+<meta name="theme-color" content="#0b0c0e">
+<title>InvestGroup — My Portfolio</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text y='.9em' font-size='70' x='12' fill='%23c8f04a'>◆</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text y='.9em' font-size='70' x='12' fill='%23c8f04a'>◆</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0c0e;
+  --surface: #12141a;
+  --surface2: #191c24;
+  --surface-glass: rgba(18, 20, 26, 0.75);
+  --border: #242834;
+  --border-light: rgba(200, 240, 74, 0.15);
+  --accent: #c8f04a;
+  --accent-glow: rgba(200, 240, 74, 0.25);
+  --green: #4af0b8;
+  --red: #f04a6a;
+  --gold: #f0c14a;
+  --blue: #4ab8f0;
+  --purple: #a064f0;
+  --text: #e8eaf0;
+  --muted: #6b7280;
+  --muted2: #9ca3af;
+  --nav-h: 64px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{height:100%;height:-webkit-fill-available;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:13px;line-height:1.5;-webkit-text-size-adjust:100%;text-size-adjust:100%;min-height:100dvh;overflow:hidden;position:fixed;width:100%;top:0;left:0;}
+
+/* TOAST NOTIFICATION */
+#toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: var(--accent);
+  color: #0b0c0e;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 11px;
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 14px rgba(200, 240, 74, 0.4);
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* OFFLINE BANNER */
+#offline-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:9000;background:rgba(240,74,106,.15);border-bottom:1px solid rgba(240,74,106,.3);padding:8px 16px;font-size:11px;color:var(--red);text-align:center;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;backdrop-filter:blur(4px);}
+#offline-banner.show{display:block;}
+
+/* LOGIN */
+#login{position:fixed;inset:0;background:radial-gradient(circle at top, #181c26 0%, #0b0c0e 80%);z-index:8000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+#login.off{display:none;}
+.lk-logo{font-family:'DM Serif Display',Georgia,serif;font-size:48px;color:var(--accent);margin-bottom:2px;text-shadow:0 0 20px var(--accent-glow);}
+.lk-title{font-family:'DM Serif Display',Georgia,serif;font-size:24px;color:var(--text);}
+.lk-sub{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:28px;margin-top:2px;}
+.lk-card{background:var(--surface-glass);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:340px;box-shadow:0 12px 32px rgba(0,0,0,0.4);}
+.fl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;display:block;margin-bottom:6px;}
+.lk-select,.lk-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:10px;font-family:'DM Mono',ui-monospace,monospace;font-size:13px;outline:none;transition:all .15s;margin-bottom:12px;}
+.lk-select:focus,.lk-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.lk-btn{width:100%;background:var(--accent);color:#0b0c0e;border:none;border-radius:10px;padding:13px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:13px;cursor:pointer;margin-top:4px;transition:all .2s;}
+.lk-btn:active{transform:scale(0.98);}
+.lk-err{color:var(--red);font-size:11px;text-align:center;margin-top:8px;min-height:16px;}
+.lk-info{color:var(--muted);font-size:11px;text-align:center;margin-top:6px;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* APP */
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;background:var(--bg);}
+#app.off{display:none;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));background:var(--surface-glass);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);flex-shrink:0;z-index:200;}
+.tb-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
+.tb-title{font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.back-btn{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:5px 9px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.15s;}
+.back-btn:active{background:var(--surface2);}
+.back-btn.hidden{display:none;}
+.tb-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.sync-dot-wrapper {display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;}
+.tb-ghost{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:8px;padding:6px 9px;font-size:14px;cursor:pointer;line-height:1;transition:all .15s;}
+.tb-ghost:active{background:var(--surface2);}
+
+/* SCROLL AREA */
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+.page{display:none;padding:16px;animation:fadeIn 0.2s ease-out;}
+.page.active{display:block;}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* BOTTOM NAV */
+.bottom-nav{display:flex;background:var(--surface-glass);backdrop-filter:blur(12px);border-top:1px solid var(--border);flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:300;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px;cursor:pointer;color:var(--muted);font-size:8px;letter-spacing:.3px;text-transform:uppercase;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;gap:3px;border:none;background:none;overflow:hidden;position:relative;transition:all 0.15s;}
+.nav-tab .ni{font-size:18px;line-height:1;transition:transform 0.15s;}
+.nav-tab.active{color:var(--accent);}
+.nav-tab.active .ni{transform:scale(1.15);}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;overflow:hidden;transition:all 0.2s;}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.kpi-card.yellow::after{background:var(--accent);}.kpi-card.green::after{background:var(--green);}.kpi-card.blue::after{background:var(--blue);}.kpi-card.red::after{background:var(--red);}.kpi-card.gold::after{background:var(--gold);}
+.kl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
+.kv{font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--text);letter-spacing:-.5px;line-height:1.1;}
+.kv.green{color:var(--green);}.kv.red{color:var(--red);}.kv.gold{color:var(--gold);}
+.ks{font-size:10px;color:var(--muted);margin-top:4px;}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+.card-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.01);}
+.card-title{font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px;color:var(--text);}
+.card-body{padding:16px;}
+
+/* VISUAL BREAKDOWN BAR */
+.breakdown-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface2); margin: 12px 0 16px; }
+.breakdown-seg { height: 100%; transition: width 0.4s ease; }
+
+/* TABLE */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead th{text-align:left;padding:8px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
+tbody tr{border-bottom:1px solid rgba(35,38,48,.5);transition:background 0.15s;}
+tbody tr:hover{background:rgba(255,255,255,0.02);}
+tbody tr:last-child{border-bottom:none;}
+tbody td{padding:10px 10px;color:var(--text);vertical-align:middle;}
+
+/* BADGES */
+.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:9px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;letter-spacing:.3px;text-transform:uppercase;}
+.bg{background:rgba(74,240,184,.12);color:var(--green);border:1px solid rgba(74,240,184,.2);}
+.br{background:rgba(240,74,106,.12);color:var(--red);border:1px solid rgba(240,74,106,.2);}
+.by{background:rgba(200,240,74,.12);color:var(--accent);border:1px solid rgba(200,240,74,.2);}
+.bgold{background:rgba(240,193,74,.12);color:var(--gold);border:1px solid rgba(240,193,74,.2);}
+.bb{background:rgba(74,184,240,.12);color:var(--blue);border:1px solid rgba(74,184,240,.2);}
+.bm{background:rgba(107,114,128,.2);color:var(--muted2);border:1px solid rgba(107,114,128,.3);}
+.bp{background:rgba(160,100,240,.12);color:var(--purple);border:1px solid rgba(160,100,240,.2);}
+
+/* FORMS & BUTTONS */
+.fg{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
+input, select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:11px 12px;border-radius:8px;font-family:'DM Mono',ui-monospace,monospace;font-size:13px;outline:none;transition:border-color .15s;width:100%;}
+input:focus, select:focus{border-color:var(--accent);}
+
+.btn{background:var(--accent);color:#0b0c0e;border:none;border-radius:10px;padding:12px 16px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:13px;cursor:pointer;width:100%;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.btn:active{transform:scale(0.98);opacity:0.9;}
+.btn-g{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 16px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px;cursor:pointer;width:100%;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.btn-g:active{background:var(--surface2);}
+.btn-sm{padding:5px 10px!important;font-size:10px!important;border-radius:6px!important;width:auto!important;}
+.copy-btn { background: rgba(200,240,74,0.1); color: var(--accent); border: 1px solid rgba(200,240,74,0.3); padding: 3px 8px; border-radius: 6px; font-size: 10px; font-family: 'Syne', sans-serif; font-weight: 700; cursor: pointer; margin-left: 6px; transition: all 0.15s; }
+.copy-btn:active { background: var(--accent); color: #000; }
+
+/* MODAL */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.mo.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;animation:sup .25s cubic-bezier(0.175, 0.885, 0.32, 1.275);padding-bottom:env(safe-area-inset-bottom);}
+@keyframes sup{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.mhandle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 4px;cursor:pointer;}
+.mhd{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 10px;}
+.mtitle{font-family:'DM Serif Display',Georgia,serif;font-size:20px;color:var(--text);}
+.mclose{background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer;line-height:1;}
+.mbody{padding:8px 20px 12px;}
+.mfoot{padding:14px 20px 20px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--border);}
+
+/* MISC */
+.divider{height:1px;background:var(--border);margin:12px 0;}
+.empty{text-align:center;padding:28px 12px;color:var(--muted);}
+.empty-icon{font-size:32px;margin-bottom:8px;opacity:0.6;}
+.prog-wrap{background:var(--surface2);border-radius:6px;height:6px;overflow:hidden;margin-top:6px;}
+.prog-fill{height:100%;border-radius:6px;transition:width .4s ease;}
+.tl{padding-left:16px;border-left:2px solid var(--border);}
+.tl-item{position:relative;padding:0 0 14px 16px;}
+.tl-item::before{content:'';position:absolute;left:-23px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);}
+.tl-item.in::before{border-color:var(--green);background:rgba(74,240,184,.2);}
+.tl-item.out::before{border-color:var(--red);background:rgba(240,74,106,.2);}
+.tl-date{font-size:10px;color:var(--muted);}
+.tl-desc{font-size:12px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
+.tl-amt{font-size:12px;}
+.section-title{font-family:'DM Serif Display',Georgia,serif;font-size:22px;margin-bottom:14px;color:var(--text);}
+.deposit-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
+.deposit-row:last-child{border-bottom:none;}
+.deposit-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
+.deposit-value{font-size:13px;font-weight:700;color:var(--text);text-align:right;word-break:break-all;max-width:65%;display:flex;align-items:center;justify-content:flex-end;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<div id="toast">Copied to clipboard!</div>
+<div id="offline-banner">⚡ No internet connection — displaying last cached data</div>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="lk-logo">◆</div>
+  <div class="lk-title">My Portfolio</div>
+  <div class="lk-sub">InvestGroup Member Portal</div>
+  <div class="lk-card">
+    <span class="fl">Select Your Name</span>
+    <select class="lk-select" id="login-name">
+      <option value="">— Loading members… —</option>
+    </select>
+    <span class="fl">Enter Your PIN</span>
+    <input class="lk-input" type="password" id="login-pin" placeholder="••••" maxlength="10" inputmode="numeric">
+    <button class="lk-btn" onclick="tryLogin()">Access My Portfolio →</button>
+    <div class="lk-err" id="login-err"></div>
+    <div class="lk-info" id="login-info"></div>
+    <div style="text-align:center;margin-top:14px;">
+      <a onclick="openForgotPin()" style="font-size:11px;color:var(--muted);text-decoration:underline;cursor:pointer;">Forgot PIN?</a>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="off">
+
+  <div class="topbar">
+    <div class="tb-left">
+      <button class="back-btn hidden" id="back-btn" onclick="goBack()">← Back</button>
+      <div class="tb-title" id="tb-title">My Portfolio</div>
+    </div>
+    <div class="tb-right">
+      <span class="sync-dot-wrapper">
+        <span id="sync-dot" style="font-size:12px;color:var(--muted);cursor:help;" title="Connection status">●</span>
+      </span>
+      <button class="tb-ghost" onclick="showPage('settings-pg')" title="Settings">⊙</button>
+      <button class="tb-ghost" onclick="logout()" title="Logout" style="color:var(--red);border-color:rgba(240,74,106,.3);">⏻</button>
+    </div>
+  </div>
+
+  <div class="scroll-area">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <!-- Member Header Card -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;">
+        <div id="m-av" style="width:48px;height:48px;border-radius:50%;background:rgba(200,240,74,0.1);border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:16px;color:var(--accent);flex-shrink:0;">--</div>
+        <div style="flex:1;min-width:0;">
+          <div id="m-name-d" style="font-family:'DM Serif Display',Georgia,serif;font-size:20px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">--</div>
+          <div id="m-role-d" style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">--</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div id="m-eq-pct" style="font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--accent);">0%</div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Net Equity</div>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card yellow"><div class="kl">Capital Account</div><div class="kv" id="m-ca">--</div><div class="ks">Rolling balance</div></div>
+        <div class="kpi-card green"><div class="kl">Contributed</div><div class="kv green" id="m-in">--</div><div class="ks">Total paid in</div></div>
+        <div class="kpi-card blue"><div class="kl">Inv. Profit</div><div class="kv" id="m-iprofit">--</div><div class="ks" id="m-iret">daily weighted</div></div>
+        <div class="kpi-card red"><div class="kl">Withdrawn</div><div class="kv red" id="m-out">--</div><div class="ks">Total taken out</div></div>
+      </div>
+
+      <!-- Net Worth Breakdown Card -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Net Worth Breakdown</div></div>
+        <div class="card-body">
+          <div class="breakdown-bar" id="sw-breakdown-bar">
+            <div class="breakdown-seg" id="seg-ca" style="background:var(--accent);width:100%;"></div>
+            <div class="breakdown-seg" id="seg-inv" style="background:var(--green);width:0%;"></div>
+            <div class="breakdown-seg" id="seg-loan" style="background:var(--gold);width:0%;"></div>
+            <div class="breakdown-seg" id="seg-bonus" style="background:var(--purple);width:0%;"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Capital Account Balance</span><span id="sw-net" style="font-weight:700;color:var(--accent)">--</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Investment Profit (Live Open)</span><span id="sw-igain" style="font-weight:700">--</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">Pending Loan Interest Share</span><span id="sw-linc" style="color:var(--gold);font-weight:700">--</span></div>
+            <div id="sw-bonus-row" style="display:none;justify-content:space-between;font-size:12px;"><span style="color:var(--muted)">★ Management Bonus (10%)</span><span id="sw-bonus" style="color:var(--purple);font-weight:700">--</span></div>
+            <div class="divider"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px;">Final Net Worth</span>
+              <span id="sw-nw" style="font-family:'DM Serif Display',Georgia,serif;font-size:24px;color:var(--green)">--</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;"><span style="color:var(--muted)">Overall ROI</span><span id="sw-roi" style="font-weight:700">--</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Year End Allowance Card -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">📅 Year-End Withdrawal Allowance</div></div>
+        <div class="card-body" id="yea-card-body">
+          <div class="empty"><span class="spinner"></span></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <button class="btn" onclick="showPage('deposit-pg')">💰 Deposit</button>
+        <button class="btn-g" onclick="showPage('invest-pg')">📈 Investments</button>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Recent Activity</div><button class="btn-g btn-sm" onclick="showPage('tx-pg')">All →</button></div>
+        <div class="card-body" style="padding:12px 16px;" id="m-recent">
+          <div class="empty"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVESTMENTS -->
+    <div class="page" id="page-invest">
+      <div class="section-title">My Investments</div>
+      <div class="kpi-grid">
+        <div class="kpi-card yellow"><div class="kl">Capital Account</div><div class="kv" id="i-ca">--</div></div>
+        <div class="kpi-card blue"><div class="kl">My Contributions</div><div class="kv" id="i-in">--</div></div>
+        <div class="kpi-card green"><div class="kl">My Inv. Profit</div><div class="kv green" id="i-gain">--</div></div>
+        <div class="kpi-card gold"><div class="kl">My Equity</div><div class="kv gold" id="i-eq">--</div></div>
+      </div>
+
+      <!-- Capital Account History -->
+      <div class="card">
+        <div class="card-hd">
+          <div class="card-title">◆ Capital Account History</div>
+          <div id="i-ca-bal" style="font-family:'DM Serif Display',Georgia,serif;font-size:16px;color:var(--accent)">--</div>
+        </div>
+        <div class="card-body" style="padding:12px 16px;" id="ca-history-list">
+          <div class="empty"><div>No activity yet</div></div>
+        </div>
+      </div>
+      <div id="inv-cards"></div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div class="page" id="page-tx">
+      <div class="section-title">My Transactions</div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">History</div><span class="badge bm" id="tx-cnt">0</span></div>
+        <div class="tw"><table><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead><tbody id="tx-body"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- LOANS -->
+    <div class="page" id="page-loans">
+      <div class="section-title">My Loans</div>
+      <div id="loan-cards"></div>
+    </div>
+
+    <!-- DEPOSIT -->
+    <div class="page" id="page-deposit">
+      <div class="section-title">Make a Deposit</div>
+      <div style="background:rgba(200,240,74,.06);border:1px solid rgba(200,240,74,.2);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--muted2);line-height:1.7;">
+        Transfer funds directly to the group account below. Ensure you use the exact reference so your deposit is correctly credited.
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">🏦 Group Bank Account</div></div>
+        <div class="card-body" id="bank-card" style="padding:12px 16px;">
+          <div class="empty"><span class="spinner"></span><div style="margin-top:8px">Loading details…</div></div>
+        </div>
+      </div>
+      <div id="deposit-note-card" style="display:none;background:rgba(240,193,74,.07);border:1px solid rgba(240,193,74,.2);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--gold);line-height:1.7;"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="section-title">Settings</div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">My Account</div></div>
+        <div class="card-body">
+          <div style="font-size:12px;color:var(--muted2);margin-bottom:14px;">Signed in as <strong id="sett-name" style="color:var(--text)">--</strong></div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn-g" onclick="openModal('modal-pin')">🔐 Change My PIN</button>
+            <button class="btn-g" style="color:var(--red);border-color:rgba(240,74,106,.3);" onclick="logout()">⏻ Logout</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">📲 Install App</div></div>
+        <div class="card-body" style="font-size:12px;color:var(--muted2);line-height:1.9;">
+          <strong style="color:var(--accent);">Android:</strong> Chrome menu ⋮ → Add to Home screen → Install<br>
+          <strong style="color:var(--accent);">iPhone:</strong> Safari Share (□↑) → Add to Home Screen
+        </div>
+      </div>
+    </div>
+
+  </div><!-- scroll-area -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-tab active" id="tab-dashboard" onclick="showPage('dashboard')"><span class="ni">⬡</span>Home</button>
+    <button class="nav-tab" id="tab-invest-pg" onclick="showPage('invest-pg')"><span class="ni">📈</span>Invest</button>
+    <button class="nav-tab" id="tab-tx-pg" onclick="showPage('tx-pg')"><span class="ni">≡</span>History</button>
+    <button class="nav-tab" id="tab-loans-pg" onclick="showPage('loans-pg')"><span class="ni">⬕</span>Loans</button>
+    <button class="nav-tab" id="tab-deposit-pg" onclick="showPage('deposit-pg')"><span class="ni">💰</span>Deposit</button>
+  </nav>
+</div>
+
+<!-- CHANGE PIN MODAL -->
+<div class="mo" id="modal-pin">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-pin')"></div>
+    <div class="mhd"><div class="mtitle">Change My PIN</div><button class="mclose" onclick="closeModal('modal-pin')">×</button></div>
+    <div class="mbody">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Your PIN is stored privately on this device.</div>
+      <div class="fg"><label>Current PIN</label><input type="password" id="pc-cur" placeholder="••••" inputmode="numeric" maxlength="10"></div>
+      <div class="fg"><label>New PIN</label><input type="password" id="pc-new" placeholder="Min 4 digits" inputmode="numeric" maxlength="10"></div>
+      <div class="fg"><label>Confirm New PIN</label><input type="password" id="pc-cf" placeholder="Repeat new PIN" inputmode="numeric" maxlength="10"></div>
+      <div style="border-top:1px solid var(--border);margin:12px 0;padding-top:12px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Security question (used if you forget your PIN):</div>
+        <div class="fg"><label>Question</label>
+          <select id="pc-sq">
+            <option value="">-- Choose a question --</option>
+            <option>What is your mother's maiden name?</option>
+            <option>What was the name of your first school?</option>
+            <option>What is your childhood nickname?</option>
+            <option>What is your favourite food?</option>
+            <option>What city were you born in?</option>
+          </select>
+        </div>
+        <div class="fg"><label>Answer</label><input type="text" id="pc-sa" placeholder="Your answer (case sensitive)"></div>
+      </div>
+      <div style="color:var(--red);font-size:11px;min-height:16px;" id="pc-err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="changePin()">Update PIN</button>
+      <button class="btn-g" onclick="closeModal('modal-pin')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORGOT PIN MODAL -->
+<div class="mo" id="modal-forgot-pin">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-forgot-pin')"></div>
+    <div class="mhd"><div class="mtitle">Forgot PIN</div><button class="mclose" onclick="closeModal('modal-forgot-pin')">×</button></div>
+    <div class="mbody">
+      <div id="fp-question" style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text);"></div>
+      <div class="fg"><label>Your Answer</label><input type="text" id="fp-answer" placeholder="Case sensitive"></div>
+      <div id="fp-new-wrap" style="display:none;">
+        <div class="fg"><label>New PIN</label><input type="password" id="fp-new" placeholder="Min 4 digits" inputmode="numeric" maxlength="10"></div>
+        <div class="fg"><label>Confirm New PIN</label><input type="password" id="fp-cf" placeholder="Repeat" inputmode="numeric" maxlength="10"></div>
+      </div>
+      <div style="color:var(--red);font-size:11px;min-height:16px;" id="fp-err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" id="fp-btn" onclick="verifySecurityAnswer()">Verify Answer</button>
+      <button class="btn-g" onclick="closeModal('modal-forgot-pin')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- FIRST LOGIN SET PIN MODAL -->
+<div class="mo" id="modal-first-pin">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mhd"><div class="mtitle">🔐 Set Private PIN</div></div>
+    <div class="mbody">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">You are currently logged in with a default PIN. Please set your own private PIN now for device security.</div>
+      <div class="fg"><label>New PIN</label><input type="password" id="fp1-new" placeholder="Min 4 digits" inputmode="numeric" maxlength="10"></div>
+      <div class="fg"><label>Confirm PIN</label><input type="password" id="fp1-cf" placeholder="Repeat" inputmode="numeric" maxlength="10"></div>
+      <div style="border-top:1px solid var(--border);margin:12px 0;padding-top:12px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Set a security question:</div>
+        <div class="fg"><label>Question</label>
+          <select id="fp1-sq">
+            <option value="">-- Choose a question --</option>
+            <option>What is your mother's maiden name?</option>
+            <option>What was the name of your first school?</option>
+            <option>What is your childhood nickname?</option>
+            <option>What is your favourite food?</option>
+            <option>What city were you born in?</option>
+          </select>
+        </div>
+        <div class="fg"><label>Answer</label><input type="text" id="fp1-sa" placeholder="Your answer (case sensitive)"></div>
+      </div>
+      <div style="color:var(--red);font-size:11px;min-height:16px;" id="fp1-err"></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn" onclick="saveFirstPin()">Save My PIN</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════
+// CONFIG & STATE
+// ════════════════════════════════
+const FB_CFG={
+  apiKey:"AIzaSyAmWOFu5I7yyMy7clIM-LHt9cxa8RfDBt4",
+  authDomain:"investgroup-5f2f9.firebaseapp.com",
+  databaseURL:"https://investgroup-5f2f9-default-rtdb.firebaseio.com",
+  projectId:"investgroup-5f2f9",
+  storageBucket:"investgroup-5f2f9.firebasestorage.app",
+  messagingSenderId:"422666447690",
+  appId:"1:422666447690:web:d800f06e8a8b9fe0d32fb3"
+};
+
+let GD=null, ME=null, MY_ID=null;
+let fbApp=null, fbDB=null;
+let pageHistory=[], currentPage='dashboard';
+
+const ADMIN_BONUS_PCT=10;
+const IN_T=['contribution','return','loan_repayment','profit'];
+const TB={contribution:'bg',withdrawal:'br',investment:'bb',return:'bg',loan_out:'bgold',loan_repayment:'bb',expense:'br',profit:'by'};
+
+// ════════════════════════════════
+// UTILS & TOAST
+// ════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if(!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function copyToClipboard(text, label) {
+  if(!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    showToast(`Copied ${label || ''}!`);
+  }).catch(() => {
+    showToast('Failed to copy');
+  });
+}
+
+function C(){return(GD&&GD.settings&&GD.settings.currency)||'$';}
+function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(Math.floor(a/1e4)/100).toFixed(2)+'M':a>=1e3?(Math.floor(a/100)/10).toFixed(1)+'k':a.toFixed(0);return(n<0?'-':'')+c+s;}
+function fmtF(n){return(n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function txSignDisplay(t){
+  let isIn;
+  if(t.type==='profit') isIn=t.amount>=0;
+  else isIn=IN_T.includes(t.type);
+  return{isIn,sign:isIn?'+':'−',color:isIn?'var(--green)':'var(--red)',abs:fmtF(Math.abs(t.amount))};
+}
+function today(){return new Date().toISOString().split('T')[0];}
+function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(d1))/(1000*60*60*24)));}
+
+function setSyncDot(s,c){
+  const e=document.getElementById('sync-dot');
+  if(e){e.textContent=s;e.style.color=c;e.title=s;}
+}
+
+// ════════════════════════════════
+// CACHE & SESSION
+// ════════════════════════════════
+function saveCache(d){try{localStorage.setItem('igm_cache',JSON.stringify(d));}catch(e){}}
+function loadCache(){try{const r=localStorage.getItem('igm_cache');return r?JSON.parse(r):null;}catch(e){return null;}}
+function saveSession(id){localStorage.setItem('igm_session',id);}
+function getSession(){return localStorage.getItem('igm_session');}
+function clearSession(){localStorage.removeItem('igm_session');}
+
+// ════════════════════════════════
+// NETWORK SYNC
+// ════════════════════════════════
+function checkOnline(){
+  const offline=!navigator.onLine;
+  document.getElementById('offline-banner').classList.toggle('show', offline);
+  if(!offline) setSyncDot('●','var(--green)');
+  else setSyncDot('✗','var(--red)');
+}
+window.addEventListener('online',()=>{checkOnline();if(MY_ID&&fbDB)startLiveSync();});
+window.addEventListener('offline',checkOnline);
+
+// ════════════════════════════════
+// FIREBASE ENGINE
+// ════════════════════════════════
+function loadFirebase(){
+  let loaded=0;
+  const srcs=['https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js','https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'];
+  srcs.forEach(src=>{
+    const s=document.createElement('script');s.src=src;
+    s.onload=()=>{if(++loaded===srcs.length)onFirebaseReady();};
+    s.onerror=()=>{setSyncDot('✗','var(--red)');useCache();};
+    document.head.appendChild(s);
+  });
+}
+
+function onFirebaseReady(){
+  try{
+    if(!fbApp)fbApp=firebase.initializeApp(FB_CFG);
+    fbDB=firebase.database(fbApp);
+    firebase.auth(fbApp).signInAnonymously().then(()=>{
+      setSyncDot('●','var(--green)');
+      populateLoginList();
+      const sid=getSession();
+      if(sid)tryAutoLogin(sid);
+    }).catch(e=>{console.warn('Auth:',e);setSyncDot('✗','var(--red)');useCache();});
+  }catch(e){console.warn(e);useCache();}
+}
+
+function populateLoginList(){
+  if(!fbDB)return;
+  fbDB.ref('investgroup/members').once('value').then(snap=>{
+    const members=snap.val()||[];
+    const sel=document.getElementById('login-name');
+    if(!Array.isArray(members)||!members.length){
+      sel.innerHTML='<option value="">— No members found —</option>';
+      document.getElementById('login-info').textContent='Ask your treasurer to set up members.';
+      return;
+    }
+    sel.innerHTML='<option value="">— Select your name —</option>'+members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+  }).catch(()=>{setSyncDot('✗','var(--red)');useCache();});
+}
+
+function fetchAll(cb){
+  if(!fbDB||!navigator.onLine){useCache(cb);return;}
+  setSyncDot('⟳','var(--gold)');
+  fbDB.ref('investgroup').once('value').then(snap=>{
+    const d=snap.val();
+    if(!d){document.getElementById('login-err').textContent='No group data found.';return;}
+    saveCache(d);GD=d;setSyncDot('●','var(--green)');
+    if(cb)cb();
+  }).catch(()=>{setSyncDot('✗','var(--red)');useCache(cb);});
+}
+
+function startLiveSync(){
+  if(!fbDB||!navigator.onLine)return;
+  fbDB.ref('investgroup').on('value',snap=>{
+    const d=snap.val();if(!d)return;
+    saveCache(d);GD=d;
+    setSyncDot('●','var(--green)');
+    if(MY_ID) renderAll();
+  });
+}
+
+function useCache(cb){
+  const c=loadCache();
+  if(c){GD=c;document.getElementById('offline-banner').classList.add('show');if(cb)cb();}
+  else{document.getElementById('login-info').textContent='No cached offline data.';}
+}
+
+function tryAutoLogin(savedId){
+  fetchAll(()=>{
+    if(!GD)return;
+    const member=(GD.members||[]).find(m=>m.id===savedId);
+    if(!member)return;
+    const localPin=localStorage.getItem('igm_pin_'+savedId);
+    const treasurerPin=(GD.memberPins||{})[savedId];
+    if(localPin||treasurerPin){MY_ID=savedId;ME=member;openApp();}
+  });
+}
+
+// ════════════════════════════════
+// AUTHENTICATION
+// ════════════════════════════════
+function tryLogin(){
+  const id=document.getElementById('login-name').value;
+  const pin=document.getElementById('login-pin').value.trim();
+  const errEl=document.getElementById('login-err');
+  errEl.textContent='';
+  if(!id){errEl.textContent='Please select your name.';return;}
+  if(!pin){errEl.textContent='Please enter your PIN.';return;}
+  document.getElementById('login-info').innerHTML='<span class="spinner"></span> Verifying…';
+  fetchAll(()=>{
+    document.getElementById('login-info').textContent='';
+    if(!GD){errEl.textContent='Could not load data. Check network.';return;}
+    const member=(GD.members||[]).find(m=>m.id===id);
+    if(!member){errEl.textContent='Member not found.';return;}
+    const localPin=localStorage.getItem('igm_pin_'+id);
+    const treasurerPin=(GD.memberPins||{})[id];
+    const validPin=localPin||treasurerPin;
+    if(!validPin){errEl.textContent='No PIN set. Ask your treasurer.';return;}
+    if(pin!==validPin){errEl.textContent='Incorrect PIN.';document.getElementById('login-pin').value='';return;}
+    MY_ID=id;ME=member;saveSession(id);openApp();
+  });
+}
+
+function openApp(){
+  document.getElementById('login').classList.add('off');
+  document.getElementById('app').classList.remove('off');
+  renderAll();
+  startLiveSync();
+  checkOnline();
+  const hasOwnPin=!!localStorage.getItem('igm_pin_'+MY_ID);
+  if(!hasOwnPin){
+    setTimeout(()=>openModal('modal-first-pin'),500);
+  }
+}
+
+function logout(){
+  clearSession();
+  if(fbDB)fbDB.ref('investgroup').off();
+  MY_ID=null;ME=null;GD=null;
+  document.getElementById('app').classList.add('off');
+  document.getElementById('login').classList.remove('off');
+  document.getElementById('login-pin').value='';
+  document.getElementById('login-err').textContent='';
+  document.getElementById('login-name').value='';
+}
+
+// ════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════
+const PAGE_TITLES={dashboard:'My Portfolio','invest-pg':'My Investments','tx-pg':'Transactions','loans-pg':'My Loans','deposit-pg':'Deposit','settings-pg':'Settings'};
+
+function showPage(pg,addH=true){
+  if(addH&&currentPage!==pg)pageHistory.push(currentPage);
+  currentPage=pg;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pageId='page-'+pg.replace('-pg','');
+  const el=document.getElementById(pageId)||document.getElementById('page-'+pg);
+  if(el)el.classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  const tab=document.getElementById('tab-'+pg);if(tab)tab.classList.add('active');
+  document.getElementById('tb-title').textContent=PAGE_TITLES[pg]||pg;
+  document.getElementById('back-btn').classList.toggle('hidden',pageHistory.length===0);
+  document.querySelector('.scroll-area').scrollTop=0;
+  if(pg==='settings-pg'){const e=document.getElementById('sett-name');if(e)e.textContent=ME?.name||'--';}
+}
+
+function goBack(){
+  if(!pageHistory.length)return;
+  const prev=pageHistory.pop();
+  showPage(prev,false);
+}
+
+// ════════════════════════════════
+// PORTFOLIO CALCULATIONS
+// ════════════════════════════════
+function mCon(id){return(GD.transactions||[]).filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+function mWit(id){return(GD.transactions||[]).filter(t=>t.type==='withdrawal'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+
+function caBalanceOf(memberId){
+  const m=(GD.members||[]).find(x=>x.id===memberId);
+  return m&&m.capitalAccount?m.capitalAccount.balance:0;
+}
+
+function getEq(){
+  const nbm=(GD.members||[]).map(x=>({id:x.id,net:Math.max(0,caBalanceOf(x.id))}));
+  const tnp=nbm.reduce((s,x)=>s+x.net,0)||1;
+  const mNet=Math.max(0,caBalanceOf(MY_ID));
+  return{mNet,eqF:mNet/tnp,eqP:(mNet/tnp*100).toFixed(2)};
+}
+
+function lnTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
+function lnBalance(l){return Math.max(0,lnTotalOwed(l)-l.repaid);}
+
+// PROFIT CALC (Fixes weightedShare issue)
+function calcInvProfit(inv){
+  if(!inv.contributions||!inv.contributions.length)return[];
+  const endDate=inv.closeDate||today();
+  const totalGain=inv.currentValue-inv.amount;
+
+  const rows=[...inv.contributions].map(c=>{
+    const activeDays=daysBetween(c.date,endDate);
+    return{...c,activeDays,weight:c.amount*activeDays};
+  });
+
+  const totalWeight=rows.reduce((s,r)=>s+r.weight,0)||1;
+
+  return rows.map(r=>{
+    const weightedShare=r.weight/totalWeight;
+    const profit=totalGain*weightedShare;
+    return{
+      memberId:r.memberId,
+      contribution:r.amount,
+      joinDate:r.date,
+      weightedShare:weightedShare,
+      shareAtJoin:weightedShare,
+      activeDays:r.activeDays,
+      profit
+    };
+  });
+}
+
+function memberOpenInvContribution(){
+  return(GD.investments||[]).filter(i=>i.status!=='closed').reduce((sum,inv)=>{
+    const rows=(inv.contributions||[]).filter(c=>c.memberId===MY_ID);
+    return sum+rows.reduce((s,c)=>s+c.amount,0);
+  },0);
+}
+
+function yearEndAllowance(){
+  const bal=ME.capitalAccount?ME.capitalAccount.balance:0;
+  const tiedUp=memberOpenInvContribution();
+  const free=Math.max(0,bal-tiedUp);
+  return+(free*0.20).toFixed(2);
+}
+
+function yearEndWindowStatus(){
+  const now=new Date();
+  const y=now.getFullYear();
+  const start=new Date(y,0,2);
+  const end=new Date(y,0,10,23,59,59);
+  let inWindow=now>=start&&now<=end;
+  let nextOpen=now>end?new Date(y+1,0,2):start;
+  const fmtDate=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  return{
+    inWindow,
+    label:inWindow?`Open now — closes ${fmtDate(end)}`:`Locked — opens ${fmtDate(nextOpen)}`,
+    windowStart:fmtDate(start),
+    windowEnd:fmtDate(end)
+  };
+}
+
+function myInvProfit(){
+  return(GD.investments||[]).filter(i=>i.status!=='closed').reduce((s,inv)=>{
+    const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);
+    return s+rows.reduce((ss,r)=>ss+r.profit,0);
+  },0);
+}
+
+function myBonus(){
+  const pendingInvProfit=(GD.investments||[]).filter(i=>i.status!=='closed').reduce((s,inv)=>{
+    const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+r.profit,0);
+  },0);
+  const pendingIncome=Math.max(0,pendingInvProfit);
+  const bonusPool=pendingIncome*(ADMIN_BONUS_PCT/100);
+  const admins=(GD.members||[]).filter(m=>m.role==='admin'||m.role==='treasurer');
+  const isAdmin=admins.some(a=>a.id===MY_ID);
+  return isAdmin&&admins.length>0?bonusPool/admins.length:0;
+}
+
+function myPendingLoanInterest(){
+  return(GD.loans||[]).reduce((s,l)=>{
+    if(!l.equitySnapshot||!l.equitySnapshot.length)return s;
+    const snap=l.equitySnapshot.find(e=>e.memberId===MY_ID);
+    if(!snap)return s;
+    const totalInterest=(l.amount*l.rate)/100;
+    const realized=Math.min(Math.max(0,l.repaid-l.amount),totalInterest);
+    const notYetRealized=Math.max(0,totalInterest-realized);
+    return s+notYetRealized*snap.pctEquity;
+  },0);
+}
+
+// ════════════════════════════════
+// RENDERING VIEWS
+// ════════════════════════════════
+function renderAll(){
+  if(!GD||!MY_ID||!ME)return;
+  renderDash();renderInvestments();renderTransactions();renderLoans();renderDeposit();
+}
+
+function renderDash(){
+  const{mNet,eqF,eqP}=getEq();
+  const totalIn=mCon(MY_ID),totalOut=mWit(MY_ID);
+  const invProfit=myInvProfit();
+  const loanInc=myPendingLoanInterest();
+  const bonus=myBonus();
+  const caBal=ME.capitalAccount?ME.capitalAccount.balance:0;
+  const netWorth=caBal+invProfit+loanInc+bonus;
+  const roi=totalIn>0?((netWorth-totalIn)/totalIn*100):0;
+
+  // Header
+  document.getElementById('m-av').textContent=ME.name.substring(0,2).toUpperCase();
+  document.getElementById('m-name-d').textContent=ME.name;
+  document.getElementById('m-role-d').textContent=ME.role||'Member';
+  document.getElementById('m-eq-pct').textContent=eqP+'%';
+
+  // KPIs
+  document.getElementById('m-in').textContent=fmt(totalIn);
+  document.getElementById('m-out').textContent=fmt(totalOut);
+  const caEl=document.getElementById('m-ca');
+  if(caEl){caEl.textContent=fmt(caBal);caEl.className='kv '+(caBal>=0?'':'red');}
+  document.getElementById('m-iprofit').textContent=fmt(invProfit);
+  document.getElementById('m-iprofit').className='kv '+(invProfit>=0?'green':'red');
+
+  // Breakdown
+  document.getElementById('sw-net').textContent=fmtF(caBal);
+  const ig=document.getElementById('sw-igain');ig.textContent=(invProfit>=0?'+':'')+fmtF(invProfit);ig.style.color=invProfit>=0?'var(--green)':'var(--red)';
+  document.getElementById('sw-linc').textContent='+'+fmtF(loanInc);
+  
+  if(bonus>0){
+    document.getElementById('sw-bonus-row').style.display='flex';
+    document.getElementById('sw-bonus').textContent='+'+fmtF(bonus);
+  } else {
+    document.getElementById('sw-bonus-row').style.display='none';
+  }
+
+  // Visual Breakdown Bar Weights
+  const absNet = Math.max(1, Math.abs(netWorth));
+  document.getElementById('seg-ca').style.width = Math.min(100, Math.max(0, (caBal / absNet) * 100)) + '%';
+  document.getElementById('seg-inv').style.width = Math.min(100, Math.max(0, (invProfit / absNet) * 100)) + '%';
+  document.getElementById('seg-loan').style.width = Math.min(100, Math.max(0, (loanInc / absNet) * 100)) + '%';
+  document.getElementById('seg-bonus').style.width = Math.min(100, Math.max(0, (bonus / absNet) * 100)) + '%';
+
+  const nw=document.getElementById('sw-nw');nw.textContent=fmtF(netWorth);nw.style.color=netWorth>=0?'var(--green)':'var(--red)';
+  const r=document.getElementById('sw-roi');r.textContent=(roi>=0?'+':'')+roi.toFixed(2)+'%';r.style.color=roi>=0?'var(--green)':'var(--red)';
+
+  // Allowance Card
+  const yeaBody=document.getElementById('yea-card-body');
+  if(yeaBody){
+    const allowance=yearEndAllowance();
+    const tiedUp=memberOpenInvContribution();
+    const win=yearEndWindowStatus();
+    yeaBody.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-family:'DM Serif Display',Georgia,serif;font-size:20px;color:var(--gold)">${fmtF(allowance)}</span>
+      <span class="badge ${win.inWindow?'bg':'bm'}" style="font-size:9px;">${win.inWindow?'Window Open':'Locked'}</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">20% of your available capital account (excluding ${fmtF(tiedUp)} active in investments).</div>
+    <div style="font-size:10px;color:${win.inWindow?'var(--green)':'var(--muted)'};font-weight:700;">${win.label}</div>`;
+  }
+
+  // Recent Activity
+  const myTxs=(GD.transactions||[]).filter(t=>t.memberId===MY_ID).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  const el=document.getElementById('m-recent');
+  if(!myTxs.length){el.innerHTML='<div class="empty"><div>No recent transactions</div></div>';return;}
+  el.innerHTML='<div class="tl">'+myTxs.map(t=>{
+    const sd=txSignDisplay(t),cls=sd.isIn?'in':t.type==='loan_out'?'loan':'out';
+    return`<div class="tl-item ${cls}"><div class="tl-date">${t.date}</div>
+    <div class="tl-desc">${t.desc}</div>
+    <div class="tl-amt" style="color:${sd.color}">${sd.sign}${sd.abs}</div></div>`;
+  }).join('')+'</div>';
+}
+
+function renderInvestments(){
+  const{eqP}=getEq();
+  const invs=GD.investments||[];
+  const myInvs=invs.filter(inv=>calcInvProfit(inv).some(r=>r.memberId===MY_ID));
+  const myInput=myInvs.reduce((s,inv)=>{const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);return s+rows.reduce((ss,r)=>ss+r.contribution,0);},0);
+  const myProfit=myInvs.reduce((s,inv)=>{const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
+
+  document.getElementById('i-in').textContent=fmt(myInput);
+  const iGain=document.getElementById('i-gain');if(iGain){iGain.textContent=fmt(myProfit);iGain.className='kv '+(myProfit>=0?'green':'red');}
+  const iEq=document.getElementById('i-eq');if(iEq)iEq.textContent=eqP+'%';
+
+  const caBal=ME.capitalAccount?ME.capitalAccount.balance:0;
+  const caEl=document.getElementById('i-ca');
+  if(caEl){caEl.textContent=fmt(caBal);caEl.className='kv '+(caBal>=0?'':'red');}
+  const caBal2=document.getElementById('i-ca-bal');
+  if(caBal2){caBal2.textContent=fmt(caBal);caBal2.style.color=caBal>=0?'var(--accent)':'var(--red)';}
+
+  // Capital Account History List
+  const caHist=document.getElementById('ca-history-list');
+  if(caHist){
+    const hist=ME.capitalAccount&&ME.capitalAccount.history?ME.capitalAccount.history:[];
+    if(!hist.length){
+      caHist.innerHTML='<div style="font-size:11px;color:var(--muted)">No capital account history recorded yet.</div>';
+    } else {
+      caHist.innerHTML=[...hist].reverse().map(h=>{
+        const isPos=h.amount>=0;
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:11px">${h.note}</div>
+            <div style="font-size:9px;color:var(--muted)">${h.date}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:12px">
+            <div style="color:${isPos?'var(--green)':'var(--red)'};font-weight:700;font-size:12px">${isPos?'+':''}${fmtF(h.amount)}</div>
+            <div style="font-size:9px;color:var(--muted)">Bal: ${fmtF(h.balance)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Investment Cards
+  const el=document.getElementById('inv-cards');
+  if(!invs.length){el.innerHTML='<div class="empty"><div class="empty-icon">◈</div><div>No active investments found</div></div>';return;}
+  const SC={open:'bg',closed:'br',funding:'bp'};
+  
+  el.innerHTML=invs.map(inv=>{
+    const rows=calcInvProfit(inv).filter(r=>r.memberId===MY_ID);
+    const myP=rows.reduce((s,r)=>s+r.profit,0);
+    const myI=rows.reduce((s,r)=>s+r.contribution,0);
+    const totalDays=daysBetween(inv.startDate||inv.date||today(),inv.closeDate||today())||1;
+    const gain=inv.currentValue-inv.amount;
+    
+    if(!rows.length){
+      return`<div class="card" style="opacity:.6;">
+        <div class="card-hd">
+          <div><div class="card-title">${inv.name}</div><div style="font-size:9px;color:var(--muted)">${inv.type} · <span class="badge ${SC[inv.status]||'bm'}">${inv.status}</span></div></div>
+        </div>
+        <div class="card-body" style="padding:12px 16px;font-size:11px;color:var(--muted)">Non-contributor</div>
+      </div>`;
+    }
+    return`<div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">${inv.name}</div><div style="font-size:9px;color:var(--muted)">${inv.type} · ${totalDays} days active · <span class="badge ${SC[inv.status]||'bm'}">${inv.status}</span></div></div>
+        <div style="text-align:right"><div style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:${myP>=0?'var(--green)':'var(--red)'}">${myP>=0?'+':''}${fmt(myP)}</div><div style="font-size:9px;color:var(--muted)">My Profit</div></div>
+      </div>
+      <div class="card-body" style="padding:12px 16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center;margin-bottom:10px;">
+          <div><div style="font-size:12px;font-weight:700">${fmt(myI)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">My Input</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:${myP>=0?'var(--green)':'var(--red)'}">${myP>=0?'+':''}${fmt(myP)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">My Gain</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:${gain>=0?'var(--green)':'var(--red)'}">${gain>=0?'+':''}${fmt(gain)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Group Gain</div></div>
+        </div>
+        ${rows.map(r=>`<div style="font-size:10px;color:var(--muted2);padding:6px 0;border-top:1px solid var(--border);">
+          Contributed: ${fmtF(r.contribution)} · Joined: ${r.joinDate} · ${r.activeDays} days active · ${(r.weightedShare*100).toFixed(1)}% weighted share
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTransactions(){
+  const myTxs=(GD.transactions||[]).filter(t=>t.memberId===MY_ID).sort((a,b)=>b.date.localeCompare(a.date));
+  const cnt=document.getElementById('tx-cnt');if(cnt)cnt.textContent=myTxs.length;
+  const tb=document.getElementById('tx-body');
+  if(!myTxs.length){tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:18px">No transaction history found</td></tr>';return;}
+  tb.innerHTML=myTxs.map(t=>{
+    const sd=txSignDisplay(t);
+    return`<tr><td>${t.date}</td><td><span class="badge ${TB[t.type]||'bm'}">${t.type.replace('_',' ')}</span></td>
+    <td>${t.desc}</td><td style="color:${sd.color};font-weight:700;white-space:nowrap">${sd.sign}${sd.abs}</td></tr>`;
+  }).join('');
+}
+
+function renderLoans(){
+  const firstName=ME.name.toLowerCase().split(' ')[0];
+  const myLoans=(GD.loans||[]).filter(l=>l.borrower&&l.borrower.toLowerCase().includes(firstName));
+  const el=document.getElementById('loan-cards');
+  if(!myLoans.length){el.innerHTML='<div class="empty"><div class="empty-icon">⬕</div><div>No personal loans active</div></div>';return;}
+  el.innerHTML=myLoans.map(l=>{
+    const bal=lnBalance(l),tot=lnTotalOwed(l),isPaid=bal===0,isOver=!isPaid&&l.dueDate&&l.dueDate<today();
+    const sb=isPaid?'bg':isOver?'br':'by',pct=Math.min(100,(l.repaid/tot)*100);
+    return`<div class="card">
+      <div class="card-hd">
+        <div><div class="card-title">Loan — ${fmtF(l.amount)}</div><div style="font-size:9px;color:var(--muted)">Rate: ${l.rate}% · Due: ${l.dueDate||'—'}</div></div>
+        <span class="badge ${sb}">${isPaid?'Paid':isOver?'Overdue':'Active'}</span>
+      </div>
+      <div class="card-body" style="padding:12px 16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center;margin-bottom:12px;">
+          <div><div style="font-size:12px;font-weight:700">${fmt(l.amount)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Principal</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--gold)">${fmt(l.amount*l.rate/100)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Interest</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:${bal>0?'var(--red)':'var(--green)'}">${fmt(bal)}</div><div style="font-size:8px;color:var(--muted);text-transform:uppercase">Remaining</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px"><span>Repayment Progress</span><span>${pct.toFixed(0)}%</span></div>
+        <div class="prog-wrap"><div class="prog-fill" style="background:${isPaid?'var(--green)':isOver?'var(--red)':'var(--accent)'};width:${pct}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDeposit(){
+  const bank=(GD.settings&&GD.settings.bank)||{};
+  const el=document.getElementById('bank-card');
+  const noteEl=document.getElementById('deposit-note-card');
+  if(!bank.accountNumber&&!bank.accountName){
+    el.innerHTML='<div class="empty"><div class="empty-icon">🏦</div><div>Bank details not configured yet.<br>Contact your group treasurer.</div></div>';
+    noteEl.style.display='none';return;
+  }
+  const ref=bank.reference?bank.reference.replace('Your Name',ME.name):ME.name+' INVEST';
+  
+  const rows=[
+    {l:'Account Name', v:bank.accountName, canCopy:false},
+    {l:'Account Number', v:bank.accountNumber, canCopy:true},
+    {l:'Bank', v:bank.bankName, canCopy:false},
+    {l:'Branch Code', v:bank.branchCode, canCopy:true},
+    {l:'Reference', v:ref, canCopy:true}
+  ].filter(r=>r.v);
+
+  el.innerHTML=rows.map(r=>`
+    <div class="deposit-row">
+      <div class="deposit-label">${r.l}</div>
+      <div class="deposit-value">
+        <span>${r.v}</span>
+        ${r.canCopy ? `<button class="copy-btn" onclick="copyToClipboard('${r.v}', '${r.l}')">Copy</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  if(bank.note){noteEl.style.display='block';noteEl.innerHTML='<strong>📌 Deposit Note:</strong> '+bank.note;}
+  else noteEl.style.display='none';
+}
+
+// ════════════════════════════════
+// MODALS & PIN MANAGEMENT
+// ════════════════════════════════
+function changePin(){
+  const cur=document.getElementById('pc-cur').value.trim();
+  const nw=document.getElementById('pc-new').value.trim();
+  const cf=document.getElementById('pc-cf').value.trim();
+  const sq=document.getElementById('pc-sq').value;
+  const sa=document.getElementById('pc-sa').value.trim();
+  const err=document.getElementById('pc-err');
+  
+  const localPin=localStorage.getItem('igm_pin_'+MY_ID);
+  const treasurerPin=(GD&&GD.memberPins&&GD.memberPins[MY_ID])||'';
+  const valid=localPin||treasurerPin;
+  
+  if(cur!==valid){err.textContent='Current PIN is incorrect.';return;}
+  if(nw.length<4){err.textContent='New PIN must be at least 4 digits.';return;}
+  if(nw!==cf){err.textContent='PIN confirmations do not match.';return;}
+  if(!sq||!sa){err.textContent='Please set a security question and answer.';return;}
+  
+  localStorage.setItem('igm_pin_'+MY_ID,nw);
+  localStorage.setItem('igm_sq_'+MY_ID,sq);
+  localStorage.setItem('igm_sa_'+MY_ID,sa);
+  err.textContent='';closeModal('modal-pin');
+  showToast('✓ PIN Updated Successfully!');
+}
+
+function saveFirstPin(){
+  const nw=document.getElementById('fp1-new').value.trim();
+  const cf=document.getElementById('fp1-cf').value.trim();
+  const sq=document.getElementById('fp1-sq').value;
+  const sa=document.getElementById('fp1-sa').value.trim();
+  const err=document.getElementById('fp1-err');
+  
+  if(nw.length<4){err.textContent='PIN must be at least 4 digits.';return;}
+  if(nw!==cf){err.textContent='PIN confirmations do not match.';return;}
+  if(!sq||!sa){err.textContent='Please set a security question and answer.';return;}
+  
+  localStorage.setItem('igm_pin_'+MY_ID,nw);
+  localStorage.setItem('igm_sq_'+MY_ID,sq);
+  localStorage.setItem('igm_sa_'+MY_ID,sa);
+  closeModal('modal-first-pin');
+  showToast('✓ Private PIN saved on this device!');
+}
+
+function openForgotPin(){
+  const id=document.getElementById('login-name').value;
+  if(!id){document.getElementById('login-err').textContent='Please select your name first.';return;}
+  const sq=localStorage.getItem('igm_sq_'+id);
+  if(!sq){
+    document.getElementById('login-err').textContent='No security question registered. Contact your treasurer.';
+    return;
+  }
+  document.getElementById('fp-question').textContent=sq;
+  document.getElementById('fp-answer').value='';
+  document.getElementById('fp-err').textContent='';
+  document.getElementById('fp-new-wrap').style.display='none';
+  document.getElementById('fp-btn').textContent='Verify Answer';
+  document.getElementById('fp-btn').onclick=verifySecurityAnswer;
+  openModal('modal-forgot-pin');
+}
+
+function verifySecurityAnswer(){
+  const id=document.getElementById('login-name').value;
+  const answer=document.getElementById('fp-answer').value.trim();
+  const stored=localStorage.getItem('igm_sa_'+id)||'';
+  
+  if(answer.toLowerCase()!==stored.toLowerCase()){
+    document.getElementById('fp-err').textContent='Incorrect answer.';
+    return;
+  }
+  document.getElementById('fp-new-wrap').style.display='block';
+  document.getElementById('fp-err').textContent='✓ Correct! Set a new PIN below.';
+  document.getElementById('fp-err').style.color='var(--green)';
+  document.getElementById('fp-btn').textContent='Save New PIN';
+  document.getElementById('fp-btn').onclick=resetForgottenPin;
+}
+
+function resetForgottenPin(){
+  const id=document.getElementById('login-name').value;
+  const nw=document.getElementById('fp-new').value.trim();
+  const cf=document.getElementById('fp-cf').value.trim();
+  const err=document.getElementById('fp-err');
+  if(nw.length<4){err.textContent='PIN must be at least 4 digits.';err.style.color='var(--red)';return;}
+  if(nw!==cf){err.textContent='PINs do not match.';err.style.color='var(--red)';return;}
+  localStorage.setItem('igm_pin_'+id,nw);
+  closeModal('modal-forgot-pin');
+  showToast('✓ PIN reset successfully!');
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+document.getElementById('login-pin').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();});
+
+// ════════════════════════════════
+// PWA MANIFEST INJECTION
+// ════════════════════════════════
+(function(){
+  const m={name:'My Portfolio',short_name:'Portfolio',display:'standalone',background_color:'#0b0c0e',theme_color:'#0b0c0e',start_url:'.',orientation:'portrait',icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='42' fill='%230b0c0e'/><text y='.85em' font-size='140' x='22' fill='%23c8f04a'>◆</text></svg>",sizes:'192x192',type:'image/svg+xml'}]};
+  const blob=new Blob([JSON.stringify(m)],{type:'application/json'});
+  const link=document.createElement('link');link.rel='manifest';link.href=URL.createObjectURL(blob);document.head.appendChild(link);
+})();
+
+// ════════════════════════════════
+// INITIALIZATION
+// ════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{checkOnline();loadFirebase();});
+</script>
+</body>
+</html>
