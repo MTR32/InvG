@@ -750,6 +750,112 @@ function lnRepaid(){return DB.loans.reduce((s,l)=>s+l.repaid,0);}
 function lnTotal(){return DB.loans.reduce((s,l)=>s+l.amount,0);}
 function loanTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
 function loanBalance(l){return Math.max(0,loanTotalOwed(l)-l.repaid);}
+
+// ── LOAN STATUS & AUTO-REPAYMENT ENGINE ──────────────────────────────────────
+
+// Returns overdue loans for a member (past due date, not fully repaid), oldest first
+function memberOverdueLoans(memberId){
+  const t2=today();
+  return DB.loans
+    .filter(l=>l.borrowerMemberId===memberId&&loanBalance(l)>0.01&&l.dueDate&&l.dueDate<t2)
+    .sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
+}
+
+// Sum of all outstanding loan balances for a member
+function memberTotalLoanBalance(memberId){
+  return DB.loans.filter(l=>l.borrowerMemberId===memberId).reduce((s,l)=>s+loanBalance(l),0);
+}
+
+// Returns {flagged, reasons[]} — whether a member is blocked from deposits + needs auto-repayment
+function memberLoanStatus(memberId){
+  const reasons=[];
+  const overdue=memberOverdueLoans(memberId);
+  if(overdue.length>0){
+    const list=overdue.map(l=>l.borrower+' (due '+l.dueDate+', '+fmtF(loanBalance(l))+' remaining)').join('; ');
+    reasons.push('Overdue loan(s): '+list);
+  }
+  const totalOwed=memberTotalLoanBalance(memberId);
+  const capBal=caBalance(memberId);
+  if(totalOwed>capBal+0.01&&totalOwed>0){
+    reasons.push('Total outstanding loans ('+fmtF(totalOwed)+') exceed capital account balance ('+fmtF(capBal)+')');
+  }
+  return{flagged:reasons.length>0,reasons};
+}
+
+// Intercepts earnings for a flagged member — redirects to loan repayment first.
+// Returns {applied, remainder} where remainder goes to capital account normally.
+function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date){
+  if(earningsAmount<=0)return{applied:0,remainder:earningsAmount};
+  const t2=today();
+  const capBal=caBalance(memberId);
+
+  // Loans that qualify: overdue ones always; non-overdue ones only while total debt > capital
+  const allMemberLoans=DB.loans
+    .filter(l=>l.borrowerMemberId===memberId&&loanBalance(l)>0.01)
+    .sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
+
+  let remaining=earningsAmount;
+  let runningDebt=memberTotalLoanBalance(memberId);
+
+  for(const l of allMemberLoans){
+    if(remaining<=0)break;
+    const isOverdue=l.dueDate&&l.dueDate<t2;
+    const debtExceedsCap=runningDebt>capBal+0.01;
+    if(!isOverdue&&!debtExceedsCap)break; // this loan doesn't qualify — stop
+
+    const lBal=loanBalance(l);
+    const toApply=+Math.min(remaining,lBal).toFixed(2);
+    if(toApply<=0)continue;
+
+    const balBefore=lBal;
+    l.repaid=+(l.repaid+toApply).toFixed(2);
+    const balAfter=loanBalance(l);
+    remaining=+(remaining-toApply).toFixed(2);
+    runningDebt=+(runningDebt-toApply).toFixed(2);
+
+    // Audit trail transaction
+    DB.transactions.push({id:uid(),date,type:'loan_repayment',
+      desc:'Auto-repayment — '+l.borrower+' (from: '+earningsDesc+')',
+      amount:toApply,memberId:'',
+      notes:'Auto-applied from member earnings. Balance: '+fmtF(balBefore)+' → '+fmtF(balAfter)});
+
+    // Record in member's auto-repayment history
+    const m=DB.members.find(x=>x.id===memberId);
+    if(m){
+      if(!m.autoRepaymentHistory)m.autoRepaymentHistory=[];
+      m.autoRepaymentHistory.push({date,amount:toApply,source:earningsDesc,
+        loanBorrower:l.borrower,balBefore,balAfter});
+    }
+
+    // Trigger interest distribution now that repaid increased
+    distributeLoanInterest(l,date);
+
+    // If loan cleared, only cascade to next if THAT loan is also overdue
+    if(balAfter<0.01){
+      const nextIdx=allMemberLoans.indexOf(l)+1;
+      if(nextIdx<allMemberLoans.length){
+        const next=allMemberLoans[nextIdx];
+        const nextOverdue=next.dueDate&&next.dueDate<t2;
+        if(!nextOverdue&&runningDebt<=capBal+0.01)break;
+      }
+    }
+  }
+
+  const applied=+(earningsAmount-remaining).toFixed(2);
+  return{applied,remainder:remaining};
+}
+
+// Posts earnings — intercepts for auto-repayment if member is flagged, then credits remainder
+function postEarningsWithAutoRepay(memberId, amount, desc, date){
+  if(amount<=0)return;
+  const{flagged}=memberLoanStatus(memberId);
+  if(flagged){
+    const{remainder}=applyAutoRepayment(memberId,amount,desc,date);
+    if(remainder>0)caPost(memberId,remainder,desc,date);
+  } else {
+    caPost(memberId,amount,desc,date);
+  }
+}
 // Total interest already permanently posted to members' capital accounts via distributeLoanInterest()
 function intEarned(){return DB.loans.reduce((s,l)=>s+(l.interestDistributed||0),0);}
 // Interest still pending — realized by repayments but not yet distributed (safety net for legacy loans)
@@ -1217,6 +1323,23 @@ function openMemberPortfolio(id){
       </div>
     </div>
     <div class="card" style="margin-bottom:12px;">
+      <div class="card-hd"><div class="card-title">⚡ Auto-Repayment History</div></div>
+      <div class="card-body" style="padding:10px 14px;">
+        ${(()=>{
+          const hist=m.autoRepaymentHistory||[];
+          const{flagged,reasons}=memberLoanStatus(id);
+          const statusBanner=flagged?`<div style="background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.25);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--red);">⛔ Auto-repayment ACTIVE — deposits blocked.<br><span style="color:var(--muted)">Reason(s): ${reasons.join(' · ')}</span></div>`:'<div style="font-size:11px;color:var(--muted)">No active auto-repayment. Member can deposit freely.</div>';
+          if(!hist.length)return statusBanner+'<div style="font-size:11px;color:var(--muted);margin-top:6px">No auto-repayments have been applied yet.</div>';
+          return statusBanner+[...hist].reverse().map(h=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;">
+            <div><div style="font-weight:700">${h.loanBorrower} loan</div>
+            <div style="font-size:9px;color:var(--muted)">${h.date} · from: ${h.source}</div>
+            <div style="font-size:9px;color:var(--muted)">Balance: ${fmtF(h.balBefore)} → ${fmtF(h.balAfter)}</div></div>
+            <div style="color:var(--red);font-weight:700;flex-shrink:0;margin-left:8px">−${fmtF(h.amount)}</div>
+          </div>`).join('');
+        })()}
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px;">
       <div class="card-hd"><div class="card-title">📈 Investments</div></div>
       <div class="card-body" style="padding:10px 14px;">
         ${(()=>{
@@ -1659,7 +1782,7 @@ function distributeInvProfits(inv){
     bonusPerAdmin=admins.length>0?+(bonusPool/admins.length).toFixed(2):0;
     admins.forEach(a=>{
       if(bonusPerAdmin===0)return;
-      caPost(a.id, bonusPerAdmin, `Mgmt Bonus (${ADMIN_BONUS_PCT}%): ${inv.name}`, closeDate);
+      postEarningsWithAutoRepay(a.id,bonusPerAdmin,`Mgmt Bonus (${ADMIN_BONUS_PCT}%): ${inv.name}`,closeDate);
       DB.transactions.push({id:uid(),date:closeDate,type:'profit',
         desc:`Management bonus — ${inv.name}`,amount:bonusPerAdmin,memberId:a.id,
         notes:`${ADMIN_BONUS_PCT}% management bonus, split among ${admins.length} admin(s)`});
@@ -1672,7 +1795,7 @@ function distributeInvProfits(inv){
   rows.forEach(r=>{
     const adjustedProfit=+(r.profit*scale).toFixed(2);
     if(adjustedProfit===0)return;
-    caPost(r.memberId, adjustedProfit, `Profit: ${inv.name}`, closeDate);
+    postEarningsWithAutoRepay(r.memberId,adjustedProfit,`Profit: ${inv.name}`,closeDate);
     DB.transactions.push({id:uid(),date:closeDate,type:'profit',
       desc:`Profit distribution — ${inv.name}`,amount:adjustedProfit,memberId:r.memberId,
       notes:`${(r.weightedShare*100).toFixed(2)}% share · ${r.activeDays} days active${bonusPool>0?` · after ${ADMIN_BONUS_PCT}% mgmt bonus`:''}`});
@@ -1943,14 +2066,19 @@ function fixLoanRates(){
 function saveLoan(){
   const bor=document.getElementById('ln-bor').value.trim(),amt=parseFloat(document.getElementById('ln-amt').value)||0;
   if(!bor||amt<=0)return alert('Fill borrower and amount.');
-  // Snapshot each member's % equity (of capital account balances) at the moment this loan is issued.
-  // Only members present now get a share of THIS loan's interest — new members later won't retroactively qualify.
+  // Snapshot each member's % equity at loan issue date (for 90% interest split)
   const balances=DB.members.map(m=>({memberId:m.id,bal:caBalance(m.id)})).filter(x=>x.bal>0);
   const totalBal=balances.reduce((s,x)=>s+x.bal,0);
   const equitySnapshot=totalBal>0?balances.map(x=>({memberId:x.memberId,pctEquity:x.bal/totalBal})):[];
-  const loan={id:uid(),borrower:bor,amount:amt,rate:parseFloat(document.getElementById('ln-rate').value)||DB.settings.defaultRate||10,date:document.getElementById('ln-date').value||today(),dueDate:document.getElementById('ln-due').value||'',notes:document.getElementById('ln-notes').value,repaid:0,interestDistributed:0,equitySnapshot};
+  // Find the member record matching the borrower name (for auto-repayment and 10% bonus)
+  const borrowerMember=DB.members.find(m=>m.name===bor);
+  const loan={id:uid(),borrower:bor,borrowerMemberId:borrowerMember?borrowerMember.id:null,
+    amount:amt,rate:parseFloat(document.getElementById('ln-rate').value)||DB.settings.defaultRate||10,
+    date:document.getElementById('ln-date').value||today(),
+    dueDate:document.getElementById('ln-due').value||'',
+    notes:document.getElementById('ln-notes').value,repaid:0,interestDistributed:0,equitySnapshot};
   DB.loans.push(loan);
-  DB.transactions.push({id:uid(),date:loan.date,type:'loan_out',desc:'Loan to '+bor,amount:amt,memberId:'',notes:loan.notes});
+  DB.transactions.push({id:uid(),date:loan.date,type:'loan_out',desc:'Loan to '+bor,amount:amt,memberId:borrowerMember?borrowerMember.id:'',notes:loan.notes});
   closeModal('modal-add-loan');['ln-bor','ln-amt','ln-rate','ln-date','ln-due','ln-notes'].forEach(id=>document.getElementById(id).value='');save();
 }
 function openRepay(id){
@@ -1960,23 +2088,37 @@ function openRepay(id){
   document.getElementById('rp-date').value=today();document.getElementById('rp-amt').value='';
   openModal('modal-repay');
 }
-// Distribute any newly-realized interest from a repayment to the loan's locked equity snapshot.
-// Interest is only "realized" once repayments exceed the principal — same logic as intEarned().
-// No admin/management bonus is taken from this pool.
+// Distribute newly-realized loan interest:
+// 10% goes to the borrower as a repayment bonus (they are always a member).
+// Remaining 90% is split among all members by their equity snapshot at loan issue date.
+// Both flows go through postEarningsWithAutoRepay so flagged members get auto-repayment applied.
 function distributeLoanInterest(l, date){
   if(!l.equitySnapshot||!l.equitySnapshot.length)return;
   const totalInterest=(l.amount*l.rate)/100;
   const interestRealizedSoFar=Math.min(Math.max(0,l.repaid-l.amount),totalInterest);
   const newlyRealized=+(interestRealizedSoFar-(l.interestDistributed||0)).toFixed(2);
   if(newlyRealized<=0)return;
+
+  // 10% borrower repayment bonus
+  const borrowerBonus=+(newlyRealized*0.10).toFixed(2);
+  if(borrowerBonus>0&&l.borrowerMemberId){
+    postEarningsWithAutoRepay(l.borrowerMemberId,borrowerBonus,`Borrower bonus: ${l.borrower}`,date);
+    DB.transactions.push({id:uid(),date,type:'profit',
+      desc:`Borrower repayment bonus — ${l.borrower}`,amount:borrowerBonus,memberId:l.borrowerMemberId,
+      notes:`10% borrower bonus on ${fmtF(newlyRealized)} realized interest`});
+  }
+
+  // 90% split by equity snapshot
+  const pool90=+(newlyRealized-borrowerBonus).toFixed(2);
   l.equitySnapshot.forEach(e=>{
-    const share=+(newlyRealized*e.pctEquity).toFixed(2);
-    if(share===0)return;
-    const m=DB.members.find(x=>x.id===e.memberId);
-    caPost(e.memberId, share, `Loan interest: ${l.borrower}`, date);
-    DB.transactions.push({id:uid(),date,type:'profit',desc:`Loan interest — ${l.borrower}`,amount:share,memberId:e.memberId,
-      notes:`${(e.pctEquity*100).toFixed(2)}% equity share at loan issue · no mgmt bonus applied`});
+    const share=+(pool90*e.pctEquity).toFixed(2);
+    if(share<0.01)return;
+    postEarningsWithAutoRepay(e.memberId,share,`Loan interest: ${l.borrower}`,date);
+    DB.transactions.push({id:uid(),date,type:'profit',
+      desc:`Loan interest — ${l.borrower}`,amount:share,memberId:e.memberId,
+      notes:`${(e.pctEquity*100).toFixed(2)}% equity at loan issue · 90% interest pool`});
   });
+
   l.interestDistributed=interestRealizedSoFar;
 }
 function saveRepay(){
@@ -1998,6 +2140,16 @@ function saveTx(){
   const amt=parseFloat(document.getElementById('tx-amt').value),date=document.getElementById('tx-date').value||today();
   if(!desc||isNaN(amt)||amt<=0)return alert('Fill description and amount.');
   const memId=document.getElementById('tx-mem').value||'';
+
+  // BLOCK contributions for members with overdue loans or loans exceeding capital balance.
+  // Only loan repayment transactions are permitted for these members.
+  if(type==='contribution'&&memId){
+    const{flagged,reasons}=memberLoanStatus(memId);
+    if(flagged){
+      const m=DB.members.find(x=>x.id===memId);
+      return alert('⛔ Deposit blocked for '+(m?m.name:'this member')+'\n\nReason(s):\n• '+reasons.join('\n• ')+'\n\nOnly loan repayments are permitted until their loan situation is resolved.');
+    }
+  }
 
   const repayKeys=['repay','repaid','pay back','paying back','loan payment','installment','instalment','settl','brought back','bring back'];
   const descLow=desc.toLowerCase();

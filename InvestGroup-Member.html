@@ -237,6 +237,14 @@ input:focus{border-color:var(--accent);}
         </div>
       </div>
 
+      <!-- AUTO-REPAYMENT STATUS BANNER -->
+      <div id="auto-repay-banner" style="display:none;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.25);border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+        <div style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:12px;color:var(--red);margin-bottom:4px;">⛔ Deposits Blocked — Auto-Repayment Active</div>
+        <div id="auto-repay-reasons" style="font-size:11px;color:var(--muted);margin-bottom:8px;"></div>
+        <div style="font-size:11px;color:var(--muted);">Any earnings you receive (profit, interest, bonuses) are being automatically applied to your outstanding loan(s) first. Once your loan situation is resolved, deposits and full earnings access will resume.</div>
+        <div id="auto-repay-hist-summary" style="margin-top:8px;font-size:11px;"></div>
+      </div>
+
       <div class="card">
         <div class="card-hd"><div class="card-title">📅 Year-End Withdrawal Allowance</div></div>
         <div class="card-body" id="yea-card-body">
@@ -296,6 +304,7 @@ input:focus{border-color:var(--accent);}
 
     <!-- DEPOSIT -->
     <div class="page" id="page-deposit">
+      <div id="deposit-block-msg" style="display:none;margin-bottom:12px;"></div>
       <div class="section-title">Make a Deposit</div>
       <div style="background:rgba(200,240,74,.06);border:1px solid rgba(200,240,74,.2);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--muted2);line-height:1.8;">
         Transfer to the group account below. Use the reference shown so your payment is correctly identified.
@@ -401,7 +410,6 @@ input:focus{border-color:var(--accent);}
 <!-- FIRST LOGIN - SET OWN PIN MODAL -->
 <div class="mo" id="modal-first-pin">
   <div class="modal">
-    <div class="mhandle"></div>
     <div class="mhd"><div class="mtitle">🔐 Set Your Private PIN</div></div>
     <div class="mbody">
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">You're logged in with a temporary PIN from your treasurer. Set your own private PIN now — it will be stored only on this device and the treasurer cannot see or reset it.</div>
@@ -764,6 +772,30 @@ function myPendingLoanInterest(){
   },0);
 }
 
+// ── LOAN STATUS (member-side) ────────────────────────────────────────────────
+function memberOverdueLoans(){
+  const t2=today();
+  return(GD.loans||[]).filter(l=>l.borrowerMemberId===MY_ID&&loanBalance(l)>0.01&&l.dueDate&&l.dueDate<t2)
+    .sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
+}
+function memberTotalLoanBalance(){
+  return(GD.loans||[]).filter(l=>l.borrowerMemberId===MY_ID).reduce((s,l)=>s+loanBalance(l),0);
+}
+function loanBalance(l){return Math.max(0,(l.amount+(l.amount*l.rate/100))-l.repaid);}
+function memberLoanStatus(){
+  const reasons=[];
+  const overdue=memberOverdueLoans();
+  if(overdue.length>0){
+    reasons.push('You have '+overdue.length+' overdue loan(s): '+overdue.map(l=>l.borrower+' (due '+l.dueDate+', '+fmtF(loanBalance(l))+' remaining)').join('; '));
+  }
+  const totalOwed=memberTotalLoanBalance();
+  const capBal=ME.capitalAccount?ME.capitalAccount.balance:0;
+  if(totalOwed>capBal+0.01&&totalOwed>0){
+    reasons.push('Your total outstanding loans ('+fmtF(totalOwed)+') exceed your capital account balance ('+fmtF(capBal)+')');
+  }
+  return{flagged:reasons.length>0,reasons};
+}
+
 // ════════════════════════════════
 // RENDER
 // ════════════════════════════════
@@ -810,6 +842,34 @@ function renderDash(){
   }
   const nw=document.getElementById('sw-nw');nw.textContent=fmtF(netWorth);nw.style.color=netWorth>=0?'var(--green)':'var(--red)';
   const r=document.getElementById('sw-roi');r.textContent=(roi>=0?'+':'')+roi.toFixed(2)+'%';r.style.color=roi>=0?'var(--green)':'var(--red)';
+
+  // Auto-repayment banner
+  const{flagged,reasons}=memberLoanStatus();
+  const banner=document.getElementById('auto-repay-banner');
+  const reasonEl=document.getElementById('auto-repay-reasons');
+  const histEl=document.getElementById('auto-repay-hist-summary');
+  if(banner){
+    banner.style.display=flagged?'block':'none';
+    if(flagged&&reasonEl){
+      reasonEl.innerHTML=reasons.map(r=>'• '+r).join('<br>');
+    }
+    if(flagged&&histEl&&ME.autoRepaymentHistory&&ME.autoRepaymentHistory.length){
+      const recent=[...ME.autoRepaymentHistory].reverse().slice(0,3);
+      histEl.innerHTML='<div style="font-weight:700;color:var(--muted);margin-bottom:4px">Recent auto-repayments:</div>'+
+        recent.map(h=>`<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);">
+          <span style="color:var(--muted)">${h.date} · ${h.loanBorrower}</span>
+          <span style="color:var(--red)">−${fmtF(h.amount)}</span>
+        </div>`).join('');
+    }
+  }
+
+  // Block deposit form if flagged
+  const depositPage=document.getElementById('page-deposit');
+  const depositBlockEl=document.getElementById('deposit-block-msg');
+  if(depositBlockEl){
+    depositBlockEl.style.display=flagged?'block':'none';
+    if(flagged)depositBlockEl.innerHTML='<div style="background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.25);border-radius:10px;padding:12px;font-size:11px;color:var(--red);">⛔ <strong>Deposits are blocked.</strong><br><br>'+reasons.map(r=>'• '+r).join('<br>')+'<br><br><span style="color:var(--muted)">Contact your treasurer to make a loan repayment.</span></div>';
+  }
 
   // Year-End Withdrawal Allowance
   const yeaBody=document.getElementById('yea-card-body');
@@ -1081,7 +1141,10 @@ function resetForgottenPin(){
 // ════════════════════════════════
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
-document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+// Backdrop tap closes all modals EXCEPT modal-first-pin which is mandatory until PIN is set
+document.querySelectorAll('.mo').forEach(o=>o.addEventListener('click',e=>{
+  if(e.target===o&&o.id!=='modal-first-pin')o.classList.remove('open');
+}));
 document.getElementById('login-pin').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();});
 
 // ════════════════════════════════
