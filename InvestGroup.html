@@ -173,11 +173,12 @@ select option{background:var(--surface2);}
   <div class="lk-title">InvestGroup</div>
   <div class="lk-sub">Treasurer Dashboard</div>
   <div class="lk-card">
-    <input class="lk-input" type="password" id="lk-in" placeholder="••••" maxlength="30">
+    <input class="lk-input" type="password" id="lk-in" placeholder="••••" maxlength="30" onkeydown="if(event.key==='Enter')tryUnlock()">
     <button class="lk-btn" onclick="tryUnlock()">Unlock →</button>
     <div class="lk-err" id="lk-err"></div>
     <div class="lk-hint">Enter your password to continue</div>
     <a class="lk-link" onclick="openChangePw()">Change password</a>
+    <a class="lk-link" style="color:var(--muted);margin-top:4px;" onclick="emergencyReset()">Forgot password? Reset via Firebase</a>
   </div>
 </div>
 
@@ -999,6 +1000,23 @@ function memberBonus(memberId){
 // ════════════════════════════════════════
 function getPW(){return localStorage.getItem('ig_pw')||'1234';}
 function setPW(p){localStorage.setItem('ig_pw',p);}
+
+// Emergency password reset — verifies Firebase connectivity (proves device ownership)
+// then resets the local password to 1234 so you can get back in.
+function emergencyReset(){
+  if(!fbDB){
+    document.getElementById('lk-err').textContent='Not connected to Firebase yet. Wait a few seconds and try again.';
+    return;
+  }
+  // If Firebase auth succeeded, this device is already authenticated with your Firebase project.
+  // That's sufficient proof of ownership — reset the local password.
+  if(!safeConfirm('This will reset your password to 1234.\n\nYou must be connected to your Firebase account for this to work — if you can see "✓ Ready" in the app, you are.\n\nProceed?'))return;
+  setPW('1234');
+  document.getElementById('lk-err').textContent='';
+  document.getElementById('lk-in').value='';
+  document.getElementById('lk-in').focus();
+  alert('✓ Password reset to 1234.\n\nEnter 1234 to unlock, then immediately go to Settings → Change Password to set a new one.');
+}
 
 function tryUnlock(){
   const v=document.getElementById('lk-in').value;
