@@ -703,6 +703,16 @@ function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r
     if(!i.startDate) i.startDate=i.date||today();
     return i;
   });
+  // Backfill borrowerMemberId on loans that were created before this field existed
+  DB.loans=DB.loans.map(l=>{
+    if(!l.borrowerMemberId&&l.borrower){
+      const m=DB.members.find(x=>x.name.trim().toLowerCase()===l.borrower.trim().toLowerCase());
+      if(m)l.borrowerMemberId=m.id;
+    }
+    if(l.interestDistributed===undefined)l.interestDistributed=0;
+    if(!l.equitySnapshot)l.equitySnapshot=[];
+    return l;
+  });
   // Ensure every member has a capitalAccount object
   DB.members=DB.members.map(m=>{
     if(!m.capitalAccount) m.capitalAccount={balance:0,history:[]};
@@ -755,16 +765,25 @@ function loanBalance(l){return Math.max(0,loanTotalOwed(l)-l.repaid);}
 // ── LOAN STATUS & AUTO-REPAYMENT ENGINE ──────────────────────────────────────
 
 // Returns overdue loans for a member (past due date, not fully repaid), oldest first
+// Match a loan to a member — prefer borrowerMemberId (reliable), fall back to name match
+// for loans created before borrowerMemberId was added to saveLoan().
+function loanBelongsToMember(l, memberId){
+  if(l.borrowerMemberId)return l.borrowerMemberId===memberId;
+  // Legacy: match by name
+  const m=DB.members.find(x=>x.id===memberId);
+  return m&&l.borrower&&l.borrower.trim().toLowerCase()===m.name.trim().toLowerCase();
+}
+
 function memberOverdueLoans(memberId){
   const t2=today();
   return DB.loans
-    .filter(l=>l.borrowerMemberId===memberId&&loanBalance(l)>0.01&&l.dueDate&&l.dueDate<t2)
+    .filter(l=>loanBelongsToMember(l,memberId)&&loanBalance(l)>0.01&&l.dueDate&&l.dueDate<t2)
     .sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
 }
 
 // Sum of all outstanding loan balances for a member
 function memberTotalLoanBalance(memberId){
-  return DB.loans.filter(l=>l.borrowerMemberId===memberId).reduce((s,l)=>s+loanBalance(l),0);
+  return DB.loans.filter(l=>loanBelongsToMember(l,memberId)).reduce((s,l)=>s+loanBalance(l),0);
 }
 
 // Returns {flagged, reasons[]} — whether a member is blocked from deposits + needs auto-repayment
@@ -792,7 +811,7 @@ function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date){
 
   // Loans that qualify: overdue ones always; non-overdue ones only while total debt > capital
   const allMemberLoans=DB.loans
-    .filter(l=>l.borrowerMemberId===memberId&&loanBalance(l)>0.01)
+    .filter(l=>loanBelongsToMember(l,memberId)&&loanBalance(l)>0.01)
     .sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
 
   let remaining=earningsAmount;
@@ -2117,12 +2136,15 @@ function distributeLoanInterest(l, date){
   const newlyRealized=+(interestRealizedSoFar-(l.interestDistributed||0)).toFixed(2);
   if(newlyRealized<=0)return;
 
-  // 10% borrower repayment bonus
+  // 10% borrower repayment bonus — find the borrower member by ID or name
+  const borrowerMember=l.borrowerMemberId
+    ?DB.members.find(m=>m.id===l.borrowerMemberId)
+    :DB.members.find(m=>m.name.trim().toLowerCase()===l.borrower.trim().toLowerCase());
   const borrowerBonus=+(newlyRealized*0.10).toFixed(2);
-  if(borrowerBonus>0&&l.borrowerMemberId){
-    postEarningsWithAutoRepay(l.borrowerMemberId,borrowerBonus,`Borrower bonus: ${l.borrower}`,date);
+  if(borrowerBonus>0&&borrowerMember){
+    postEarningsWithAutoRepay(borrowerMember.id,borrowerBonus,`Borrower bonus: ${l.borrower}`,date);
     DB.transactions.push({id:uid(),date,type:'profit',
-      desc:`Borrower repayment bonus — ${l.borrower}`,amount:borrowerBonus,memberId:l.borrowerMemberId,
+      desc:`Borrower repayment bonus — ${l.borrower}`,amount:borrowerBonus,memberId:borrowerMember.id,
       notes:`10% borrower bonus on ${fmtF(newlyRealized)} realized interest`});
   }
 
@@ -2488,6 +2510,13 @@ function loadFromFirebase(){
     DB.investments=DB.investments.map(i=>{if(!i.contributions)i.contributions=[];if(!i.valueHistory)i.valueHistory=[];if(!i.status)i.status='open';if(!i.startDate)i.startDate=i.date||today();return i;});
     // Migrate members — ensure capitalAccount exists
     DB.members=DB.members.map(m=>{if(!m.capitalAccount)m.capitalAccount={balance:0,history:[]};return m;});
+    // Backfill borrowerMemberId on legacy loans
+    DB.loans=DB.loans.map(l=>{
+      if(!l.borrowerMemberId&&l.borrower){const m=DB.members.find(x=>x.name.trim().toLowerCase()===l.borrower.trim().toLowerCase());if(m)l.borrowerMemberId=m.id;}
+      if(l.interestDistributed===undefined)l.interestDistributed=0;
+      if(!l.equitySnapshot)l.equitySnapshot=[];
+      return l;
+    });
     saveDB();renderAll();
     const t=new Date().toLocaleTimeString();
     setSyncStatus('✓ Loaded','var(--green)');
