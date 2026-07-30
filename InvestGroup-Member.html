@@ -682,6 +682,16 @@ function intEarned(){return(GD.loans||[]).reduce((s,l)=>s+(l.interestDistributed
 function lnTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
 function lnBalance(l){return Math.max(0,lnTotalOwed(l)-l.repaid);}
 
+// Checks if a loan belongs to the currently logged-in member.
+// Priority: borrowerMemberId (reliable) → any word in ME.name found anywhere in l.borrower, case-insensitive.
+// Safe as long as no two members have any word in common (e.g. "John" and "Johnson" would both match "John").
+function loanIsMine(l){
+  if(l.borrowerMemberId)return l.borrowerMemberId===MY_ID;
+  if(!l.borrower||!ME||!ME.name)return false;
+  const borrowerLow=l.borrower.toLowerCase();
+  return ME.name.toLowerCase().split(/\s+/).filter(w=>w.length>1).some(w=>borrowerLow.includes(w));
+}
+
 // PROFIT CALC — matches treasurer app formula exactly
 function calcInvProfit(inv){
   // Formula: profit = totalGain × (contribution × activeDays) / Σ(contribution × activeDays)
@@ -775,11 +785,11 @@ function myPendingLoanInterest(){
 // ── LOAN STATUS (member-side) ────────────────────────────────────────────────
 function memberOverdueLoans(){
   const t2=today();
-  return(GD.loans||[]).filter(l=>l.borrowerMemberId===MY_ID&&loanBalance(l)>0.01&&l.dueDate&&l.dueDate<t2)
+  return(GD.loans||[]).filter(l=>loanIsMine(l)&&loanBalance(l)>0.01&&l.dueDate&&l.dueDate<t2)
     .sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
 }
 function memberTotalLoanBalance(){
-  return(GD.loans||[]).filter(l=>l.borrowerMemberId===MY_ID).reduce((s,l)=>s+loanBalance(l),0);
+  return(GD.loans||[]).filter(l=>loanIsMine(l)).reduce((s,l)=>s+loanBalance(l),0);
 }
 function loanBalance(l){return Math.max(0,(l.amount+(l.amount*l.rate/100))-l.repaid);}
 function memberLoanStatus(){
@@ -887,10 +897,14 @@ function renderDash(){
   }
 
   // Recent
-  const myTxs=(GD.transactions||[]).filter(t=>
-    t.memberId===MY_ID||
-    (t.type==='loan_out'&&(t.desc||'').toLowerCase().includes(ME.name.toLowerCase()))
-  ).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  const myLoansRecent=(GD.loans||[]).filter(l=>loanIsMine(l));
+  const myBorrowerNamesRecent=myLoansRecent.map(l=>(l.borrower||'').toLowerCase());
+  function isMineByDescRecent(t){const d=(t.desc||'').toLowerCase();return myBorrowerNamesRecent.some(n=>n&&d.includes(n));}
+  const myTxs=(GD.transactions||[]).filter(t=>{
+    if(t.memberId===MY_ID)return true;
+    if((t.type==='loan_out'||t.type==='loan_repayment')&&isMineByDescRecent(t))return true;
+    return false;
+  }).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
   const el=document.getElementById('m-recent');
   if(!myTxs.length){el.innerHTML='<div class="empty"><div>No transactions yet</div></div>';return;}
   el.innerHTML='<div class="tl">'+myTxs.map(t=>{
@@ -981,15 +995,20 @@ function renderInvestments(){
 }
 
 function renderTransactions(){
-  // Include transactions explicitly tagged to this member, plus loan_out records
-  // where this member is the borrower (those are posted with memberId='' as group records)
-  const myLoanIds=new Set((GD.loans||[])
-    .filter(l=>l.borrowerMemberId===MY_ID||(l.borrower&&l.borrower.trim().toLowerCase()===ME.name.trim().toLowerCase()))
-    .map(l=>l.id));
+  // Build set of this member's loan borrower names for fast description matching
+  const myLoans=(GD.loans||[]).filter(l=>loanIsMine(l));
+  const myBorrowerNames=myLoans.map(l=>(l.borrower||'').toLowerCase());
+
+  function isMineByDesc(t){
+    const descLow=(t.desc||'').toLowerCase();
+    return myBorrowerNames.some(name=>name&&descLow.includes(name));
+  }
+
   const myTxs=(GD.transactions||[]).filter(t=>{
-    if(t.memberId===MY_ID)return true;
-    // Catch loan_out and loan_repayment records linked to this member's loans by description
-    if(t.type==='loan_out'&&(t.desc||'').toLowerCase().includes(ME.name.toLowerCase()))return true;
+    if(t.memberId===MY_ID)return true; // contributions, withdrawals, profit, bonus, interest
+    if(t.type==='loan_out'&&isMineByDesc(t))return true;
+    if(t.type==='loan_repayment'&&isMineByDesc(t))return true;
+    if(t.type==='profit'&&isMineByDesc(t))return true; // auto-repayment borrower bonus
     return false;
   }).sort((a,b)=>b.date.localeCompare(a.date));
   const cnt=document.getElementById('tx-cnt');if(cnt)cnt.textContent=myTxs.length;
@@ -1004,10 +1023,7 @@ function renderTransactions(){
 
 function renderLoans(){
   // Match loans by borrowerMemberId (reliable) or full name match (legacy loans)
-  const myLoans=(GD.loans||[]).filter(l=>
-    l.borrowerMemberId===MY_ID||
-    (l.borrower&&l.borrower.trim().toLowerCase()===ME.name.trim().toLowerCase())
-  );
+  const myLoans=(GD.loans||[]).filter(l=>loanIsMine(l));
   const el=document.getElementById('loan-cards');
   if(!myLoans.length){el.innerHTML='<div class="empty"><div class="empty-icon">⬕</div><div>No loans recorded for you</div></div>';return;}
   el.innerHTML=myLoans.map(l=>{
