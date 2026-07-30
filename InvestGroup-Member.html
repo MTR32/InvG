@@ -899,10 +899,20 @@ function renderDash(){
   // Recent
   const myLoansRecent=(GD.loans||[]).filter(l=>loanIsMine(l));
   const myBorrowerNamesRecent=myLoansRecent.map(l=>(l.borrower||'').toLowerCase());
-  function isMineByDescRecent(t){const d=(t.desc||'').toLowerCase();return myBorrowerNamesRecent.some(n=>n&&d.includes(n));}
+  // Only match loan_out/loan_repayment where this member IS the borrower —
+  // check the desc starts with the borrower name, not just contains it anywhere
+  // (avoids matching "Auto-repayment — OTHER (from: Loan interest: Martin)")
+  function isMineAsBorrower(t){
+    const d=(t.desc||'').toLowerCase();
+    return myBorrowerNamesRecent.some(n=>n&&(
+      d.startsWith('loan to '+n)||
+      d.startsWith('repayment — '+n)||
+      d.startsWith('auto-repayment — '+n)
+    ));
+  }
   const myTxs=(GD.transactions||[]).filter(t=>{
     if(t.memberId===MY_ID)return true;
-    if((t.type==='loan_out'||t.type==='loan_repayment')&&isMineByDescRecent(t))return true;
+    if((t.type==='loan_out'||t.type==='loan_repayment')&&isMineAsBorrower(t))return true;
     return false;
   }).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
   const el=document.getElementById('m-recent');
@@ -995,19 +1005,24 @@ function renderInvestments(){
 }
 
 function renderTransactions(){
-  // Build set of this member's loan borrower names for fast description matching
   const myLoans=(GD.loans||[]).filter(l=>loanIsMine(l));
   const myBorrowerNames=myLoans.map(l=>(l.borrower||'').toLowerCase());
 
-  function isMineByDesc(t){
-    const descLow=(t.desc||'').toLowerCase();
-    return myBorrowerNames.some(name=>name&&descLow.includes(name));
+  // Only match transactions where this member IS the borrower —
+  // the borrower name must appear at the START of the relevant desc segment
+  function isMineAsBorrower(t){
+    const d=(t.desc||'').toLowerCase();
+    return myBorrowerNames.some(n=>n&&(
+      d.startsWith('loan to '+n)||
+      d.startsWith('repayment — '+n)||
+      d.startsWith('auto-repayment — '+n)
+    ));
   }
 
   const myTxs=(GD.transactions||[]).filter(t=>{
-    if(t.memberId===MY_ID)return true; // contributions, withdrawals, profit, bonus, interest — all correctly tagged
-    if(t.type==='loan_out'&&isMineByDesc(t))return true; // loan disbursements have blank memberId
-    if(t.type==='loan_repayment'&&isMineByDesc(t))return true; // repayments have blank memberId
+    if(t.memberId===MY_ID)return true; // contributions, withdrawals, profit, bonus, interest — correctly tagged
+    if(t.type==='loan_out'&&isMineAsBorrower(t))return true; // loan disbursements have blank memberId
+    if(t.type==='loan_repayment'&&isMineAsBorrower(t))return true; // repayments have blank memberId
     return false;
   }).sort((a,b)=>b.date.localeCompare(a.date));
   const cnt=document.getElementById('tx-cnt');if(cnt)cnt.textContent=myTxs.length;

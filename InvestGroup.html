@@ -410,6 +410,7 @@ select option{background:var(--surface2);}
           <button class="btn" onclick="exportData()">↓ Export JSON Backup</button>
           <div class="fg"><label>Import Backup</label><input type="file" id="imp-file" accept=".json" onchange="importData(event)"></div>
           <div class="divider"></div>
+          <button class="btn-g" style="width:100%;padding:10px;margin-bottom:8px;" onclick="cleanupOrphanTransactions()">🧹 Clean Orphaned Transactions</button>
           <button class="btn-d" style="width:100%;padding:10px;" onclick="clearAll()">⚠ Clear All Data</button>
         </div>
       </div>
@@ -2046,6 +2047,34 @@ function clearAll(){
   if(!safeConfirm('Delete ALL data permanently?'))return;
   if(!safeConfirm('This cannot be undone. Are you absolutely sure?'))return;
   DB={settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}},members:[],investments:[],loans:[],transactions:[],memberPins:{}};save();
+}
+
+// Remove orphaned/bad auto-repayment and cascade-duplicate transactions from before the bug fix.
+// Safe to run at any time — only removes auto-repayment entries whose source loan no longer exists
+// or whose borrower is not a known member.
+function cleanupOrphanTransactions(){
+  const before=DB.transactions.length;
+  DB.transactions=DB.transactions.filter(t=>{
+    // Remove auto-repayment records where the referenced borrower has no matching active loan
+    if(t.type==='loan_repayment'&&(t.desc||'').toLowerCase().startsWith('auto-repayment')){
+      // Extract the borrower name from "Auto-repayment — BORROWER (from: ...)"
+      const match=(t.desc||'').match(/auto-repayment\s*[—-]\s*(.+?)\s*\(from:/i);
+      if(match){
+        const borrower=match[1].trim().toLowerCase();
+        const loanExists=DB.loans.some(l=>l.borrower.trim().toLowerCase()===borrower&&loanBalance(l)>0.01);
+        if(!loanExists)return false; // no active loan for this borrower — orphaned record
+      }
+    }
+    return true;
+  });
+  const removed=before-DB.transactions.length;
+  if(removed>0){
+    rebuildCapitalAccounts();
+    save();
+    alert(`✓ Cleaned up ${removed} orphaned auto-repayment transaction(s). Capital accounts recalculated.`);
+  } else {
+    alert('No orphaned transactions found — ledger is clean.');
+  }
 }
 
 function openAddLoanModal(){
