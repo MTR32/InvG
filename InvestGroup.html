@@ -2024,7 +2024,10 @@ function delLoan(id){
   DB.transactions=DB.transactions.filter(t=>{
     if(t.type==='loan_out'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
     if(t.type==='loan_repayment'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
-    if(t.type==='profit'&&(t.desc||'').toLowerCase().startsWith('loan interest')&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
+    if(t.type==='profit'&&(t.desc||'').toLowerCase().includes(borrowerLower)&&(
+      (t.desc||'').toLowerCase().startsWith('loan interest')||
+      (t.desc||'').toLowerCase().startsWith('borrower repayment bonus')
+    ))return false;
     return true;
   });
   rebuildCapitalAccounts();
