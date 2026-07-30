@@ -1005,10 +1005,9 @@ function renderTransactions(){
   }
 
   const myTxs=(GD.transactions||[]).filter(t=>{
-    if(t.memberId===MY_ID)return true; // contributions, withdrawals, profit, bonus, interest
-    if(t.type==='loan_out'&&isMineByDesc(t))return true;
-    if(t.type==='loan_repayment'&&isMineByDesc(t))return true;
-    if(t.type==='profit'&&isMineByDesc(t))return true; // auto-repayment borrower bonus
+    if(t.memberId===MY_ID)return true; // contributions, withdrawals, profit, bonus, interest — all correctly tagged
+    if(t.type==='loan_out'&&isMineByDesc(t))return true; // loan disbursements have blank memberId
+    if(t.type==='loan_repayment'&&isMineByDesc(t))return true; // repayments have blank memberId
     return false;
   }).sort((a,b)=>b.date.localeCompare(a.date));
   const cnt=document.getElementById('tx-cnt');if(cnt)cnt.textContent=myTxs.length;
