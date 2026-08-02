@@ -732,6 +732,7 @@ function fmtF(n){return(n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimum
 function txSignDisplay(t){
   let isIn;
   if(t.type==='profit') isIn=t.amount>=0;
+  else if(t.type==='loan_repayment'&&t.isAutoRepay) isIn=false; // auto-repayments are money leaving member's account
   else isIn=IN_T.includes(t.type);
   return{isIn,sign:isIn?'+':'−',color:isIn?'var(--green)':'var(--red)',abs:fmtF(Math.abs(t.amount))};
 }
@@ -793,11 +794,6 @@ function memberLoanStatus(memberId, excludeLoanId){
     const list=overdue.map(l=>l.borrower+' (due '+l.dueDate+', '+fmtF(loanBalance(l))+' remaining)').join('; ');
     reasons.push('Overdue loan(s): '+list);
   }
-  const totalOwed=memberTotalLoanBalance(memberId,excludeLoanId);
-  const capBal=caBalance(memberId);
-  if(totalOwed>capBal+0.01&&totalOwed>0){
-    reasons.push('Total outstanding loans ('+fmtF(totalOwed)+') exceed capital account balance ('+fmtF(capBal)+')');
-  }
   return{flagged:reasons.length>0,reasons};
 }
 
@@ -806,20 +802,17 @@ function memberLoanStatus(memberId, excludeLoanId){
 function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date, excludeLoanId){
   if(earningsAmount<=0)return{applied:0,remainder:earningsAmount};
   const t2=today();
-  const capBal=caBalance(memberId);
 
   const allMemberLoans=DB.loans
     .filter(l=>l.id!==excludeLoanId&&loanBelongsToMember(l,memberId)&&loanBalance(l)>0.01)
     .sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
 
   let remaining=earningsAmount;
-  let runningDebt=allMemberLoans.reduce((s,l)=>s+loanBalance(l),0);
 
   for(const l of allMemberLoans){
     if(remaining<=0)break;
     const isOverdue=l.dueDate&&l.dueDate<t2;
-    const debtExceedsCap=runningDebt>capBal+0.01;
-    if(!isOverdue&&!debtExceedsCap)break;
+    if(!isOverdue)break; // only overdue loans trigger auto-repayment
 
     const lBal=loanBalance(l);
     const toApply=+Math.min(remaining,lBal).toFixed(2);
@@ -829,11 +822,10 @@ function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date, exclud
     l.repaid=+(l.repaid+toApply).toFixed(2);
     const balAfter=loanBalance(l);
     remaining=+(remaining-toApply).toFixed(2);
-    runningDebt=+(runningDebt-toApply).toFixed(2);
 
     DB.transactions.push({id:uid(),date,type:'loan_repayment',
       desc:'Auto-repayment — '+l.borrower+' (from: '+earningsDesc+')',
-      amount:toApply,memberId:'',
+      amount:toApply,memberId:memberId,isAutoRepay:true,
       notes:'Auto-applied from member earnings. Balance: '+fmtF(balBefore)+' → '+fmtF(balAfter)});
 
     const m=DB.members.find(x=>x.id===memberId);
@@ -846,12 +838,13 @@ function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date, exclud
     // No recursive distributeLoanInterest here — that caused cascading duplicate entries.
     // Interest from auto-repaid amounts is picked up when the treasurer records manual repayments.
 
+    // If this loan is cleared, only cascade to next if that loan is ALSO overdue
     if(balAfter<0.01){
       const nextIdx=allMemberLoans.indexOf(l)+1;
       if(nextIdx<allMemberLoans.length){
         const next=allMemberLoans[nextIdx];
         const nextOverdue=next.dueDate&&next.dueDate<t2;
-        if(!nextOverdue&&runningDebt<=capBal+0.01)break;
+        if(!nextOverdue)break;
       }
     }
   }
@@ -1699,6 +1692,7 @@ function rebuildCapitalAccounts(){
     if(t.type==='contribution')delta=t.amount;
     else if(t.type==='withdrawal')delta=-t.amount;
     else if(t.type==='profit')delta=t.amount; // profit, bonus, loan interest — all signed correctly
+    else if(t.type==='loan_repayment'&&t.isAutoRepay)delta=-t.amount; // auto-repayments debit the capital account
     if(delta===0)return;
     if(!m.capitalAccount)m.capitalAccount={balance:0,history:[]};
     m.capitalAccount.balance=+(m.capitalAccount.balance+delta).toFixed(2);
@@ -2099,8 +2093,10 @@ function fixLoanRates(){
       const borrowerLower=l.borrower.toLowerCase();
       DB.transactions=DB.transactions.filter(t=>!(
         t.type==='profit'&&
-        (t.desc||'').toLowerCase().startsWith('loan interest')&&
-        (t.desc||'').toLowerCase().includes(borrowerLower)
+        (t.desc||'').toLowerCase().includes(borrowerLower)&&(
+          (t.desc||'').toLowerCase().startsWith('loan interest')||
+          (t.desc||'').toLowerCase().startsWith('borrower repayment bonus')
+        )
       ));
       l.interestDistributed=0;
     }
@@ -2207,7 +2203,7 @@ function saveTx(){
   if(!desc||isNaN(amt)||amt<=0)return alert('Fill description and amount.');
   const memId=document.getElementById('tx-mem').value||'';
 
-  // BLOCK contributions for members with overdue loans or loans exceeding capital balance.
+  // BLOCK contributions for members with overdue loans.
   // Only loan repayment transactions are permitted for these members.
   if(type==='contribution'&&memId){
     const{flagged,reasons}=memberLoanStatus(memId);
@@ -2237,6 +2233,7 @@ function saveTx(){
   if(memId){
     if(type==='contribution') caPost(memId, amt, desc, date);
     else if(type==='withdrawal') caPost(memId, -amt, desc, date);
+    else if(type==='profit') postEarningsWithAutoRepay(memId, amt, desc, date);
   }
   closeModal('modal-tx');['tx-desc','tx-amt','tx-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('smart-hint').classList.remove('show');

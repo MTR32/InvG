@@ -798,11 +798,6 @@ function memberLoanStatus(){
   if(overdue.length>0){
     reasons.push('You have '+overdue.length+' overdue loan(s): '+overdue.map(l=>l.borrower+' (due '+l.dueDate+', '+fmtF(loanBalance(l))+' remaining)').join('; '));
   }
-  const totalOwed=memberTotalLoanBalance();
-  const capBal=ME.capitalAccount?ME.capitalAccount.balance:0;
-  if(totalOwed>capBal+0.01&&totalOwed>0){
-    reasons.push('Your total outstanding loans ('+fmtF(totalOwed)+') exceed your capital account balance ('+fmtF(capBal)+')');
-  }
   return{flagged:reasons.length>0,reasons};
 }
 
