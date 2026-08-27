@@ -1015,14 +1015,14 @@ function calcInvProfit(inv){
   // closed same day, or all contributions landed exactly on the close date), every weight is 0.
   // Fall back to splitting purely by contribution amount so profit still distributes correctly
   // instead of silently going to nobody.
-  const rawTotalWeight=rows.reduce((s,r)=>s+r.weight,0);
-  const totalAmount=rows.reduce((s,r)=>s+r.amount,0)||1;
+  const rawTotalWeight=round2(rows.reduce((s,r)=>s+safeNum(r.weight),0));
+  const totalAmount=round2(rows.reduce((s,r)=>s+safeNum(r.amount),0));
   const useAmountFallback=rawTotalWeight<=0;
   const totalWeight=useAmountFallback?totalAmount:rawTotalWeight;
 
   return rows.map(r=>{
-    const weightedShare=useAmountFallback?(r.amount/totalWeight):(r.weight/totalWeight);
-    const profit=totalGain*weightedShare;
+    const weightedShare=totalWeight>0?(useAmountFallback?(safeNum(r.amount)/totalWeight):(safeNum(r.weight)/totalWeight)):0;
+    const profit=round2(totalGain*weightedShare);
     return{memberId:r.memberId,memberName:r.memberName||'Unknown',contribution:r.amount,joinDate:r.date,activeDays:r.activeDays,weightedShare,profit};
   });
 }
@@ -1050,6 +1050,9 @@ function memberPendingInvProfit(memberId){
 // not a live recalculation. This means if someone is removed from admin/treasurer role,
 // whatever they already earned and had posted to their capital account stays untouched —
 // it's real transaction history, not a formula that re-evaluates their current role.
+function safeNum(v,fallback=0){const n=Number(v);return Number.isFinite(n)?n:fallback;}
+function safePct(v){const n=Number(v);return Number.isFinite(n)?n:0;}
+
 function calcAdminBonus(){
   // Only investments not yet closed still have a "pending/projected" bonus —
   // closed investments already posted their bonus permanently via distributeInvProfits().
@@ -1058,7 +1061,7 @@ function calcAdminBonus(){
     return s+rows.reduce((ss,r)=>ss+r.profit,0);
   },0);
   const pendingIncome=Math.max(0,pendingInvProfit);
-  const bonusPool=pendingIncome*(adminBonusPct()/100);
+  const bonusPool=round2(pendingIncome*(adminBonusPct()/100));
   const admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
   const bonusPerAdmin=admins.length>0?bonusPool/admins.length:0;
   return{bonusPool,bonusPerAdmin,admins,totalIncome:pendingIncome};
@@ -1342,7 +1345,7 @@ function openMemberPortfolio(id){
   const loanInc=memberPendingLoanInterest(id);
   const bonus=memberBonus(id);
   const netWorth=caBalance(id)+invProfit+loanInc+bonus;
-  const roi=totalIn>0?((netWorth-totalIn)/totalIn*100):0;
+  const roi=totalIn>0?safePct((safeNum(netWorth)-safeNum(totalIn))/safeNum(totalIn)*100):0;
   const SC={open:'bg',closed:'br',funding:'bp'};
 
   // per investment rows
@@ -1616,13 +1619,13 @@ function getRepRange(){
 function renderReports(){
   const{from,to}=getRepRange();
   const txs=DB.transactions.filter(t=>{if(from&&t.date<from)return false;if(to&&t.date>to)return false;return true;});
-  const cap=capPool();
-  const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
-  const int=intEarned();
-  const totalInvProfit=DB.investments.reduce((s,inv)=>{const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
-  const bonusPool=totalInvProfit>0?+(totalInvProfit*(adminBonusPct()/100)).toFixed(2):0;
-  const netIncome=totalInvProfit+int-exp;
-  const roi=cap>0?(netIncome/cap*100):0;
+  const cap=round2(capPool());
+  const exp=round2(txs.filter(t=>t.type==='expense').reduce((s,t)=>s+safeNum(t.amount),0));
+  const int=round2(intEarned());
+  const totalInvProfit=round2(DB.investments.reduce((s,inv)=>{const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+safeNum(r.profit),0);},0));
+  const bonusPool=round2(totalInvProfit>0?totalInvProfit*(adminBonusPct()/100):0);
+  const netIncome=round2(totalInvProfit+int-exp);
+  const roi=cap>0?safePct(netIncome/cap*100):0;
   document.getElementById('rp-cap').textContent=fmtF(cap);
   document.getElementById('rp-ret').textContent=fmtF(totalInvProfit);
   document.getElementById('rp-roi').textContent=roi.toFixed(1)+'%';
@@ -2412,7 +2415,7 @@ function exportPDF(){
   const totalInvProfit=DB.investments.reduce((s,inv2)=>{const rows=calcInvProfit(inv2);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
   const bonusPool=totalInvProfit>0?+(totalInvProfit*(adminBonusPct()/100)).toFixed(2):0;
   const netIncome=totalInvProfit+int;
-  const roi=cap>0?(netIncome/cap*100):0;
+  const roi=cap>0?safePct(netIncome/cap*100):0;
   const gname=DB.settings.groupName||'Investment Group';
   const dt=new Date().toLocaleDateString('en',{year:'numeric',month:'long',day:'numeric'});
 
@@ -2430,7 +2433,7 @@ function exportPDF(){
       <td style="padding:8px 10px;text-align:right;color:#059669">${fmtF(c)}</td>
       <td style="padding:8px 10px;text-align:right;color:#dc2626">${fmtF(w)}</td>
       <td style="padding:8px 10px;text-align:right">${fmtF(x.net)}</td>
-      <td style="padding:8px 10px;text-align:right">${(x.net/tnp*100).toFixed(1)}%</td>
+      <td style="padding:8px 10px;text-align:right">${(tnp>0?safePct(safeNum(x.net)/tnp*100):0).toFixed(1)}%</td>
       <td style="padding:8px 10px;text-align:right;color:${invP>=0?'#059669':'#dc2626'}">${invP>=0?'+':''}${fmtF(invP)}</td>
       ${bonus>0?`<td style="padding:8px 10px;text-align:right;color:#d97706">+${fmtF(bonus)}</td>`:`<td style="padding:8px 10px;text-align:right;color:#9ca3af">—</td>`}
       <td style="padding:8px 10px;text-align:right;font-weight:700;color:${total>=0?'#059669':'#dc2626'}">${total>=0?'+':''}${fmtF(total)}</td>
