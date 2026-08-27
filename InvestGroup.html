@@ -430,7 +430,10 @@ select option{background:var(--surface2);}
           <button class="btn-g" id="apply-import-btn" style="width:100%;padding:10px;display:none;" onclick="applyImportedData()">✓ Apply Selected Backup</button>
           <div id="import-status" style="font-size:10px;color:var(--muted);"></div>
           <div class="divider"></div>
-          <button class="btn-g" style="width:100%;padding:10px;margin-bottom:8px;" onclick="cleanupOrphanTransactions()">🧹 Clean Orphaned Transactions</button>
+          <button class="btn-g" style="width:100%;padding:10px;margin-bottom:8px;" onclick="safeRepairLedger()">✓ Rebuild & Repair Ledger Safely</button>
+          <button class="btn-g" style="width:100%;padding:10px;margin-bottom:8px;" onclick="cleanupOrphanTransactions();renderLedgerAudit();">🧹 Clean Orphaned Transactions</button>
+          <div class="divider"></div>
+          <div class="card" style="margin:0;background:rgba(255,255,255,.02);"><div class="card-hd"><div class="card-title">Ledger Integrity</div></div><div class="card-body" id="ledger-audit">Checking…</div></div>
           <button class="btn-d" style="width:100%;padding:10px;" onclick="clearAll()">⚠ Clear All Data</button>
         </div>
       </div>
@@ -775,6 +778,8 @@ function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r
     if(!m.capitalAccount) m.capitalAccount={balance:0,history:[]};
     return m;
   });
+  // Rebuild derived capital balances from the ledger so stale capitalAccount snapshots cannot drift.
+  rebuildCapitalAccounts();
 }
 function updateCashReconciliationUI(){
   const strip=document.getElementById('cash-reconcile-strip'); if(!strip)return;
@@ -1213,7 +1218,7 @@ function quickAddTxForActiveMember(){
 // RENDER ALL
 // ════════════════════════════════════════
 function renderAll(){
-  renderDash();renderCF();renderMembers();renderInvestments();renderLoans();renderTx();renderReports();updateMemSel();
+  renderDash();renderCF();renderMembers();renderInvestments();renderLoans();renderTx();renderReports();updateMemSel();renderLedgerAudit();
 }
 
 // ── DASHBOARD ──
@@ -1635,9 +1640,15 @@ function renderReports(){
   const cap=round2(capPool());
   const exp=round2(txs.filter(t=>t.type==='expense').reduce((s,t)=>s+safeNum(t.amount),0));
   const int=round2(intEarned());
-  const totalInvProfit=round2(DB.investments.reduce((s,inv)=>{const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+safeNum(r.profit),0);},0));
-  const bonusPool=round2(totalInvProfit>0?totalInvProfit*(adminBonusPct()/100):0);
-  const netIncome=round2(totalInvProfit+int-exp);
+  // Reports use REALIZED ledger postings for historical profit. Live/open investment
+  // projections are kept out of realized ROI so reports cannot disagree with capital accounts.
+  const totalInvProfit=round2(txs.filter(t=>t.type==='profit'&&String(t.desc||'').toLowerCase().startsWith('profit distribution'))
+    .reduce((s,t)=>s+safeNum(t.amount),0));
+  // Management bonus is a REAL posted transaction. The current bonus rate is only for future
+  // closures; changing the setting must never rewrite historical bonuses.
+  const bonusPool=round2(txs.filter(t=>t.type==='profit'&&String(t.desc||'').toLowerCase().startsWith('management bonus'))
+    .reduce((s,t)=>s+safeNum(t.amount),0));
+  const netIncome=round2(totalInvProfit+int-exp-bonusPool);
   const roi=cap>0?safePct(netIncome/cap*100):0;
   document.getElementById('rp-cap').textContent=fmtF(cap);
   document.getElementById('rp-ret').textContent=fmtF(totalInvProfit);
@@ -2201,6 +2212,64 @@ function clearAll(){
 // Remove orphaned/bad auto-repayment and cascade-duplicate transactions from before the bug fix.
 // Safe to run at any time — only removes auto-repayment entries whose source loan no longer exists
 // or whose borrower is not a known member.
+// ════════════════════════════════════════
+// LEDGER CONSISTENCY / SAFE REPAIR
+// ════════════════════════════════════════
+function ledgerAudit(){
+  const tx=Array.isArray(DB.transactions)?DB.transactions:[];
+  const members=new Set(DB.members.map(m=>m.id));
+  const loans=new Set(DB.loans.map(l=>l.id));
+  const invs=new Set(DB.investments.map(i=>i.id));
+  const duplicateGroups={};
+  const seen={};
+  tx.forEach(t=>{
+    const key=[t.date,t.type,String(t.desc||'').trim().toLowerCase(),round2(t.amount),t.memberId||'',t.loanId||'',t.investmentId||'',!!t.isAutoRepay].join('|');
+    seen[key]=(seen[key]||0)+1;
+  });
+  Object.keys(seen).forEach(k=>{if(seen[k]>1)duplicateGroups[k]=seen[k];});
+  const orphanMember=tx.filter(t=>t.memberId&&!members.has(t.memberId));
+  const orphanLoan=tx.filter(t=>t.loanId&&!loans.has(t.loanId));
+  const orphanInv=tx.filter(t=>t.investmentId&&!invs.has(t.investmentId));
+  const missingReturns=DB.investments.filter(i=>i.status==='closed'&&!tx.some(t=>t.type==='return'&&t.investmentId===i.id&&safeNum(t.amount)>0));
+  const linkedRepayByLoan={};
+  tx.filter(t=>t.type==='loan_repayment'&&t.loanId).forEach(t=>linkedRepayByLoan[t.loanId]=(linkedRepayByLoan[t.loanId]||0)+safeNum(t.amount));
+  const loanMismatches=DB.loans.filter(l=>Math.abs(round2(safeNum(l.repaid)-safeNum(linkedRepayByLoan[l.id]||0)))>.01&&linkedRepayByLoan[l.id]!==undefined);
+  return {txCount:tx.length,duplicateGroups,duplicateCount:Object.keys(duplicateGroups).reduce((n,k)=>n+duplicateGroups[k]-1,0),orphanMember,orphanLoan,orphanInv,missingReturns,loanMismatches,ledgerCash:cashLedgerBalance(),physicalCash:physicalCash(),variance:cashVariance()};
+}
+function renderLedgerAudit(){
+  const el=document.getElementById('ledger-audit');if(!el)return;
+  const a=ledgerAudit();
+  const items=[];
+  if(a.duplicateCount)items.push(`⚠ ${a.duplicateCount} possible duplicate transaction(s) — NOT deleted automatically.`);
+  if(a.orphanMember.length)items.push(`⚠ ${a.orphanMember.length} transaction(s) reference deleted/missing members.`);
+  if(a.orphanLoan.length)items.push(`⚠ ${a.orphanLoan.length} transaction(s) reference missing loans.`);
+  if(a.orphanInv.length)items.push(`⚠ ${a.orphanInv.length} transaction(s) reference missing investments.`);
+  if(a.missingReturns.length)items.push(`⚠ ${a.missingReturns.length} closed investment(s) have no explicit return transaction.`);
+  if(a.loanMismatches.length)items.push(`⚠ ${a.loanMismatches.length} linked loan(s) have repayment totals different from their loan record.`);
+  if(!items.length)items.push('✓ Ledger references are internally consistent.');
+  const v=a.variance;
+  const cashLine=a.physicalCash===null?`Ledger cash: ${fmtF(a.ledgerCash)} · No physical count saved`:`Ledger cash: ${fmtF(a.ledgerCash)} · Physical: ${fmtF(a.physicalCash)} · Variance: ${v>=0?'+':'−'}${fmtF(Math.abs(v))}`;
+  el.innerHTML=`<div style="font-size:10px;color:var(--muted);margin-bottom:7px">${cashLine}</div>${items.map(x=>`<div style="font-size:10px;padding:5px 0;color:${x.startsWith('✓')?'var(--green)':'var(--gold)'}">${x}</div>`).join('')}`;
+}
+function safeRepairLedger(){
+  if(!safeConfirm('Run safe ledger repair?\n\nThis will normalize numeric amounts, rebuild member capital accounts, add only missing closed-investment return records, and preserve possible duplicates or ambiguous history for review.'))return;
+  DB.transactions=DB.transactions.map(t=>({...t,amount:round2(t.amount)}));
+  // Remove exact duplicate IDs only; same-date/amount transactions are preserved because they may be legitimate.
+  const ids=new Set();DB.transactions=DB.transactions.filter(t=>{if(!t.id)return true;if(ids.has(t.id))return false;ids.add(t.id);return true;});
+  DB.investments.forEach(i=>{
+    i.contributions=Array.isArray(i.contributions)?i.contributions:[];
+    i.valueHistory=Array.isArray(i.valueHistory)?i.valueHistory:[];
+    if(i.status==='closed'&&!DB.transactions.some(t=>t.type==='return'&&t.investmentId===i.id&&safeNum(t.amount)>0)){
+      const amount=round2(i.currentValue);
+      if(amount>0)DB.transactions.push({id:uid(),date:i.closeDate||i.date||today(),type:'return',desc:'Investment return: '+i.name,amount,memberId:'',notes:'Historical return created during safe ledger repair from closed investment record.',investmentId:i.id,historical:true});
+    }
+  });
+  DB.members.forEach(m=>{if(!m.capitalAccount)m.capitalAccount={balance:0,history:[]};});
+  rebuildCapitalAccounts();
+  saveDB();renderAll();renderLedgerAudit();
+  alert('✓ Safe ledger repair completed. Possible duplicate/ambiguous transactions were preserved for review.');
+}
+
 function cleanupOrphanTransactions(silent=false){
   const before=DB.transactions.length;
   DB.transactions=DB.transactions.filter(t=>{
