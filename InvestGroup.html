@@ -220,7 +220,7 @@ select option{background:var(--surface2);}
     <div class="page active" id="page-dashboard">
       <div id="d-alerts"></div>
       <div class="kpi-grid">
-        <div class="kpi-card yellow"><div class="kl">Member Capital</div><div class="kv" id="d-cap">--</div><div class="ks">Member capital claims (not added to assets)</div></div>
+        <div class="kpi-card yellow"><div class="kl">Total Group Value</div><div class="kv" id="d-cap">--</div><div class="ks">Total member pool / value of the group</div></div>
         <div class="kpi-card green"><div class="kl">Reserve</div><div class="kv green" id="d-res">--</div><div class="ks" id="d-res-pct">0% of capital</div></div>
         <div class="kpi-card blue"><div class="kl">Invested Value</div><div class="kv" id="d-inv">--</div><div class="ks" id="d-inv-c">0 open positions</div></div>
         <div class="kpi-card gold"><div class="kl">Loans Out</div><div class="kv gold" id="d-ln">--</div><div class="ks" id="d-ln-c">0 active</div></div>
@@ -840,10 +840,43 @@ function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(
 // ════════════════════════════════════════
 function sumTx(type,memberId=null){return round2(DB.transactions.filter(t=>t.type===type&&(!memberId||t.memberId===memberId)).reduce((s,t)=>s+Number(t.amount||0),0));}
 // Member Capital Claims: what members collectively own/are credited with.
+// GROUP VALUE / POOL: the total value credited to members.
+// This is the single pool from which open investments and outstanding loan principal
+// are allocated. It must NOT add investments or loans again, because they are already
+// portions of this same pool.
 function capPool(){return round2(DB.members.reduce((s,m)=>s+caBalance(m.id),0));}
-function totInv(){return round2(DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+Number(i.currentValue||0),0));}
-function lnOut(){return round2(DB.loans.reduce((s,l)=>s+Math.max(0,loanTotalOwed(l)-Number(l.repaid||0)),0));}
-function assetPortfolioValue(){return round2(Math.max(0,reserve())+totInv()+lnOut());}
+function totalGroupValue(){return capPool();}
+
+// Money currently committed outside the reserve.
+// For open investments, use the amount originally deployed (not a live market value)
+// because reserve is measuring how much of the group's pool is tied up in the position.
+function openInvestmentCommitted(){
+  return round2(DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+Number(i.amount||0),0));
+}
+
+// Outstanding LOAN PRINCIPAL only. Repayments above principal are interest and must not
+// make the original principal commitment appear larger or smaller than it is.
+function loanPrincipalOut(){
+  return round2(DB.loans.reduce((s,l)=>{
+    const principal=Number(l.amount||0);
+    const repaid=Number(l.repaid||0);
+    return s+Math.max(0,principal-Math.min(principal,Math.max(0,repaid)));
+  },0));
+}
+
+function totInv(){return round2(DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+Number(i.currentValue||i.amount||0),0));}
+function lnOut(){return loanPrincipalOut();}
+
+// RESERVE = total group value minus money currently tied up in open investments and
+// outstanding loan principal. Nothing is counted twice.
+function reserve(){
+  return round2(Math.max(0,totalGroupValue()-openInvestmentCommitted()-loanPrincipalOut()));
+}
+
+// Total asset value is the same group pool; reserve + committed investments + loan
+// principal should reconcile back to it (subject to unrealized investment gains).
+function assetPortfolioValue(){return totalGroupValue();}
+
 
 // PHYSICAL CASH = actual external cash movements only.
 // Internal profit allocations and automatic repayments do not create new group cash.
@@ -864,9 +897,7 @@ function cashLedgerBalance(){
   );
   return round2(cashIn-cashOut);
 }
-// Reconciliation is deliberately NOT included in reserve(). It is a separate
-// variance between recorded cash and the physical cash count.
-function reserve(){return cashLedgerBalance();}
+// Reconciliation is deliberately NOT included in reserve(). It is a separate variance between recorded cash and the physical cash count.
 function physicalCash(){
   const cr=DB.settings&&DB.settings.cashReconciliation||{};
   const n=Number(cr.physicalCash);
