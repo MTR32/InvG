@@ -427,6 +427,8 @@ select option{background:var(--surface2);}
         <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
           <button class="btn" onclick="exportData()">↓ Export JSON Backup</button>
           <div class="fg"><label>Import Backup</label><input type="file" id="imp-file" accept=".json" onchange="importData(event)"></div>
+          <button class="btn-g" id="apply-import-btn" style="width:100%;padding:10px;display:none;" onclick="applyImportedData()">✓ Apply Selected Backup</button>
+          <div id="import-status" style="font-size:10px;color:var(--muted);"></div>
           <div class="divider"></div>
           <button class="btn-g" style="width:100%;padding:10px;margin-bottom:8px;" onclick="cleanupOrphanTransactions()">🧹 Clean Orphaned Transactions</button>
           <button class="btn-d" style="width:100%;padding:10px;" onclick="clearAll()">⚠ Clear All Data</button>
@@ -699,7 +701,12 @@ let pageHistory=[], curPage='dashboard';
 let activeMemberPortfolioId=null;
 let fbApp=null, fbDB=null;
 
-const ADMIN_BONUS_PCT=10;
+const DEFAULT_ADMIN_BONUS_PCT=5;
+const DEFAULT_ADMIN_BONUS_ANNUAL_CAP=2000000;
+function adminBonusPct(){return Math.max(0,Math.min(100,Number(DB.settings.adminBonusPct ?? DEFAULT_ADMIN_BONUS_PCT)||DEFAULT_ADMIN_BONUS_PCT));}
+function adminBonusAnnualCap(){const n=Number(DB.settings.adminBonusAnnualCap);return Number.isFinite(n)&&n>0?round2(n):DEFAULT_ADMIN_BONUS_ANNUAL_CAP;}
+function adminBonusPaidThisYear(year){return round2(DB.transactions.filter(t=>t.type==='profit'&&String(t.desc||'').startsWith('Management bonus — ')&&String(t.date||'').slice(0,4)===String(year)).reduce((s,t)=>s+Number(t.amount||0),0));}
+function ADMIN_BONUS_PCT(){return adminBonusPct();}
 
 const IN_T=['contribution','return','loan_repayment','profit'];
 const OUT_T=['withdrawal','investment','loan_out','expense'];
@@ -710,7 +717,12 @@ const TB={contribution:'bg',withdrawal:'br',investment:'bb',return:'bg',loan_out
 // ════════════════════════════════════════
 function saveDB(){localStorage.setItem('ig_db',JSON.stringify(DB));}
 function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r);}catch(e){}
-  DB.settings=DB.settings||{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}};
+  DB.settings=DB.settings||{groupName:'My Investment Group',currency:'UGX',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{},cashReconciliation:{date:'',physicalCash:null,adjustment:0}};
+  if(DB.settings.currency==='$')DB.settings.currency='UGX';
+  if(DB.settings.adminBonusPct===undefined || Number(DB.settings.adminBonusPct)===10)DB.settings.adminBonusPct=5;
+  if(DB.settings.adminBonusAnnualCap===undefined)DB.settings.adminBonusAnnualCap=2000000;
+  if(!Array.isArray(DB.settings.adminBonusChanges))DB.settings.adminBonusChanges=[];
+  if(!DB.settings.cashReconciliation)DB.settings.cashReconciliation={date:'',physicalCash:null,adjustment:0};
   if(!DB.settings.bank) DB.settings.bank={};
   DB.members=DB.members||[];DB.investments=DB.investments||[];
   DB.loans=DB.loans||[];DB.transactions=DB.transactions||[];DB.memberPins=DB.memberPins||{};
@@ -805,18 +817,31 @@ function lnOut(){return round2(DB.loans.reduce((s,l)=>s+Math.max(0,loanTotalOwed
 // This deliberately excludes member capital claims to avoid double-counting.
 function assetPortfolioValue(){return round2(Math.max(0,reserve())+totInv()+lnOut());}
 
-// Cash Reserve = actual physical cash available in the group's account.
-// Formula: total cash ever received (contributions + loan repayments + returns)
-//         minus cash that physically left (withdrawals + cash deployed to investments + loans issued + expenses)
-// We use ORIGINAL deployed amounts for investments (not currentValue) since market gains
-// don't affect the physical cash balance. We use principal only for loans (not interest)
-// since uncollected interest hasn't physically arrived yet.
+// PHYSICAL CASH RECONCILIATION
+// Only transactions that represent real external cash movement affect physical cash.
+// Internal entries such as profit distributions and auto-repayments do NOT create cash.
+// Investment purchases and loan disbursements are taken from the actual ledger transactions,
+// not from current DB object totals, so historical records cannot be counted twice.
+function cashLedgerBalance(){
+  const actualIn=round2(
+    sumTx('contribution')+
+    sumTx('return')+
+    DB.transactions.filter(t=>t.type==='loan_repayment'&&!t.isAutoRepay).reduce((s,t)=>s+Number(t.amount||0),0)
+  );
+  const actualOut=round2(
+    sumTx('withdrawal')+
+    sumTx('expense')+
+    sumTx('investment')+
+    sumTx('loan_out')
+  );
+  return round2(actualIn-actualOut);
+}
+function reserveReconciliation(){
+  const cr=DB.settings&&DB.settings.cashReconciliation||{};
+  return round2(Number(cr.adjustment||0));
+}
 function reserve(){
-  const totalIn=round2(sumTx('contribution')+sumTx('return')+lnRepaid());
-  const totalOut=round2(sumTx('withdrawal')+sumTx('expense')+
-    DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+Number(i.amount||0),0)+
-    lnTotal());
-  return round2(totalIn-totalOut);
+  return round2(cashLedgerBalance()+reserveReconciliation());
 }
 function lnRepaid(){return round2(DB.loans.reduce((s,l)=>s+Number(l.repaid||0),0));}
 function lnTotal(){return round2(DB.loans.reduce((s,l)=>s+Number(l.amount||0),0));}
@@ -2579,6 +2604,9 @@ let pendingImportData=null;
 function importData(e){
   const file=e.target.files&&e.target.files[0];
   if(!file)return;
+  const status=document.getElementById('import-status');
+  const btn=document.getElementById('apply-import-btn');
+  if(status)status.textContent='Reading '+file.name+'…';
   const r=new FileReader();
   r.onload=ev=>{
     try{
@@ -2588,50 +2616,49 @@ function importData(e){
       }
       pendingImportData=d;
       const s=d.settings||{};
-      const msg='BACKUP READY\n\nMembers: '+d.members.length+'\nInvestments: '+d.investments.length+'\nLoans: '+d.loans.length+'\nTransactions: '+d.transactions.length+'\nCurrency: '+(s.currency||'UGX')+'\n\nPress OK to APPLY this backup. Your current data will be replaced.';
-      if(!safeConfirm(msg)){pendingImportData=null;e.target.value='';return;}
-      applyImportedData();
+      if(status)status.textContent=`Backup loaded: ${d.members.length} members, ${d.investments.length} investments, ${d.loans.length} loans, ${d.transactions.length} transactions. Press Apply Backup.`;
+      if(btn)btn.style.display='block';
     }catch(err){
       pendingImportData=null;
+      if(btn)btn.style.display='none';
+      if(status)status.textContent='Invalid backup: '+(err.message||'');
       alert('Invalid backup file. '+(err.message||''));
       e.target.value='';
     }
   };
-  r.onerror=()=>{pendingImportData=null;alert('Could not read the backup file.');};
+  r.onerror=()=>{pendingImportData=null;if(btn)btn.style.display='none';if(status)status.textContent='Could not read the backup file.';alert('Could not read the backup file.');};
   r.readAsText(file);
 }
 function applyImportedData(){
-  if(!pendingImportData)return;
+  if(!pendingImportData)return alert('Select a JSON backup first.');
+  if(!safeConfirm('Apply this backup now?\n\nYour current app data on this device will be replaced by the selected backup.'))return;
   try{
     const d=pendingImportData;
-    const defaults={groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{},cashReconciliation:{date:'',physicalCash:null,adjustment:0}};
+    const defaults={groupName:'My Investment Group',currency:'UGX',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{},cashReconciliation:{date:'',physicalCash:null,adjustment:0}};
     DB={...d,settings:{...defaults,...(d.settings||{}),bank:{...defaults.bank,...((d.settings&&d.settings.bank)||{})}}};
     DB.members=Array.isArray(DB.members)?DB.members:[];
     DB.investments=Array.isArray(DB.investments)?DB.investments:[];
     DB.loans=Array.isArray(DB.loans)?DB.loans:[];
     DB.transactions=Array.isArray(DB.transactions)?DB.transactions:[];
     DB.memberPins=DB.memberPins||{};
-    // IMPORTANT: do not call loadDB() here. loadDB() reads localStorage and would
-    // overwrite the freshly imported backup with the old data. Normalize only
-    // the imported state, then persist it.
-    DB.settings.bank=DB.settings.bank||{};
     DB.settings.cashReconciliation=DB.settings.cashReconciliation||{date:'',physicalCash:null,adjustment:0};
-    DB.settings.adminBonusPct=DB.settings.adminBonusPct===undefined?5:Number(DB.settings.adminBonusPct);
-    DB.settings.adminBonusAnnualCap=DB.settings.adminBonusAnnualCap===undefined?2000000:Number(DB.settings.adminBonusAnnualCap);
+    DB.settings.adminBonusPct=Number.isFinite(Number(DB.settings.adminBonusPct))?Number(DB.settings.adminBonusPct):5;
+    DB.settings.adminBonusAnnualCap=Number.isFinite(Number(DB.settings.adminBonusAnnualCap))?Number(DB.settings.adminBonusAnnualCap):2000000;
     DB.settings.adminBonusChanges=Array.isArray(DB.settings.adminBonusChanges)?DB.settings.adminBonusChanges:[];
+    // Normalize imported records without calling loadDB(), which would overwrite them from localStorage.
+    DB.investments=DB.investments.map(i=>{i.contributions=Array.isArray(i.contributions)?i.contributions:[];i.valueHistory=Array.isArray(i.valueHistory)?i.valueHistory:[];i.status=i.status||'open';i.startDate=i.startDate||i.date||today();if(i.profitDistributed===undefined)i.profitDistributed=i.status==='closed';return i;});
+    DB.members=DB.members.map(m=>{if(!m.capitalAccount)m.capitalAccount={balance:0,history:[]};return m;});
+    DB.loans=DB.loans.map(l=>{if(l.interestDistributed===undefined)l.interestDistributed=0;if(!l.equitySnapshot)l.equitySnapshot=[];return l;});
     saveDB();
     renderAll();
     loadSettingsForm();
     pendingImportData=null;
     const input=document.getElementById('imp-file');if(input)input.value='';
-    if(fbDB){
-      syncToFirebase();
-    }else{
-      alert('✓ Backup applied and saved on this device.\n\nFirebase is not connected, so use “Sync to Firebase” later if you want this imported data uploaded.');
-    }
-  }catch(err){
-    alert('Import could not be applied: '+(err.message||err));
-  }
+    const btn=document.getElementById('apply-import-btn');if(btn)btn.style.display='none';
+    const status=document.getElementById('import-status');if(status)status.textContent='✓ Backup applied and saved on this device.';
+    if(fbDB)syncToFirebase();
+    alert('✓ Backup applied successfully. The app is now using the imported data.');
+  }catch(err){alert('Import could not be applied: '+(err.message||err));}
 }
 // ════════════════════════════════════════
 // FIREBASE
@@ -2672,7 +2699,7 @@ function syncToFirebase(){
   if(!fbDB){alert('Not connected to Firebase yet.\n\nThis usually means the Firebase scripts are still loading, or failed to load. Wait a few seconds and try again — if it persists, check that nothing is blocking gstatic.com/firebaseio.com (ad-blocker, restrictive network, etc).');return;}
   setSyncStatus('⟳ Syncing…','var(--gold)');
   const payload={
-    settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate},
+    settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate,adminBonusPct:adminBonusPct(),adminBonusAnnualCap:adminBonusAnnualCap(),adminBonusChanges:DB.settings.adminBonusChanges||[],cashReconciliation:DB.settings.cashReconciliation||{date:'',physicalCash:null,adjustment:0}},
     members:DB.members.map(m=>({id:m.id,name:m.name,role:m.role,email:m.email||'',phone:m.phone||'',notes:m.notes||'',capitalAccount:m.capitalAccount||{balance:0,history:[]}})),
     investments:DB.investments,loans:DB.loans,transactions:DB.transactions,
     memberPins:DB.memberPins||{},lastUpdated:new Date().toISOString()
