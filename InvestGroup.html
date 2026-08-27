@@ -737,6 +737,29 @@ function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r
     if(i.profitDistributed===undefined)i.profitDistributed=i.status==='closed';
     return i;
   });
+  // Migration: make every closed investment's cash return explicit exactly once.
+  // Legacy builds inferred the cash return merely from status==='closed'. That made
+  // cash calculations dependent on investment status. We now record the closing
+  // value as a return transaction so the cash ledger contains the real movement.
+  DB.investments.forEach(i=>{
+    if(i.status!=='closed')return;
+    const exists=DB.transactions.some(t=>t.type==='return'&&t.investmentId===i.id);
+    if(exists)return;
+    const amount=round2(Number(i.currentValue||0));
+    if(amount<=0)return;
+    DB.transactions.push({
+      id:uid(), date:i.closeDate||i.date||today(), type:'return',
+      desc:'Investment return: '+i.name, amount, memberId:'',
+      notes:'Historical investment return migrated from closed investment record. Cash movement made explicit.',
+      investmentId:i.id, historical:true
+    });
+  });
+  // Remove the old artificial cash adjustment if it was created by the earlier
+  // reconciliation patch. Physical cash is now displayed separately from ledger cash.
+  if(DB.settings.cashReconciliation && DB.settings.cashReconciliation.note &&
+     String(DB.settings.cashReconciliation.note).includes('Historical reconciliation to physical cash')){
+    DB.settings.cashReconciliation.adjustment=0;
+  }
   // Backfill borrowerMemberId on loans that were created before this field existed
   DB.loans=DB.loans.map(l=>{
     if(!l.borrowerMemberId&&l.borrower){
@@ -753,7 +776,16 @@ function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r
     return m;
   });
 }
-function save(){saveDB();renderAll();}
+function updateCashReconciliationUI(){
+  const strip=document.getElementById('cash-reconcile-strip'); if(!strip)return;
+  const p=physicalCash();
+  strip.style.display=p===null?'none':'';
+  if(p===null)return;
+  const led=cashLedgerBalance(),v=cashVariance();
+  const a=document.getElementById('d-cash-ledger'),b=document.getElementById('d-cash-physical'),c=document.getElementById('d-cash-variance');
+  if(a)a.textContent=fmtF(led); if(b)b.textContent=fmtF(p); if(c){c.textContent=(v>=0?'+':'−')+fmtF(Math.abs(v));c.style.color=v===0?'var(--green)':'var(--red)';}
+}
+function save(){saveDB();renderAll();updateCashReconciliationUI();}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
 function today(){return new Date().toISOString().split('T')[0];}
 function round2(num){
@@ -803,65 +835,46 @@ function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(
 // ════════════════════════════════════════
 function sumTx(type,memberId=null){return round2(DB.transactions.filter(t=>t.type===type&&(!memberId||t.memberId===memberId)).reduce((s,t)=>s+Number(t.amount||0),0));}
 // Member Capital Claims: what members collectively own/are credited with.
-// IMPORTANT: this is NOT an asset total. Open investment value and loans receivable
-// are separate assets and must never be added to this figure when presenting assets.
 function capPool(){return round2(DB.members.reduce((s,m)=>s+caBalance(m.id),0));}
-
-// Current value of investments still open.
 function totInv(){return round2(DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+Number(i.currentValue||0),0));}
-
-// Total outstanding on loans — principal + interest still owed.
 function lnOut(){return round2(DB.loans.reduce((s,l)=>s+Math.max(0,loanTotalOwed(l)-Number(l.repaid||0)),0));}
-
-// Asset-backed portfolio value: uncommitted cash + open investment value + loans receivable.
-// This deliberately excludes member capital claims to avoid double-counting.
 function assetPortfolioValue(){return round2(Math.max(0,reserve())+totInv()+lnOut());}
 
-// PHYSICAL CASH RECONCILIATION
-// Only transactions that represent real external cash movement affect physical cash.
-// Internal entries such as profit distributions and auto-repayments do NOT create cash.
-// Investment purchases and loan disbursements are taken from the actual ledger transactions,
-// not from current DB object totals, so historical records cannot be counted twice.
+// PHYSICAL CASH = actual external cash movements only.
+// Internal profit allocations and automatic repayments do not create new group cash.
+// Investment purchases and loan disbursements come from their ledger transactions,
+// not from the current object totals, preventing double-counting historical records.
 function cashLedgerBalance(){
-  const actualIn=round2(
+  const cashIn=round2(
     sumTx('contribution')+
     sumTx('return')+
-    DB.transactions.filter(t=>t.type==='loan_repayment'&&!t.isAutoRepay).reduce((s,t)=>s+Number(t.amount||0),0)
+    DB.transactions.filter(t=>t.type==='loan_repayment'&&!t.isAutoRepay)
+      .reduce((s,t)=>s+Number(t.amount||0),0)
   );
-  const actualOut=round2(
+  const cashOut=round2(
     sumTx('withdrawal')+
     sumTx('expense')+
     sumTx('investment')+
     sumTx('loan_out')
   );
-  return round2(actualIn-actualOut);
+  return round2(cashIn-cashOut);
 }
-function reserveReconciliation(){
+// Reconciliation is deliberately NOT included in reserve(). It is a separate
+// variance between recorded cash and the physical cash count.
+function reserve(){return cashLedgerBalance();}
+function physicalCash(){
   const cr=DB.settings&&DB.settings.cashReconciliation||{};
-  return round2(Number(cr.adjustment||0));
+  const n=Number(cr.physicalCash);
+  return Number.isFinite(n)?round2(n):null;
 }
-function reserve(){
-  return round2(cashLedgerBalance()+reserveReconciliation());
+function cashVariance(){
+  const p=physicalCash();
+  return p===null?null:round2(p-cashLedgerBalance());
 }
 function lnRepaid(){return round2(DB.loans.reduce((s,l)=>s+Number(l.repaid||0),0));}
 function lnTotal(){return round2(DB.loans.reduce((s,l)=>s+Number(l.amount||0),0));}
-function loanTotalOwed(l){
-  // Group loans use a flat one-time fee model, not duration-based compounding.
-  return round2(Number(l.amount||0)+(Number(l.amount||0)*Number(l.rate||0)/100));
-}
+function loanTotalOwed(l){return round2(Number(l.amount||0)+(Number(l.amount||0)*Number(l.rate||0)/100));}
 function loanBalance(l){return round2(Math.max(0,loanTotalOwed(l)-Number(l.repaid||0)));}
-
-// ── LOAN STATUS & AUTO-REPAYMENT ENGINE ──────────────────────────────────────
-
-// Returns overdue loans for a member (past due date, not fully repaid), oldest first
-// Match a loan to a member — prefer borrowerMemberId (reliable), fall back to name match
-// for loans created before borrowerMemberId was added to saveLoan().
-function loanBelongsToMember(l, memberId){
-  if(l.borrowerMemberId)return l.borrowerMemberId===memberId;
-  // Legacy: match by name
-  const m=DB.members.find(x=>x.id===memberId);
-  return m&&l.borrower&&l.borrower.trim().toLowerCase()===m.name.trim().toLowerCase();
-}
 
 function memberOverdueLoans(memberId, excludeLoanId){
   const t2=today();
@@ -1988,6 +2001,8 @@ function saveInvestment(){
   DB.transactions.push({id:uid(),date:startDate,type:'investment',desc:'Investment: '+name,amount,memberId:'',notes:inv.notes,investmentId:inv.id});
 
   if(isAlreadyClosed){
+    // Closed at creation: record the closing cash return explicitly.
+    DB.transactions.push({id:uid(),date:inv.closeDate,type:'return',desc:'Investment return: '+inv.name,amount:round2(inv.currentValue),memberId:'',notes:'Cash returned from investment closed at creation.',investmentId:inv.id});
     // This is historical data already finished — distribute profit to capital accounts immediately,
     // exactly as if you had closed it via the Update modal, but in one step.
     distributeInvProfits(inv);
@@ -2046,6 +2061,14 @@ function updateInv(){
     i.closeDate=i.closeDate||document.getElementById('ui-close-date').value||today();
     // Auto-distribute profits to capital accounts (only first time closing)
     if(!wasAlreadyClosed){
+      // Closing an investment is a real cash event: record the full closing value.
+      const existingReturn=DB.transactions.find(t=>t.type==='return'&&t.investmentId===i.id);
+      if(!existingReturn){
+        DB.transactions.push({id:uid(),date:i.closeDate,type:'return',desc:'Investment return: '+i.name,amount:round2(i.currentValue),memberId:'',notes:'Cash returned from closed investment.',investmentId:i.id});
+      }else{
+        existingReturn.amount=round2(i.currentValue);
+        existingReturn.date=i.closeDate;
+      }
       const totalProfit=calcInvProfit(i).reduce((s,r)=>s+r.profit,0);
       const admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
       const bonusPool=totalProfit>0?+(totalProfit*(adminBonusPct()/100)).toFixed(2):0;
