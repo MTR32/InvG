@@ -13,10 +13,28 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text y='.9em' font-size='70' x='12' fill='%23c8f04a'>◆</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0c0e;--surface:#111318;--surface2:#181b22;--border:#232630;--accent:#c8f04a;--green:#4af0b8;--red:#f04a6a;--gold:#f0c14a;--blue:#4af0b8;--text:#e8eaf0;--muted:#6b7280;--muted2:#9ca3af;--nav-h:62px;}
+:root{
+  --bg:#0b0c0e;--surface:rgba(17,19,24,0.75);--surface2:rgba(24,27,34,0.65);
+  --border:rgba(255,255,255,0.08);--border-bright:rgba(255,255,255,0.14);
+  --accent:#c8f04a;--green:#4af0b8;--red:#f04a6a;--gold:#f0c14a;--blue:#4af0b8;
+  --text:#e8eaf0;--muted:#6b7280;--muted2:#9ca3af;--nav-h:62px;
+  --glass-bg:rgba(17,19,24,0.72);--glass-card:rgba(24,27,34,0.60);
+  --glow-indigo:rgba(99,102,241,0.18);--glow-emerald:rgba(16,185,129,0.14);--glow-lime:rgba(200,240,74,0.10);
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{height:100%;height:-webkit-fill-available;}
 body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:13px;line-height:1.5;-webkit-text-size-adjust:100%;text-size-adjust:100%;min-height:100dvh;overflow:hidden;position:fixed;width:100%;top:0;left:0;}
+
+/* FROSTED MESH AMBIENT BACKGROUND */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 20%, var(--glow-indigo), transparent),
+    radial-gradient(ellipse 55% 45% at 85% 75%, var(--glow-emerald), transparent),
+    radial-gradient(ellipse 50% 40% at 50% 50%, var(--glow-lime), transparent),
+    radial-gradient(ellipse 40% 35% at 80% 10%, rgba(99,102,241,0.10), transparent);
+}
+#app,#lock{position:relative;z-index:1;}
 
 /* LOCK */
 #lock{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
@@ -24,7 +42,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 .lk-logo{font-family:'DM Serif Display',Georgia,serif;font-size:44px;color:var(--accent);margin-bottom:4px;}
 .lk-title{font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--text);}
 .lk-sub{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:28px;margin-top:2px;}
-.lk-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;width:100%;max-width:340px;}
+.lk-card{background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border-bright);border-radius:20px;padding:22px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
 .lk-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:8px;font-family:'DM Mono',ui-monospace,monospace;font-size:18px;outline:none;letter-spacing:6px;text-align:center;transition:border-color .15s;margin-bottom:10px;}
 .lk-input:focus{border-color:var(--accent);}
 .lk-btn{width:100%;background:var(--accent);color:#0b0c0e;border:none;border-radius:8px;padding:13px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:14px;cursor:pointer;}
@@ -37,7 +55,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 #app.off{display:none;}
 
 /* TOPBAR */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;padding-top:calc(11px + env(safe-area-inset-top));background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;padding-top:calc(11px + env(safe-area-inset-top));background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--border-bright);flex-shrink:0;}
 .tb-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 .tb-title{font-family:'DM Serif Display',Georgia,serif;font-size:17px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .back-btn{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:5px 9px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
@@ -52,16 +70,16 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 .page.active{display:block;}
 
 /* BOTTOM NAV */
-.bottom-nav{display:flex;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+.bottom-nav{display:flex;background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border-bright);flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--nav-h) + env(safe-area-inset-bottom));box-shadow:0 -4px 24px rgba(0,0,0,0.3);}
 .nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 2px;cursor:pointer;color:var(--muted);font-size:7px;letter-spacing:.2px;text-transform:uppercase;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;gap:2px;border:none;background:none;overflow:hidden;position:relative;}
 .nav-tab .ni{font-size:18px;line-height:1;}
-.nav-tab.active{color:var(--accent);}
+.nav-tab.active{color:var(--accent);}.nav-tab.active::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:20px;height:2px;background:var(--accent);border-radius:2px;}
 .nav-badge{position:absolute;top:4px;right:calc(50% - 16px);background:var(--red);color:#fff;font-size:8px;font-weight:700;border-radius:10px;padding:1px 4px;min-width:14px;text-align:center;display:none;}
 .nav-badge.show{display:block;}
 
 /* KPI */
 .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
-.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;position:relative;overflow:hidden;}
+.kpi-card{background:var(--glass-card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border-bright);border-radius:16px;padding:14px;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.25);}
 .kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
 .kpi-card.yellow::after{background:var(--accent);}.kpi-card.green::after{background:var(--green);}.kpi-card.blue::after{background:var(--blue);}.kpi-card.red::after{background:var(--red);}.kpi-card.gold::after{background:var(--gold);}
 .kl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
@@ -70,7 +88,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 .ks{font-size:10px;color:var(--muted);margin-top:4px;}
 
 /* CARD */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px;}
+.card{background:var(--glass-card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border-bright);border-radius:20px;overflow:hidden;margin-bottom:12px;box-shadow:0 4px 20px rgba(0,0,0,0.22);}
 .card-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);}
 .card-title{font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px;color:var(--text);}
 .card-body{padding:14px;}
@@ -84,7 +102,7 @@ tbody tr:last-child{border-bottom:none;}
 tbody td{padding:9px 10px;color:var(--text);vertical-align:middle;}
 
 /* BADGES */
-.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;letter-spacing:.3px;text-transform:uppercase;}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:9px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;letter-spacing:.3px;text-transform:uppercase;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);}
 .bg{background:rgba(74,240,184,.12);color:var(--green);}.br{background:rgba(240,74,106,.12);color:var(--red);}
 .by{background:rgba(200,240,74,.12);color:var(--accent);}.bgold{background:rgba(240,193,74,.12);color:var(--gold);}
 .bb{background:rgba(74,240,184,.1);color:var(--blue);}.bm{background:rgba(107,114,128,.2);color:var(--muted2);}
@@ -95,7 +113,7 @@ tbody td{padding:9px 10px;color:var(--text);vertical-align:middle;}
 .fg:last-child{margin-bottom:0;}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
-input,select,textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 10px;border-radius:8px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;transition:border-color .15s;width:100%;max-width:100%;}
+input,select,textarea{background:rgba(24,27,34,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border-bright);color:var(--text);padding:9px 10px;border-radius:10px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;transition:border-color .15s;width:100%;max-width:100%;}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);}
 select option{background:var(--surface2);}
 
@@ -108,9 +126,9 @@ select option{background:var(--surface2);}
 .brow .btn,.brow .btn-g{flex:1;min-width:0;}
 
 /* MODAL */
-.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .mo.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:sup .2s ease;padding-bottom:env(safe-area-inset-bottom);}
+.modal{background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--border-bright);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:sup .2s ease;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 40px rgba(0,0,0,0.4);}
 @keyframes sup{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .mhandle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 0;cursor:pointer;}
 .mhd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;}
@@ -137,7 +155,7 @@ select option{background:var(--surface2);}
 .section-title{font-family:'DM Serif Display',Georgia,serif;font-size:18px;margin-bottom:12px;}
 .filter-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none;}
 .filter-bar::-webkit-scrollbar{display:none;}
-.chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;color:var(--muted2);cursor:pointer;white-space:nowrap;display:inline-block;}
+.chip{background:rgba(24,27,34,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border-bright);border-radius:20px;padding:5px 12px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;color:var(--muted2);cursor:pointer;white-space:nowrap;display:inline-block;}
 .chip.active{background:rgba(200,240,74,.1);border-color:var(--accent);color:var(--accent);}
 .flow-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .flow-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
@@ -202,9 +220,9 @@ select option{background:var(--surface2);}
     <div class="page active" id="page-dashboard">
       <div id="d-alerts"></div>
       <div class="kpi-grid">
-        <div class="kpi-card yellow"><div class="kl">Capital Pool</div><div class="kv" id="d-cap">--</div><div class="ks">Total member balances</div></div>
+        <div class="kpi-card yellow"><div class="kl">Member Capital</div><div class="kv" id="d-cap">--</div><div class="ks">Member capital claims (not added to assets)</div></div>
         <div class="kpi-card green"><div class="kl">Reserve</div><div class="kv green" id="d-res">--</div><div class="ks" id="d-res-pct">0% of capital</div></div>
-        <div class="kpi-card blue"><div class="kl">Invested</div><div class="kv" id="d-inv">--</div><div class="ks" id="d-inv-c">0 positions</div></div>
+        <div class="kpi-card blue"><div class="kl">Invested Value</div><div class="kv" id="d-inv">--</div><div class="ks" id="d-inv-c">0 open positions</div></div>
         <div class="kpi-card gold"><div class="kl">Loans Out</div><div class="kv gold" id="d-ln">--</div><div class="ks" id="d-ln-c">0 active</div></div>
       </div>
       <div class="card">
@@ -362,6 +380,11 @@ select option{background:var(--surface2);}
             <div class="fg"><label>Reserve Target %</label><input type="number" id="s-res" placeholder="20"></div>
             <div class="fg"><label>Default Loan Rate %</label><input type="number" id="s-rate" placeholder="10"></div>
           </div>
+          <div class="frow">
+            <div class="fg"><label>Management Bonus % of Realized Investment Profit</label><input type="number" id="s-admin-bonus" min="0" max="100" step="0.1" placeholder="5"></div>
+            <div class="fg"><label>Annual Admin Bonus Cap</label><input type="number" id="s-admin-cap" min="0" step="0.01" placeholder="2000000"></div>
+          </div>
+          <div style="font-size:11px;color:var(--muted2);margin:-2px 0 12px;line-height:1.5">Recommended starting policy: 5% of realized investment profit, with an annual cap of UGX 2,000,000 (or equivalent in your selected currency). Changes are recorded with date and time.</div>
           <button class="btn" onclick="saveSettings()">Save Settings</button>
         </div>
       </div>
@@ -673,7 +696,7 @@ const FB_CONFIG={
 // DATA
 // ════════════════════════════════════════
 let DB={
-  settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}},
+  settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{}},
   members:[],investments:[],loans:[],transactions:[],memberPins:{}
 };
 let cfFilter='all', repFilter='thisyear';
@@ -681,7 +704,12 @@ let pageHistory=[], curPage='dashboard';
 let activeMemberPortfolioId=null;
 let fbApp=null, fbDB=null;
 
-const ADMIN_BONUS_PCT=10;
+const DEFAULT_ADMIN_BONUS_PCT=5;
+const DEFAULT_ADMIN_BONUS_ANNUAL_CAP=2000000;
+function adminBonusPct(){return Math.max(0,Math.min(100,Number(DB.settings.adminBonusPct ?? DEFAULT_ADMIN_BONUS_PCT)||DEFAULT_ADMIN_BONUS_PCT));}
+function adminBonusAnnualCap(){const n=Number(DB.settings.adminBonusAnnualCap);return Number.isFinite(n)&&n>0?round2(n):DEFAULT_ADMIN_BONUS_ANNUAL_CAP;}
+function adminBonusPaidThisYear(year){return round2(DB.transactions.filter(t=>t.type==='profit'&&String(t.desc||'').startsWith('Management bonus — ')&&String(t.date||'').slice(0,4)===String(year)).reduce((s,t)=>s+Number(t.amount||0),0));}
+function ADMIN_BONUS_PCT(){return adminBonusPct();}
 
 const IN_T=['contribution','return','loan_repayment','profit'];
 const OUT_T=['withdrawal','investment','loan_out','expense'];
@@ -692,7 +720,10 @@ const TB={contribution:'bg',withdrawal:'br',investment:'bb',return:'bg',loan_out
 // ════════════════════════════════════════
 function saveDB(){localStorage.setItem('ig_db',JSON.stringify(DB));}
 function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r);}catch(e){}
-  DB.settings=DB.settings||{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}};
+  DB.settings=DB.settings||{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{}};
+  if(DB.settings.adminBonusPct===undefined)DB.settings.adminBonusPct=DEFAULT_ADMIN_BONUS_PCT;
+  if(DB.settings.adminBonusAnnualCap===undefined)DB.settings.adminBonusAnnualCap=DEFAULT_ADMIN_BONUS_ANNUAL_CAP;
+  if(!DB.settings.adminBonusChanges)DB.settings.adminBonusChanges=[];
   if(!DB.settings.bank) DB.settings.bank={};
   DB.members=DB.members||[];DB.investments=DB.investments||[];
   DB.loans=DB.loans||[];DB.transactions=DB.transactions||[];DB.memberPins=DB.memberPins||{};
@@ -702,6 +733,9 @@ function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r
     if(!i.valueHistory) i.valueHistory=[];
     if(!i.status) i.status='open';
     if(!i.startDate) i.startDate=i.date||today();
+    // Existing closed investments were already distributable in the legacy build.
+    // Mark them as finalized so a later edit can never distribute their profit twice.
+    if(i.profitDistributed===undefined)i.profitDistributed=i.status==='closed';
     return i;
   });
   // Backfill borrowerMemberId on loans that were created before this field existed
@@ -723,6 +757,33 @@ function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r
 function save(){saveDB();renderAll();}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
 function today(){return new Date().toISOString().split('T')[0];}
+function round2(num){
+  const n=Number(num);
+  if(!Number.isFinite(n))return 0;
+  return Math.round((n+Number.EPSILON)*100)/100;
+}
+function validEntryDate(date,label='Date'){
+  if(!date)return true;
+  if(date>today())return alert(`${label} cannot be in the future.`),false;
+  return true;
+}
+function validDateRange(start,end,startLabel='Start Date',endLabel='End Date'){
+  if(start&&end&&start>end){
+    alert(`${endLabel} cannot be earlier than ${startLabel}.`);
+    return false;
+  }
+  return true;
+}
+function setDateLimits(){
+  const max=today();
+  ['tx-date','ln-date','rp-date','iv-date','ic-date'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.max=max;
+  });
+  const close=document.getElementById('iv-close-date');
+  if(close)close.max=max;
+  const due=document.getElementById('ln-due');
+  if(due)due.min=document.getElementById('ln-date')?.value||'';
+}
 function C(){return DB.settings.currency||'$';}
 function fmt(n){const c=C(),a=Math.abs(n);let s=a>=1e6?(Math.floor(a/1e4)/100).toFixed(2)+'M':a>=1e3?(Math.floor(a/100)/10).toFixed(1)+'k':a.toFixed(0);return(n<0?'-':'')+c+s;}
 function fmtF(n){return(n<0?'-':'')+C()+Math.abs(n).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -741,28 +802,42 @@ function daysBetween(d1,d2){return Math.max(0,Math.round((new Date(d2)-new Date(
 // ════════════════════════════════════════
 // AGGREGATES
 // ════════════════════════════════════════
-function sumTx(type){return DB.transactions.filter(t=>t.type===type).reduce((s,t)=>s+t.amount,0);}
-// Total Assets = sum of all members' real capital account balances (which already includes
-// contributions + investment profit + loan interest + admin bonus, minus withdrawals)
-// + current value of still-open investments + loans outstanding (principal + interest owed).
-function capPool(){return DB.members.reduce((s,m)=>s+caBalance(m.id),0);}
+function sumTx(type,memberId=null){return round2(DB.transactions.filter(t=>t.type===type&&(!memberId||t.memberId===memberId)).reduce((s,t)=>s+Number(t.amount||0),0));}
+// Member Capital Claims: what members collectively own/are credited with.
+// IMPORTANT: this is NOT an asset total. Open investment value and loans receivable
+// are separate assets and must never be added to this figure when presenting assets.
+function capPool(){return round2(DB.members.reduce((s,m)=>s+caBalance(m.id),0));}
 
-// Current value of investments still open (using live currentValue, not just the original deployed amount,
-// so an open investment that has appreciated/depreciated is reflected accurately)
-function totInv(){return DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+i.currentValue,0);}
+// Current value of investments still open.
+function totInv(){return round2(DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+Number(i.currentValue||0),0));}
 
-// Total outstanding on loans — principal + interest still owed, across all loans
-function lnOut(){return DB.loans.reduce((s,l)=>s+Math.max(0,loanTotalOwed(l)-l.repaid),0);}
+// Total outstanding on loans — principal + interest still owed.
+function lnOut(){return round2(DB.loans.reduce((s,l)=>s+Math.max(0,loanTotalOwed(l)-Number(l.repaid||0)),0));}
 
-// Cash Reserve = the liquid portion of members' total balances — what's left after
-// subtracting whatever is currently tied up in open investments or out on loan.
-// This is real, available cash; it does not subtract posted profit/bonus since that money
-// hasn't left the bank, it's just been credited to a member's capital account.
-function reserve(){return capPool()-totInv()-lnOut();}
-function lnRepaid(){return DB.loans.reduce((s,l)=>s+l.repaid,0);}
-function lnTotal(){return DB.loans.reduce((s,l)=>s+l.amount,0);}
-function loanTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
-function loanBalance(l){return Math.max(0,loanTotalOwed(l)-l.repaid);}
+// Asset-backed portfolio value: uncommitted cash + open investment value + loans receivable.
+// This deliberately excludes member capital claims to avoid double-counting.
+function assetPortfolioValue(){return round2(Math.max(0,reserve())+totInv()+lnOut());}
+
+// Cash Reserve = actual physical cash available in the group's account.
+// Formula: total cash ever received (contributions + loan repayments + returns)
+//         minus cash that physically left (withdrawals + cash deployed to investments + loans issued + expenses)
+// We use ORIGINAL deployed amounts for investments (not currentValue) since market gains
+// don't affect the physical cash balance. We use principal only for loans (not interest)
+// since uncollected interest hasn't physically arrived yet.
+function reserve(){
+  const totalIn=round2(sumTx('contribution')+sumTx('return')+lnRepaid());
+  const totalOut=round2(sumTx('withdrawal')+sumTx('expense')+
+    DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+Number(i.amount||0),0)+
+    lnTotal());
+  return round2(totalIn-totalOut);
+}
+function lnRepaid(){return round2(DB.loans.reduce((s,l)=>s+Number(l.repaid||0),0));}
+function lnTotal(){return round2(DB.loans.reduce((s,l)=>s+Number(l.amount||0),0));}
+function loanTotalOwed(l){
+  // Group loans use a flat one-time fee model, not duration-based compounding.
+  return round2(Number(l.amount||0)+(Number(l.amount||0)*Number(l.rate||0)/100));
+}
+function loanBalance(l){return round2(Math.max(0,loanTotalOwed(l)-Number(l.repaid||0)));}
 
 // ── LOAN STATUS & AUTO-REPAYMENT ENGINE ──────────────────────────────────────
 
@@ -784,7 +859,7 @@ function memberOverdueLoans(memberId, excludeLoanId){
 }
 
 function memberTotalLoanBalance(memberId, excludeLoanId){
-  return DB.loans.filter(l=>l.id!==excludeLoanId&&loanBelongsToMember(l,memberId)).reduce((s,l)=>s+loanBalance(l),0);
+  return round2(DB.loans.filter(l=>l.id!==excludeLoanId&&loanBelongsToMember(l,memberId)).reduce((s,l)=>s+loanBalance(l),0));
 }
 
 function memberLoanStatus(memberId, excludeLoanId){
@@ -807,7 +882,7 @@ function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date, exclud
     .filter(l=>l.id!==excludeLoanId&&loanBelongsToMember(l,memberId)&&loanBalance(l)>0.01)
     .sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
 
-  let remaining=earningsAmount;
+  let remaining=round2(earningsAmount);
 
   for(const l of allMemberLoans){
     if(remaining<=0)break;
@@ -815,17 +890,17 @@ function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date, exclud
     if(!isOverdue)break; // only overdue loans trigger auto-repayment
 
     const lBal=loanBalance(l);
-    const toApply=+Math.min(remaining,lBal).toFixed(2);
+    const toApply=round2(Math.min(remaining,lBal));
     if(toApply<=0)continue;
 
     const balBefore=lBal;
-    l.repaid=+(l.repaid+toApply).toFixed(2);
+    l.repaid=round2(Number(l.repaid||0)+toApply);
     const balAfter=loanBalance(l);
-    remaining=+(remaining-toApply).toFixed(2);
+    remaining=round2(remaining-toApply);
 
     DB.transactions.push({id:uid(),date,type:'loan_repayment',
       desc:'Auto-repayment — '+l.borrower+' (from: '+earningsDesc+')',
-      amount:toApply,memberId:memberId,isAutoRepay:true,
+      amount:toApply,memberId:memberId,isAutoRepay:true,loanId:l.id,
       notes:'Auto-applied from member earnings. Balance: '+fmtF(balBefore)+' → '+fmtF(balAfter)});
 
     const m=DB.members.find(x=>x.id===memberId);
@@ -849,11 +924,14 @@ function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date, exclud
     }
   }
 
-  const applied=+(earningsAmount-remaining).toFixed(2);
+  const applied=round2(earningsAmount-remaining);
   return{applied,remainder:remaining};
 }
 function postEarningsWithAutoRepay(memberId, amount, desc, date, excludeLoanId){
-  if(amount<=0)return;
+  amount=round2(amount);
+  if(amount===0)return;
+  // Losses (negative amounts) post directly to capital account — no auto-repayment intercept needed
+  if(amount<0){caPost(memberId,amount,desc,date);return;}
   const{flagged}=memberLoanStatus(memberId, excludeLoanId);
   if(flagged){
     const{remainder}=applyAutoRepayment(memberId,amount,desc,date,excludeLoanId);
@@ -863,10 +941,10 @@ function postEarningsWithAutoRepay(memberId, amount, desc, date, excludeLoanId){
   }
 }
 // Total interest already permanently posted to members' capital accounts via distributeLoanInterest()
-function intEarned(){return DB.loans.reduce((s,l)=>s+(l.interestDistributed||0),0);}
+function intEarned(){return round2(DB.loans.reduce((s,l)=>s+Number(l.interestDistributed||0),0));}
 // Interest still pending — realized by repayments but not yet distributed (safety net for legacy loans)
 function intPending(){return DB.loans.reduce((s,l)=>{
-  const totalInterest=(l.amount*l.rate)/100;
+  const totalInterest=round2((Number(l.amount||0)*Number(l.rate||0))/100);
   const realized=Math.min(Math.max(0,l.repaid-l.amount),totalInterest);
   return s+Math.max(0,realized-(l.interestDistributed||0));
 },0);}
@@ -878,7 +956,7 @@ function memberPendingLoanInterest(memberId){
     if(!l.equitySnapshot||!l.equitySnapshot.length)return s;
     const snap=l.equitySnapshot.find(e=>e.memberId===memberId);
     if(!snap)return s;
-    const totalInterest=(l.amount*l.rate)/100;
+    const totalInterest=round2((Number(l.amount||0)*Number(l.rate||0))/100);
     const realized=Math.min(Math.max(0,l.repaid-l.amount),totalInterest);
     const notYetRealized=Math.max(0,totalInterest-realized);
     return s+notYetRealized*snap.pctEquity;
@@ -889,8 +967,8 @@ function memberPendingLoanInterest(memberId){
 // Posted profit (investment profit, mgmt bonus, loan interest) is NOT subtracted here —
 // it's been credited to a member's capital account, but that money hasn't left the bank.
 // It only actually leaves when a real 'withdrawal' transaction happens (Jan 2–10 window).
-function mCon(id){return DB.transactions.filter(t=>t.type==='contribution'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
-function mWit(id){return DB.transactions.filter(t=>t.type==='withdrawal'&&t.memberId===id).reduce((s,t)=>s+t.amount,0);}
+function mCon(id){return sumTx('contribution',id);}
+function mWit(id){return sumTx('withdrawal',id);}
 
 // NET EQUITY (after withdrawals)
 function getNetEquity(){
@@ -909,12 +987,16 @@ function calcInvProfit(inv){
   // Formula: profit = totalGain × (contribution × activeDays) / Σ(contribution × activeDays) for each row
   if(!inv.contributions||!inv.contributions.length) return [];
   const endDate=inv.closeDate||today();
-  const totalGain=inv.currentValue-inv.amount;
+  const startDate=inv.startDate||inv.date||today();
+  if(startDate>endDate)return [];
+  const totalGain=round2(Number(inv.currentValue||0)-Number(inv.amount||0));
 
-  // Compute activeDays for each contribution row
+  // Compute activeDays for each contribution row. Invalid contribution ranges
+  // are rejected rather than silently converted into a one-day investment.
   const rows=[...inv.contributions].map(c=>{
-    const activeDays=daysBetween(c.date,endDate);
-    return{...c,activeDays,weight:c.amount*activeDays};
+    if(c.date&&c.date>endDate)return{...c,activeDays:0,weight:0,invalidDate:true};
+    const activeDays=daysBetween(c.date||startDate,endDate);
+    return{...c,activeDays,weight:round2(Number(c.amount||0)*activeDays)};
   });
 
   // Total weight across all rows. Edge case: if the investment had zero duration (opened and
@@ -964,7 +1046,7 @@ function calcAdminBonus(){
     return s+rows.reduce((ss,r)=>ss+r.profit,0);
   },0);
   const pendingIncome=Math.max(0,pendingInvProfit);
-  const bonusPool=pendingIncome*(ADMIN_BONUS_PCT/100);
+  const bonusPool=pendingIncome*(adminBonusPct()/100);
   const admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
   const bonusPerAdmin=admins.length>0?bonusPool/admins.length:0;
   return{bonusPool,bonusPerAdmin,admins,totalIncome:pendingIncome};
@@ -1108,14 +1190,14 @@ function renderAll(){
 
 // ── DASHBOARD ──
 function renderDash(){
-  const cap=capPool(),res=reserve(),inv=totInv(),ln=lnOut();
+  const cap=capPool(),res=round2(reserve()),inv=totInv(),ln=lnOut(),assets=assetPortfolioValue();
   const rp=cap>0?(res/cap*100):0,up=cap>0?((cap-res)/cap*100):0;
   const el=id=>document.getElementById(id);
   el('d-cap').textContent=fmt(cap);
   el('d-res').textContent=fmt(res);
   el('d-res-pct').textContent=rp.toFixed(1)+'% of capital';
   el('d-inv').textContent=fmt(inv);
-  el('d-inv-c').textContent=DB.investments.filter(i=>i.status!=='closed').length+' positions';
+  el('d-inv-c').textContent=DB.investments.filter(i=>i.status!=='closed').length+' open positions · Assets '+fmt(assets);
   el('d-ln').textContent=fmt(ln);
   el('d-ln-c').textContent=DB.loans.filter(l=>loanBalance(l)>0).length+' active';
   const now=new Date(),ms=now.getMonth(),ys=now.getFullYear();
@@ -1179,7 +1261,7 @@ function renderCF(){
   let txs=DB.transactions.filter(t=>{if(from&&t.date<from)return false;if(to&&t.date>to)return false;return true;}).sort((a,b)=>a.date.localeCompare(b.date));
   const tIn=txs.reduce((s,t)=>{const sd=txSignDisplay(t);return s+(sd.isIn?Math.abs(t.amount):0);},0);
   const tOut=txs.reduce((s,t)=>{const sd=txSignDisplay(t);return s+(sd.isIn?0:Math.abs(t.amount));},0);
-  const net=tIn-tOut,rep=txs.filter(t=>t.type==='loan_repayment').reduce((s,t)=>s+t.amount,0);
+  const net=round2(tIn-tOut),rep=round2(txs.filter(t=>t.type==='loan_repayment').reduce((s,t)=>s+Number(t.amount||0),0));
   document.getElementById('cf-in').textContent=fmtF(tIn);
   document.getElementById('cf-out').textContent=fmtF(tOut);
   const cn=document.getElementById('cf-net');cn.textContent=fmtF(net);cn.className='kv '+(net>=0?'green':'red');
@@ -1301,7 +1383,7 @@ function openMemberPortfolio(id){
         <div class="divider"></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Investment Profit (daily weighted)</span><span style="color:${invProfit>=0?'var(--green)':'var(--red)'};font-weight:700">${invProfit>=0?'+':''}${fmtF(invProfit)}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loan Interest Share</span><span style="color:var(--gold);font-weight:700">+${fmtF(loanInc)}</span></div>
-        ${bonus>0?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Management Bonus (${ADMIN_BONUS_PCT}%)</span><span style="color:var(--gold);font-weight:700">+${fmtF(bonus)}</span></div>`:''}
+        ${bonus>0?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Management Bonus (${adminBonusPct()}%)</span><span style="color:var(--gold);font-weight:700">+${fmtF(bonus)}</span></div>`:''}
         <div class="divider"></div>
         <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px">Final Net Worth</span>
         <span style="font-family:'DM Serif Display',Georgia,serif;font-size:20px;color:${netWorth>=0?'var(--green)':'var(--red)'}">${fmtF(netWorth)}</span></div>
@@ -1471,7 +1553,7 @@ function renderLoans(){
     const sb=isPaid?'bg':isOver?'br':'by',pct=Math.min(100,(l.repaid/tot)*100);
     return `<div class="card${isOver?' overdue-row':''}">
       <div class="card-hd">
-        <div><div class="card-title">${l.borrower}</div><div style="font-size:9px;color:var(--muted)">Rate: ${l.rate}% · Due: ${l.dueDate||'—'}</div></div>
+        <div><div class="card-title">${l.borrower}</div><div style="font-size:9px;color:var(--muted)">Flat fee: ${l.rate}% · Due: ${l.dueDate||'—'}</div></div>
         <span class="badge ${sb}">${isPaid?'Paid':isOver?'Overdue':'Active'}</span>
       </div>
       <div class="card-body" style="padding:10px 14px;">
@@ -1498,7 +1580,7 @@ function renderTx(){
   const s=(document.getElementById('tx-search')?.value||'').toLowerCase();
   const tf=document.getElementById('tx-type-f')?.value||'';
   let txs=[...DB.transactions].sort((a,b)=>b.date.localeCompare(a.date));
-  if(s)txs=txs.filter(t=>t.desc.toLowerCase().includes(s)||(t.notes||'').toLowerCase().includes(s));
+  if(s)txs=txs.filter(t=>String(t.desc||'').toLowerCase().includes(s)||String(t.notes||'').toLowerCase().includes(s));
   if(tf)txs=txs.filter(t=>t.type===tf);
   const badge=document.getElementById('tx-count');if(badge)badge.textContent=txs.length;
   const tb=document.getElementById('tx-table');
@@ -1526,7 +1608,7 @@ function renderReports(){
   const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const int=intEarned();
   const totalInvProfit=DB.investments.reduce((s,inv)=>{const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
-  const bonusPool=totalInvProfit>0?+(totalInvProfit*(ADMIN_BONUS_PCT/100)).toFixed(2):0;
+  const bonusPool=totalInvProfit>0?+(totalInvProfit*(adminBonusPct()/100)).toFixed(2):0;
   const netIncome=totalInvProfit+int-exp;
   const roi=cap>0?(netIncome/cap*100):0;
   document.getElementById('rp-cap').textContent=fmtF(cap);
@@ -1538,16 +1620,16 @@ function renderReports(){
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Investment Profit (daily weighted)</span><span style="color:${totalInvProfit>=0?'var(--green)':'var(--red)'}">${totalInvProfit>=0?'+':''}${fmtF(totalInvProfit)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loan Interest Earned</span><span style="color:var(--green)">+${fmtF(int)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Expenses</span><span style="color:var(--red)">−${fmtF(exp)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Mgmt Bonus Pool (${ADMIN_BONUS_PCT}%)</span><span style="color:var(--gold)">−${fmtF(bonusPool)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Mgmt Bonus Pool (${adminBonusPct()}%)</span><span style="color:var(--gold)">−${fmtF(bonusPool)}</span></div>
       <div class="divider"></div>
       <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700">Net Income</span>
       <span style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:${netIncome>=0?'var(--green)':'var(--red)'}">${fmtF(netIncome)}</span></div>
     </div>`;
-  const res=reserve(),inv2=totInv(),lo=lnOut(),aC=capPool();
+  const res=round2(reserve()),inv2=totInv(),lo=lnOut();
   document.getElementById('rp-balance').innerHTML=`
     <div style="display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Cash Reserve</span><span>${fmtF(res)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Deployed Capital</span><span>${fmtF(inv2)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Open Investment Value</span><span>${fmtF(inv2)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loans Receivable</span><span>${fmtF(lo)}</span></div>
       <div class="divider"></div>
       <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700">Total Assets</span>
@@ -1581,6 +1663,8 @@ function loadSettingsForm(){
   document.getElementById('s-cur').value=DB.settings.currency||'$';
   document.getElementById('s-res').value=DB.settings.reserveTarget||20;
   document.getElementById('s-rate').value=DB.settings.defaultRate||10;
+  document.getElementById('s-admin-bonus').value=adminBonusPct();
+  document.getElementById('s-admin-cap').value=adminBonusAnnualCap();
   loadBankForm();
   renderPinList();
   const t=localStorage.getItem('ig_last_sync');
@@ -1593,6 +1677,15 @@ function saveSettings(){
   DB.settings.currency=document.getElementById('s-cur').value;
   DB.settings.reserveTarget=parseFloat(document.getElementById('s-res').value)||20;
   DB.settings.defaultRate=parseFloat(document.getElementById('s-rate').value)||10;
+  const newPct=Math.max(0,Math.min(100,parseFloat(document.getElementById('s-admin-bonus').value)||DEFAULT_ADMIN_BONUS_PCT));
+  const newCap=Math.max(0,parseFloat(document.getElementById('s-admin-cap').value)||DEFAULT_ADMIN_BONUS_ANNUAL_CAP);
+  const oldPct=adminBonusPct(),oldCap=adminBonusAnnualCap();
+  DB.settings.adminBonusPct=round2(newPct);
+  DB.settings.adminBonusAnnualCap=round2(newCap);
+  if(oldPct!==DB.settings.adminBonusPct||oldCap!==DB.settings.adminBonusAnnualCap){
+    if(!DB.settings.adminBonusChanges)DB.settings.adminBonusChanges=[];
+    DB.settings.adminBonusChanges.push({date:new Date().toISOString(),changedBy:(DB.settings.currentUserName||'Treasurer/Admin'),fromPct:oldPct,toPct:DB.settings.adminBonusPct,fromCap:oldCap,toCap:DB.settings.adminBonusAnnualCap});
+  }
   save();alert('✓ Settings saved!');
 }
 function loadBankForm(){
@@ -1695,7 +1788,7 @@ function rebuildCapitalAccounts(){
     else if(t.type==='loan_repayment'&&t.isAutoRepay)delta=-t.amount; // auto-repayments debit the capital account
     if(delta===0)return;
     if(!m.capitalAccount)m.capitalAccount={balance:0,history:[]};
-    m.capitalAccount.balance=+(m.capitalAccount.balance+delta).toFixed(2);
+    m.capitalAccount.balance=round2(m.capitalAccount.balance+delta);
     m.capitalAccount.history.push({date:t.date,amount:delta,note:t.desc,balance:m.capitalAccount.balance});
   });
 }
@@ -1704,31 +1797,31 @@ function rebuildCapitalAccounts(){
 function caPost(memberId, amount, note, date){
   const m=DB.members.find(x=>x.id===memberId);if(!m)return;
   if(!m.capitalAccount) m.capitalAccount={balance:0,history:[]};
-  m.capitalAccount.balance=+(m.capitalAccount.balance+amount).toFixed(2);
+  m.capitalAccount.balance=round2(m.capitalAccount.balance+amount);
   m.capitalAccount.history.push({date:date||today(),amount,note,balance:m.capitalAccount.balance});
 }
 
 // Get a member's capital account balance
 function caBalance(memberId){
   const m=DB.members.find(x=>x.id===memberId);
-  return m&&m.capitalAccount?m.capitalAccount.balance:0;
+  return m&&m.capitalAccount?round2(m.capitalAccount.balance):0;
 }
 
 // ── YEAR-END WITHDRAWAL ALLOWANCE ──
 // Amount = 20% of (capital account balance minus contributions currently tied up in OPEN investments)
 // Window: accessible Jan 2 – Jan 10 each year (Jan 2 is the primary date; 3rd–10th covers late withdrawal allowance)
 function memberOpenInvContribution(memberId){
-  return DB.investments.filter(i=>i.status!=='closed').reduce((sum,inv)=>{
+  return round2(DB.investments.filter(i=>i.status!=='closed').reduce((sum,inv)=>{
     const rows=(inv.contributions||[]).filter(c=>c.memberId===memberId);
-    return sum+rows.reduce((s,c)=>s+c.amount,0);
-  },0);
+    return sum+rows.reduce((s,c)=>s+Number(c.amount||0),0);
+  },0));
 }
 
 function yearEndAllowance(memberId){
   const bal=caBalance(memberId);
   const tiedUp=memberOpenInvContribution(memberId);
   const free=Math.max(0,bal-tiedUp);
-  return +(free*0.20).toFixed(2);
+  return round2(free*0.20);
 }
 
 // Returns the window status: {inWindow, label, windowStart, windowEnd}
@@ -1775,13 +1868,18 @@ function yearEndWindowStatus(){
 function autoGenContributions(startDate, deployedAmount){
   const date=startDate||today();
   const balances=DB.members.map(m=>({m,bal:caBalance(m.id)})).filter(x=>x.bal>0);
-  const totalBal=balances.reduce((s,x)=>s+x.bal,0);
+  const totalBal=round2(balances.reduce((s,x)=>s+Number(x.bal||0),0));
   if(totalBal<=0||!deployedAmount)return[];
-  return balances.map(({m,bal})=>{
+  const rows=balances.map(({m,bal})=>{
     const pctEquity=bal/totalBal;
-    const amount=+(pctEquity*deployedAmount).toFixed(2);
+    const amount=round2(pctEquity*deployedAmount);
     return{id:uid(),memberId:m.id,memberName:m.name,amount,date,pctEquity};
   }).filter(r=>r.amount>0);
+  // Rounding correction: last member absorbs any penny discrepancy so sum = deployedAmount exactly
+  const rowSum=round2(rows.reduce((s,r)=>s+r.amount,0));
+  const diff=round2(deployedAmount-rowSum);
+  if(diff!==0&&rows.length>0)rows[rows.length-1].amount=round2(rows[rows.length-1].amount+diff);
+  return rows;
 }
 
 
@@ -1793,37 +1891,64 @@ function autoGenContributions(startDate, deployedAmount){
 // is untouched since it's a real capital account entry, not a live calculation.
 // The remaining 90% of profit is split among members by time-weighted contribution.
 function distributeInvProfits(inv){
+  if(!inv)return false;
+  // Hard idempotency guard: a closed investment's distribution is a one-time event.
+  if(inv.profitDistributed===true)return false;
   const rows=calcInvProfit(inv);
-  if(!rows.length)return;
-  const totalProfit=rows.reduce((s,r)=>s+r.profit,0);
+  if(!rows.length)return false;
+  const totalProfit=round2(rows.reduce((s,r)=>s+Number(r.profit||0),0));
   const closeDate=inv.closeDate||today();
 
   // Take management bonus off the top (only if there's a positive profit to take it from)
   let bonusPool=0,bonusPerAdmin=0,admins=[];
   if(totalProfit>0){
-    bonusPool=+(totalProfit*(ADMIN_BONUS_PCT/100)).toFixed(2);
+    const requestedBonus=round2(totalProfit*(adminBonusPct()/100));
     admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
-    bonusPerAdmin=admins.length>0?+(bonusPool/admins.length).toFixed(2):0;
-    admins.forEach(a=>{
-      if(bonusPerAdmin===0)return;
-      postEarningsWithAutoRepay(a.id,bonusPerAdmin,`Mgmt Bonus (${ADMIN_BONUS_PCT}%): ${inv.name}`,closeDate);
-      DB.transactions.push({id:uid(),date:closeDate,type:'profit',
-        desc:`Management bonus — ${inv.name}`,amount:bonusPerAdmin,memberId:a.id,
-        notes:`${ADMIN_BONUS_PCT}% management bonus, split among ${admins.length} admin(s)`});
-    });
+    const year=String(closeDate||today()).slice(0,4);
+    const cap=adminBonusAnnualCap();
+    const alreadyPaid=adminBonusPaidThisYear(year);
+    const capRemaining=Math.max(0,round2(cap-alreadyPaid));
+    bonusPool=admins.length>0?round2(Math.min(requestedBonus,capRemaining)):0;
+    bonusPerAdmin=admins.length>0?round2(bonusPool/admins.length):0;
+    if(admins.length>0&&bonusPerAdmin>0){
+      let allocated=0;
+      admins.forEach((a,idx)=>{
+        let share=idx===admins.length-1?round2(bonusPool-allocated):bonusPerAdmin;
+        if(share<=0)return;
+        allocated=round2(allocated+share);
+        postEarningsWithAutoRepay(a.id,share,`Mgmt Bonus (${adminBonusPct()}%): ${inv.name}`,closeDate);
+        DB.transactions.push({id:uid(),date:closeDate,type:'profit',
+          desc:`Management bonus — ${inv.name}`,amount:share,memberId:a.id,
+          notes:`${adminBonusPct()}% requested management bonus, annual cap ${fmtF(cap)}, split among ${admins.length} admin(s)`});
+      });
+    }
   }
 
   // Remaining profit (after bonus) split among members by their time-weighted share
   const remainingProfit=totalProfit-bonusPool;
   const scale=totalProfit!==0?remainingProfit/totalProfit:1;
+  const memberShares={};
   rows.forEach(r=>{
-    const adjustedProfit=+(r.profit*scale).toFixed(2);
-    if(adjustedProfit===0)return;
-    postEarningsWithAutoRepay(r.memberId,adjustedProfit,`Profit: ${inv.name}`,closeDate);
-    DB.transactions.push({id:uid(),date:closeDate,type:'profit',
-      desc:`Profit distribution — ${inv.name}`,amount:adjustedProfit,memberId:r.memberId,
-      notes:`${(r.weightedShare*100).toFixed(2)}% share · ${r.activeDays} days active${bonusPool>0?` · after ${ADMIN_BONUS_PCT}% mgmt bonus`:''}`});
+    const adj=+(r.profit*scale).toFixed(2);
+    if(!memberShares[r.memberId])memberShares[r.memberId]={profit:0,weightedShare:0};
+    memberShares[r.memberId].profit=+(memberShares[r.memberId].profit+adj).toFixed(2);
+    memberShares[r.memberId].weightedShare=+(memberShares[r.memberId].weightedShare+r.weightedShare).toFixed(4);
   });
+  const mIds=Object.keys(memberShares);
+  const sumCheck=round2(mIds.reduce((s,id)=>s+Number(memberShares[id].profit||0),0));
+  const penny=round2(remainingProfit-sumCheck);
+  if(penny!==0&&mIds.length>0)memberShares[mIds[mIds.length-1]].profit=+(memberShares[mIds[mIds.length-1]].profit+penny).toFixed(2);
+  mIds.forEach(memberId=>{
+    const s=memberShares[memberId];
+    if(s.profit===0)return;
+    postEarningsWithAutoRepay(memberId,s.profit,`Profit: ${inv.name}`,closeDate);
+    DB.transactions.push({id:uid(),date:closeDate,type:'profit',
+      desc:`Profit distribution — ${inv.name}`,amount:round2(s.profit),memberId,
+      investmentId:inv.id,
+      notes:`${(s.weightedShare*100).toFixed(2)}% share${bonusPool>0?` · after ${adminBonusPct()}% mgmt bonus`:''}`});
+  });
+  inv.profitDistributed=true;
+  return true;
 }
 
 function previewInvestment(){
@@ -1842,6 +1967,9 @@ function saveInvestment(){
   const cur=parseFloat(document.getElementById('iv-cur').value)||amount;
   const startDate=document.getElementById('iv-date').value||today();
   const endDateInput=document.getElementById('iv-close-date').value;
+  if(!validEntryDate(startDate,'Investment start date'))return;
+  if(endDateInput&&!validEntryDate(endDateInput,'Investment close date'))return;
+  if(!validDateRange(startDate,endDateInput,'Investment start date','Investment close date'))return;
   // Auto-derive status: an End Date in the past (or today) means this investment is already
   // finished — create it directly as Closed with profit distributed. No end date, or a future
   // one, means it's still running — create it Open.
@@ -1856,7 +1984,8 @@ function saveInvestment(){
     date:startDate,startDate,amount,currentValue:cur,status,
     notes:document.getElementById('iv-notes').value,
     contributions:autoContribs,
-    valueHistory:[{date:startDate,value:cur,note:'Initial valuation'}]
+    valueHistory:[{date:startDate,value:round2(cur),note:'Initial valuation'}],
+    profitDistributed:false
   };
   if(isAlreadyClosed){
     inv.closeDate=endDateInput;
@@ -1901,10 +2030,20 @@ document.getElementById('ui-status')?.addEventListener('change',function(){
 
 function updateInv(){
   const id=document.getElementById('ui-id').value,i=DB.investments.find(x=>x.id===id);if(!i)return;
-  const val=parseFloat(document.getElementById('ui-val').value);if(isNaN(val))return alert('Enter valid value.');
+  const val=parseFloat(document.getElementById('ui-val').value);if(isNaN(val)||val<0)return alert('Enter a valid non-negative value.');
   const wasAlreadyClosed=i.status==='closed';
+  if(wasAlreadyClosed){
+    // A closed investment is immutable for accounting purposes.
+    return alert('This investment is permanently closed and cannot be edited or reopened.');
+  }
+  const requestedStatus=document.getElementById('ui-status').value;
+  const closeDateInput=document.getElementById('ui-close-date').value;
+  if(requestedStatus==='closed'){
+    if(closeDateInput&&!validEntryDate(closeDateInput,'Investment close date'))return;
+    if(!validDateRange(i.startDate||i.date||today(),closeDateInput,'Investment start date','Investment close date'))return;
+  }
   // Hard guard: once closed, an investment can never be reopened. Profits are already final.
-  const newStatus=wasAlreadyClosed?'closed':document.getElementById('ui-status').value;
+  const newStatus=requestedStatus;
   const note=document.getElementById('ui-note').value||'Value update';
   i.currentValue=val;i.status=newStatus;
   if(!i.valueHistory)i.valueHistory=[];
@@ -1915,11 +2054,11 @@ function updateInv(){
     if(!wasAlreadyClosed){
       const totalProfit=calcInvProfit(i).reduce((s,r)=>s+r.profit,0);
       const admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
-      const bonusPool=totalProfit>0?+(totalProfit*(ADMIN_BONUS_PCT/100)).toFixed(2):0;
+      const bonusPool=totalProfit>0?+(totalProfit*(adminBonusPct()/100)).toFixed(2):0;
       const scale=totalProfit!==0?(totalProfit-bonusPool)/totalProfit:1;
       const memberRowsPreview=calcInvProfit(i).map(r=>`${r.memberName}: +${fmtF(+(r.profit*scale).toFixed(2))}`).join('\n');
       distributeInvProfits(i);
-      const bonusLine=bonusPool>0&&admins.length>0?`\n\nManagement bonus (${ADMIN_BONUS_PCT}%): ${fmtF(bonusPool)} split among ${admins.map(a=>a.name).join(', ')}`:'';
+      const bonusLine=bonusPool>0&&admins.length>0?`\n\nManagement bonus (${adminBonusPct()}%): ${fmtF(bonusPool)} split among ${admins.map(a=>a.name).join(', ')}`:'';
       alert(`✓ Investment closed!\n\nProfits distributed to capital accounts:\n${memberRowsPreview||'No contributions to distribute.'}${bonusLine}\n\nThis investment is now permanently closed.`);
     }
   } else if(newStatus==='open'||newStatus==='funding'){
@@ -1943,7 +2082,9 @@ function saveInvContribution(){
   const memberId=document.getElementById('ic-member').value;
   const amount=parseFloat(document.getElementById('ic-amount').value)||0;
   const date=document.getElementById('ic-date').value||today();
+  if(!validEntryDate(date,'Contribution date'))return;
   if(!memberId||amount<=0)return alert('Select member and enter amount.');
+  if(inv.status==='closed'||inv.profitDistributed)return alert('Closed investments cannot receive new contributions.');
   const m=DB.members.find(x=>x.id===memberId);
   if(!inv.contributions)inv.contributions=[];
   inv.contributions.push({id:uid(),memberId,memberName:m?m.name:'Unknown',amount,date});
@@ -1960,27 +2101,18 @@ function safeConfirm(msg){
 
 function delMember(id){
   const m=DB.members.find(x=>x.id===id);if(!m)return;
-  const openInvs=DB.investments.filter(i=>i.status!=='closed'&&i.contributions&&i.contributions.some(c=>c.memberId===id));
-  const warnExtra=openInvs.length?`\n\nThey will also be removed from ${openInvs.length} open investment(s); those pools will be reduced accordingly.`:'';
-  if(!safeConfirm(`Remove ${m.name}?\n\nTheir capital account and contributions to OPEN investments will be removed. Historical transactions and CLOSED investment records stay for audit purposes, but no longer count toward live totals.${warnExtra}`))return;
+  const hasTransactions=DB.transactions.some(t=>t.memberId===id);
+  const hasLoans=DB.loans.some(l=>loanBelongsToMember(l,id));
+  const hasInvContrib=DB.investments.some(i=>(i.contributions||[]).some(c=>c.memberId===id));
+  if(hasTransactions||hasLoans||hasInvContrib){
+    return alert(`Cannot delete ${m.name} because this member has financial history linked to the account.
 
-  // Remove their contribution rows from any OPEN investment and shrink that investment's deployed amount accordingly
-  DB.investments.forEach(inv=>{
-    if(inv.status==='closed')return; // closed investments are final history — leave untouched
-    if(!inv.contributions||!inv.contributions.length)return;
-    const removedTotal=inv.contributions.filter(c=>c.memberId===id).reduce((s,c)=>s+c.amount,0);
-    if(removedTotal>0){
-      inv.contributions=inv.contributions.filter(c=>c.memberId!==id);
-      inv.amount=Math.max(0,inv.amount-removedTotal);
-    }
-  });
-
-  // Mark their past transactions as belonging to a removed member (keeps audit trail, stops live counting)
-  DB.transactions.forEach(t=>{
-    if(t.memberId===id){t.memberId='';t.desc=(t.desc||'')+' (member removed)';}
-  });
-
+For data integrity and audit purposes, members with transactions, loans, or investment contributions cannot be permanently deleted. You can edit their profile instead.`);
+  }
+  if(!safeConfirm(`Remove ${m.name}?\n\nThis member has no linked financial records and can be safely removed.`))return;
   DB.members=DB.members.filter(x=>x.id!==id);
+  delete DB.memberPins?.[id];
+  cleanupOrphanTransactions(true);
   rebuildCapitalAccounts();
   save();
 }
@@ -2017,11 +2149,17 @@ function delLoan(id){
   // - Any profit/interest records distributed from this loan (matched by desc)
   const borrowerLower=l.borrower.toLowerCase();
   DB.transactions=DB.transactions.filter(t=>{
-    if(t.type==='loan_out'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
-    if(t.type==='loan_repayment'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
-    if(t.type==='profit'&&(t.desc||'').toLowerCase().includes(borrowerLower)&&(
-      (t.desc||'').toLowerCase().startsWith('loan interest')||
-      (t.desc||'').toLowerCase().startsWith('borrower repayment bonus')
+    const d=(t.desc||'').toLowerCase();
+    // Match loan_out precisely: "loan to BORROWER"
+    if(t.type==='loan_out'&&d===('loan to '+borrowerLower))return false;
+    // Match manual repayments precisely: "repayment — BORROWER"
+    if(t.type==='loan_repayment'&&!t.isAutoRepay&&d===('repayment — '+borrowerLower))return false;
+    // Match auto-repayments: must start with "auto-repayment — BORROWER"
+    if(t.type==='loan_repayment'&&t.isAutoRepay&&d.startsWith('auto-repayment — '+borrowerLower))return false;
+    // Match interest and bonus profit entries precisely
+    if(t.type==='profit'&&(
+      d.startsWith('loan interest — '+borrowerLower)||
+      d.startsWith('borrower repayment bonus — '+borrowerLower)
     ))return false;
     return true;
   });
@@ -2030,33 +2168,35 @@ function delLoan(id){
 }
 function delTx(id){
   const t=DB.transactions.find(x=>x.id===id);if(!t)return;
-  const affects=t.memberId&&['contribution','withdrawal','profit'].includes(t.type);
   if(!safeConfirm('Delete this transaction?'))return;
   DB.transactions=DB.transactions.filter(x=>x.id!==id);
-  if(affects)rebuildCapitalAccounts();
+  // Rebuild from the remaining ledger so capitalAccount.history never drifts from DB.transactions.
+  rebuildCapitalAccounts();
   save();
 }
 function clearPin(id){if(!safeConfirm('Clear this PIN?'))return;delete DB.memberPins[id];saveDB();renderPinList();}
 function clearAll(){
   if(!safeConfirm('Delete ALL data permanently?'))return;
   if(!safeConfirm('This cannot be undone. Are you absolutely sure?'))return;
-  DB={settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}},members:[],investments:[],loans:[],transactions:[],memberPins:{}};save();
+  DB={settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{}},members:[],investments:[],loans:[],transactions:[],memberPins:{}};save();
 }
 
 // Remove orphaned/bad auto-repayment and cascade-duplicate transactions from before the bug fix.
 // Safe to run at any time — only removes auto-repayment entries whose source loan no longer exists
 // or whose borrower is not a known member.
-function cleanupOrphanTransactions(){
+function cleanupOrphanTransactions(silent=false){
   const before=DB.transactions.length;
   DB.transactions=DB.transactions.filter(t=>{
-    // Remove auto-repayment records where the referenced borrower has no matching active loan
-    if(t.type==='loan_repayment'&&(t.desc||'').toLowerCase().startsWith('auto-repayment')){
-      // Extract the borrower name from "Auto-repayment — BORROWER (from: ...)"
+    // A member-linked transaction is orphaned when its member no longer exists.
+    if(t.memberId && !DB.members.some(m=>m.id===t.memberId))return false;
+    // Legacy auto-repayment rows had no loanId. Keep them if a matching loan still
+    // exists, even when that loan is fully paid — historical repayments are not orphans.
+    if(t.type==='loan_repayment'&&t.isAutoRepay){
+      if(t.loanId)return DB.loans.some(l=>l.id===t.loanId);
       const match=(t.desc||'').match(/auto-repayment\s*[—-]\s*(.+?)\s*\(from:/i);
       if(match){
         const borrower=match[1].trim().toLowerCase();
-        const loanExists=DB.loans.some(l=>l.borrower.trim().toLowerCase()===borrower&&loanBalance(l)>0.01);
-        if(!loanExists)return false; // no active loan for this borrower — orphaned record
+        return DB.loans.some(l=>(l.borrower||'').trim().toLowerCase()===borrower);
       }
     }
     return true;
@@ -2064,18 +2204,18 @@ function cleanupOrphanTransactions(){
   const removed=before-DB.transactions.length;
   if(removed>0){
     rebuildCapitalAccounts();
-    save();
-    alert(`✓ Cleaned up ${removed} orphaned auto-repayment transaction(s). Capital accounts recalculated.`);
-  } else {
+    saveDB();
+    if(!silent)alert(`✓ Cleaned up ${removed} orphaned transaction(s). Capital accounts recalculated.`);
+  } else if(!silent){
     alert('No orphaned transactions found — ledger is clean.');
   }
+  return removed;
 }
-
 function openAddLoanModal(){
   // Pre-fill the rate field with the current default rate so it's never accidentally blank or wrong
   const rateField=document.getElementById('ln-rate');
   if(rateField&&!rateField.value) rateField.value=DB.settings.defaultRate||10;
-  openModal('modal-add-loan');
+  document.getElementById('ln-date').value=today();document.getElementById('ln-date').max=today();document.getElementById('ln-due').min=today();openModal('modal-add-loan');
 }
 
 // Migrate ALL existing loans to the current defaultRate.
@@ -2121,16 +2261,20 @@ function fixLoanRates(){
 }
 
 function saveLoan(){
-  const bor=document.getElementById('ln-bor').value.trim(),amt=parseFloat(document.getElementById('ln-amt').value)||0;
+  const bor=document.getElementById('ln-bor').value.trim(),amt=round2(parseFloat(document.getElementById('ln-amt').value)||0);
   if(!bor||amt<=0)return alert('Fill borrower and amount.');
+  const loanDate=document.getElementById('ln-date').value||today();
+  const dueDate=document.getElementById('ln-due').value||'';
+  if(!validEntryDate(loanDate,'Loan issue date'))return;
+  if(dueDate&&dueDate<loanDate)return alert('Due date cannot be earlier than the issue date.');
   // Snapshot each member's % equity at loan issue date (for 90% interest split)
   const balances=DB.members.map(m=>({memberId:m.id,bal:caBalance(m.id)})).filter(x=>x.bal>0);
-  const totalBal=balances.reduce((s,x)=>s+x.bal,0);
+  const totalBal=round2(balances.reduce((s,x)=>s+Number(x.bal||0),0));
   const equitySnapshot=totalBal>0?balances.map(x=>({memberId:x.memberId,pctEquity:x.bal/totalBal})):[];
   // Find the member record matching the borrower name (for auto-repayment and 10% bonus)
   const borrowerMember=DB.members.find(m=>m.name===bor);
   const loan={id:uid(),borrower:bor,borrowerMemberId:borrowerMember?borrowerMember.id:null,
-    amount:amt,rate:parseFloat(document.getElementById('ln-rate').value)||DB.settings.defaultRate||10,
+    amount:amt,rate:round2(parseFloat(document.getElementById('ln-rate').value)||DB.settings.defaultRate||10),
     date:document.getElementById('ln-date').value||today(),
     dueDate:document.getElementById('ln-due').value||'',
     notes:document.getElementById('ln-notes').value,repaid:0,interestDistributed:0,equitySnapshot};
@@ -2142,7 +2286,7 @@ function openRepay(id){
   const l=DB.loans.find(x=>x.id===id);if(!l)return;
   document.getElementById('rp-id').value=id;
   document.getElementById('rp-info').value=`${l.borrower} — ${fmtF(loanBalance(l))} outstanding`;
-  document.getElementById('rp-date').value=today();document.getElementById('rp-amt').value='';
+  document.getElementById('rp-date').value=today();document.getElementById('rp-date').max=today();document.getElementById('rp-amt').value='';
   openModal('modal-repay');
 }
 // Distribute newly-realized loan interest:
@@ -2151,56 +2295,60 @@ function openRepay(id){
 // Both flows go through postEarningsWithAutoRepay so flagged members get auto-repayment applied.
 function distributeLoanInterest(l, date){
   if(!l.equitySnapshot||!l.equitySnapshot.length)return;
-  const totalInterest=(l.amount*l.rate)/100;
-  const interestRealizedSoFar=Math.min(Math.max(0,l.repaid-l.amount),totalInterest);
-  const newlyRealized=+(interestRealizedSoFar-(l.interestDistributed||0)).toFixed(2);
+  const totalInterest=round2((Number(l.amount||0)*Number(l.rate||0))/100);
+  const interestRealizedSoFar=round2(Math.min(Math.max(0,round2(Number(l.repaid||0)-Number(l.amount||0))),totalInterest));
+  const newlyRealized=round2(interestRealizedSoFar-(l.interestDistributed||0));
   if(newlyRealized<=0)return;
 
   // 10% borrower repayment bonus — find the borrower member by ID or name
   const borrowerMember=l.borrowerMemberId
     ?DB.members.find(m=>m.id===l.borrowerMemberId)
     :DB.members.find(m=>m.name.trim().toLowerCase()===l.borrower.trim().toLowerCase());
-  const borrowerBonus=+(newlyRealized*0.10).toFixed(2);
+  const borrowerBonus=round2(newlyRealized*0.10);
   if(borrowerBonus>0&&borrowerMember){
     // excludeLoanId=l.id so the borrower's bonus is never auto-repaid back to the same loan that generated it
     postEarningsWithAutoRepay(borrowerMember.id,borrowerBonus,`Borrower bonus: ${l.borrower}`,date,l.id);
     DB.transactions.push({id:uid(),date,type:'profit',
-      desc:`Borrower repayment bonus — ${l.borrower}`,amount:borrowerBonus,memberId:borrowerMember.id,
+      desc:`Borrower repayment bonus — ${l.borrower}`,amount:round2(borrowerBonus),memberId:borrowerMember.id,loanId:l.id,
       notes:`10% borrower bonus on ${fmtF(newlyRealized)} realized interest`});
   }
 
-  // 90% split by equity snapshot
-  const pool90=+(newlyRealized-borrowerBonus).toFixed(2);
+  // If borrower is not a member, recycle their 10% back into the pool — no interest lost.
+  // 90% (or 100% if no member borrower) split by equity snapshot.
+  const pool90=borrowerMember?round2(newlyRealized-borrowerBonus):newlyRealized;
   l.equitySnapshot.forEach(e=>{
-    const share=+(pool90*e.pctEquity).toFixed(2);
+    const share=round2(pool90*Number(e.pctEquity||0));
     if(share<0.01)return;
     // excludeLoanId=l.id so interest earned from this loan doesn't auto-repay back to itself
     postEarningsWithAutoRepay(e.memberId,share,`Loan interest: ${l.borrower}`,date,l.id);
     DB.transactions.push({id:uid(),date,type:'profit',
-      desc:`Loan interest — ${l.borrower}`,amount:share,memberId:e.memberId,
+      desc:`Loan interest — ${l.borrower}`,amount:round2(share),memberId:e.memberId,loanId:l.id,
       notes:`${(e.pctEquity*100).toFixed(2)}% equity at loan issue · 90% interest pool`});
   });
 
-  l.interestDistributed=interestRealizedSoFar;
+  l.interestDistributed=round2(interestRealizedSoFar);
 }
 function saveRepay(){
-  const id=document.getElementById('rp-id').value,amt=parseFloat(document.getElementById('rp-amt').value);
+  const id=document.getElementById('rp-id').value;let amt=parseFloat(document.getElementById('rp-amt').value);
   const l=DB.loans.find(x=>x.id===id);if(!l||isNaN(amt)||amt<=0)return alert('Invalid amount.');
   const owed=loanBalance(l);
   if(amt>owed+0.01){
     if(!safeConfirm(`This repayment of ${fmtF(amt)} is more than the ${fmtF(owed)} still owed on this loan.\n\nProceed anyway? (the extra amount will be recorded but won't generate additional interest)`))return;
   }
   const date=document.getElementById('rp-date').value||today();
-  l.repaid+=amt;
+  if(!validEntryDate(date,'Repayment date'))return;
+  amt=round2(amt);
+  l.repaid=round2(Number(l.repaid||0)+amt);
   distributeLoanInterest(l, date);
-  DB.transactions.push({id:uid(),date,type:'loan_repayment',desc:'Repayment — '+l.borrower,amount:amt,memberId:'',notes:document.getElementById('rp-notes').value});
+  DB.transactions.push({id:uid(),date,type:'loan_repayment',desc:'Repayment — '+l.borrower,amount:amt,memberId:'',loanId:l.id,notes:document.getElementById('rp-notes').value});
   closeModal('modal-repay');save();
 }
 
 function saveTx(){
   const type=document.getElementById('tx-type').value,desc=document.getElementById('tx-desc').value.trim();
-  const amt=parseFloat(document.getElementById('tx-amt').value),date=document.getElementById('tx-date').value||today();
+  const amt=round2(parseFloat(document.getElementById('tx-amt').value)),date=document.getElementById('tx-date').value||today();
   if(!desc||isNaN(amt)||amt<=0)return alert('Fill description and amount.');
+  if(!validEntryDate(date,'Transaction date'))return;
   const memId=document.getElementById('tx-mem').value||'';
 
   // BLOCK contributions for members with overdue loans.
@@ -2271,7 +2419,7 @@ function exportPDF(){
   const cap=capPool(),res=reserve(),inv=totInv(),lo=lnOut();
   const int=intEarned();
   const totalInvProfit=DB.investments.reduce((s,inv2)=>{const rows=calcInvProfit(inv2);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
-  const bonusPool=totalInvProfit>0?+(totalInvProfit*(ADMIN_BONUS_PCT/100)).toFixed(2):0;
+  const bonusPool=totalInvProfit>0?+(totalInvProfit*(adminBonusPct()/100)).toFixed(2):0;
   const netIncome=totalInvProfit+int;
   const roi=cap>0?(netIncome/cap*100):0;
   const gname=DB.settings.groupName||'Investment Group';
@@ -2387,7 +2535,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
   <div class="kpi-row">
     <div class="kpi green"><div class="kpi-label">Investment Profit</div><div class="kpi-value green">${fmtF(totalInvProfit)}</div></div>
     <div class="kpi gold"><div class="kpi-label">Interest Earned</div><div class="kpi-value gold">${fmtF(int)}</div></div>
-    <div class="kpi"><div class="kpi-label">Mgmt Bonus (${ADMIN_BONUS_PCT}%)</div><div class="kpi-value">${fmtF(bonusPool)}</div></div>
+    <div class="kpi"><div class="kpi-label">Mgmt Bonus (${adminBonusPct()}%)</div><div class="kpi-value">${fmtF(bonusPool)}</div></div>
     <div class="kpi ${roi>=0?'green':'red'}"><div class="kpi-label">Group ROI</div><div class="kpi-value ${roi>=0?'green':'red'}">${roi.toFixed(2)}%</div></div>
   </div>
 
@@ -2396,7 +2544,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
       <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:#111827">Income Statement</div>
       <div class="summary-row"><span style="color:#6b7280">Investment Profit (daily weighted)</span><span style="color:${totalInvProfit>=0?'#059669':'#dc2626'};font-weight:600">${totalInvProfit>=0?'+':''}${fmtF(totalInvProfit)}</span></div>
       <div class="summary-row"><span style="color:#6b7280">Loan Interest Earned</span><span style="color:#059669;font-weight:600">+${fmtF(int)}</span></div>
-      <div class="summary-row"><span style="color:#6b7280">★ Management Bonus Pool (${ADMIN_BONUS_PCT}%)</span><span style="color:#d97706;font-weight:600">−${fmtF(bonusPool)}</span></div>
+      <div class="summary-row"><span style="color:#6b7280">★ Management Bonus Pool (${adminBonusPct()}%)</span><span style="color:#d97706;font-weight:600">−${fmtF(bonusPool)}</span></div>
       <div class="summary-total"><span>Net Income</span><span style="color:${netIncome>=0?'#059669':'#dc2626'}">${netIncome>=0?'+':''}${fmtF(netIncome)}</span></div>
     </div>
     <div>
@@ -2413,7 +2561,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 <div class="section page-break">
   <div class="section-title">Member Summary</div>
   <div class="section-sub">Individual member positions including daily-weighted investment profits and management bonus</div>
-  <div class="note">★ Management Bonus: ${ADMIN_BONUS_PCT}% of total income (${fmtF(bonusPool)}) is split equally among Admin/Treasurer roles. Net equity is calculated after withdrawals.</div>
+  <div class="note">★ Management Bonus: up to ${adminBonusPct()}% of realized investment profit, subject to an annual cap of ${fmtF(adminBonusAnnualCap())}, is split among Admin/Treasurer roles. Net equity is calculated after withdrawals.</div>
   <br>
   <table>
     <thead><tr><th>Member</th><th>Role</th><th>Contributed</th><th>Withdrawn</th><th>Net Capital</th><th>Equity%</th><th>Inv. Profit</th><th>Mgmt Bonus</th><th>Total Profit</th><th>ROI%</th></tr></thead>
@@ -2436,7 +2584,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
   <div class="section-title">Loan Book</div>
   <div class="section-sub">All loans issued including interest and repayment status</div>
   <table>
-    <thead><tr><th>Borrower</th><th>Principal</th><th>Rate%</th><th>Interest</th><th>Total Owed</th><th>Repaid</th><th>Balance</th><th>Status</th><th>Due Date</th></tr></thead>
+    <thead><tr><th>Borrower</th><th>Principal</th><th>Rate%</th><th>Interest (flat)</th><th>Total Owed</th><th>Repaid</th><th>Balance</th><th>Status</th><th>Due Date</th></tr></thead>
     <tbody>${loanRows||'<tr><td colspan="9" style="text-align:center;padding:20px;color:#6b7280">No loans recorded</td></tr>'}</tbody>
   </table>
 </div>
@@ -2473,6 +2621,8 @@ function setSyncStatus(msg,color){
   const dot=document.getElementById('sync-dot');if(dot){dot.textContent=msg.charAt(0);dot.style.color=color;dot.title=msg;}
 }
 
+// Firebase is loaded dynamically and initFirebase() runs only after all SDK files report onload.
+// This intentionally avoids the DOMContentLoaded/network race described in the audit.
 function loadFirebaseScript(){
   const scripts=['https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js','https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js'];
   let loaded=0;
@@ -2502,7 +2652,7 @@ function syncToFirebase(){
   if(!fbDB){alert('Not connected to Firebase yet.\n\nThis usually means the Firebase scripts are still loading, or failed to load. Wait a few seconds and try again — if it persists, check that nothing is blocking gstatic.com/firebaseio.com (ad-blocker, restrictive network, etc).');return;}
   setSyncStatus('⟳ Syncing…','var(--gold)');
   const payload={
-    settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate},
+    settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate,adminBonusPct:adminBonusPct(),adminBonusAnnualCap:adminBonusAnnualCap(),adminBonusChanges:DB.settings.adminBonusChanges||[]},
     members:DB.members.map(m=>({id:m.id,name:m.name,role:m.role,email:m.email||'',phone:m.phone||'',notes:m.notes||'',capitalAccount:m.capitalAccount||{balance:0,history:[]}})),
     investments:DB.investments,loans:DB.loans,transactions:DB.transactions,
     memberPins:DB.memberPins||{},lastUpdated:new Date().toISOString()
@@ -2524,10 +2674,13 @@ function loadFromFirebase(){
     if(!data){alert('No data found on Firebase. Make sure the primary admin has synced first.');setSyncStatus('✗ No data','var(--red)');return;}
     if(data.settings)DB.settings={...DB.settings,...data.settings};
     if(!DB.settings.bank)DB.settings.bank={};
-    if(data.members)DB.members=data.members;
-    if(data.investments)DB.investments=data.investments;
-    if(data.loans)DB.loans=data.loans;
-    if(data.transactions)DB.transactions=data.transactions;
+    // Firebase RTDB can return objects instead of arrays (when keys are non-sequential).
+    // ensureArray() safely converts either to a proper JS array.
+    const ensureArray=v=>!v?[]:Array.isArray(v)?v:Object.values(v);
+    if(data.members)DB.members=ensureArray(data.members);
+    if(data.investments)DB.investments=ensureArray(data.investments);
+    if(data.loans)DB.loans=ensureArray(data.loans);
+    if(data.transactions)DB.transactions=ensureArray(data.transactions);
     if(data.memberPins)DB.memberPins=data.memberPins;
     // Migrate investments
     DB.investments=DB.investments.map(i=>{if(!i.contributions)i.contributions=[];if(!i.valueHistory)i.valueHistory=[];if(!i.status)i.status='open';if(!i.startDate)i.startDate=i.date||today();return i;});
@@ -2569,7 +2722,7 @@ document.getElementById('lk-in').addEventListener('keydown',e=>{if(e.key==='Ente
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
-window.addEventListener('DOMContentLoaded',()=>{loadDB();renderAll();loadFirebaseScript();});
+window.addEventListener('DOMContentLoaded',()=>{loadDB();setDateLimits();renderAll();loadFirebaseScript();});
 </script>
 </body>
 </html>
