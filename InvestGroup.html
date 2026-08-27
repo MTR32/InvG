@@ -2611,7 +2611,14 @@ function applyImportedData(){
     DB.loans=Array.isArray(DB.loans)?DB.loans:[];
     DB.transactions=Array.isArray(DB.transactions)?DB.transactions:[];
     DB.memberPins=DB.memberPins||{};
-    loadDB();
+    // IMPORTANT: do not call loadDB() here. loadDB() reads localStorage and would
+    // overwrite the freshly imported backup with the old data. Normalize only
+    // the imported state, then persist it.
+    DB.settings.bank=DB.settings.bank||{};
+    DB.settings.cashReconciliation=DB.settings.cashReconciliation||{date:'',physicalCash:null,adjustment:0};
+    DB.settings.adminBonusPct=DB.settings.adminBonusPct===undefined?5:Number(DB.settings.adminBonusPct);
+    DB.settings.adminBonusAnnualCap=DB.settings.adminBonusAnnualCap===undefined?2000000:Number(DB.settings.adminBonusAnnualCap);
+    DB.settings.adminBonusChanges=Array.isArray(DB.settings.adminBonusChanges)?DB.settings.adminBonusChanges:[];
     saveDB();
     renderAll();
     loadSettingsForm();
