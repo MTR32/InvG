@@ -380,11 +380,6 @@ select option{background:var(--surface2);}
             <div class="fg"><label>Reserve Target %</label><input type="number" id="s-res" placeholder="20"></div>
             <div class="fg"><label>Default Loan Rate %</label><input type="number" id="s-rate" placeholder="10"></div>
           </div>
-          <div class="frow">
-            <div class="fg"><label>Management Bonus % of Realized Investment Profit</label><input type="number" id="s-admin-bonus" min="0" max="100" step="0.1" placeholder="5"></div>
-            <div class="fg"><label>Annual Admin Bonus Cap</label><input type="number" id="s-admin-cap" min="0" step="0.01" placeholder="2000000"></div>
-          </div>
-          <div style="font-size:11px;color:var(--muted2);margin:-2px 0 12px;line-height:1.5">Recommended starting policy: 5% of realized investment profit, with an annual cap of UGX 2,000,000 (or equivalent in your selected currency). Changes are recorded with date and time.</div>
           <button class="btn" onclick="saveSettings()">Save Settings</button>
         </div>
       </div>
@@ -696,7 +691,7 @@ const FB_CONFIG={
 // DATA
 // ════════════════════════════════════════
 let DB={
-  settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{}},
+  settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}},
   members:[],investments:[],loans:[],transactions:[],memberPins:{}
 };
 let cfFilter='all', repFilter='thisyear';
@@ -704,12 +699,7 @@ let pageHistory=[], curPage='dashboard';
 let activeMemberPortfolioId=null;
 let fbApp=null, fbDB=null;
 
-const DEFAULT_ADMIN_BONUS_PCT=5;
-const DEFAULT_ADMIN_BONUS_ANNUAL_CAP=2000000;
-function adminBonusPct(){return Math.max(0,Math.min(100,Number(DB.settings.adminBonusPct ?? DEFAULT_ADMIN_BONUS_PCT)||DEFAULT_ADMIN_BONUS_PCT));}
-function adminBonusAnnualCap(){const n=Number(DB.settings.adminBonusAnnualCap);return Number.isFinite(n)&&n>0?round2(n):DEFAULT_ADMIN_BONUS_ANNUAL_CAP;}
-function adminBonusPaidThisYear(year){return round2(DB.transactions.filter(t=>t.type==='profit'&&String(t.desc||'').startsWith('Management bonus — ')&&String(t.date||'').slice(0,4)===String(year)).reduce((s,t)=>s+Number(t.amount||0),0));}
-function ADMIN_BONUS_PCT(){return adminBonusPct();}
+const ADMIN_BONUS_PCT=10;
 
 const IN_T=['contribution','return','loan_repayment','profit'];
 const OUT_T=['withdrawal','investment','loan_out','expense'];
@@ -720,10 +710,7 @@ const TB={contribution:'bg',withdrawal:'br',investment:'bb',return:'bg',loan_out
 // ════════════════════════════════════════
 function saveDB(){localStorage.setItem('ig_db',JSON.stringify(DB));}
 function loadDB(){try{const r=localStorage.getItem('ig_db');if(r)DB=JSON.parse(r);}catch(e){}
-  DB.settings=DB.settings||{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{}};
-  if(DB.settings.adminBonusPct===undefined)DB.settings.adminBonusPct=DEFAULT_ADMIN_BONUS_PCT;
-  if(DB.settings.adminBonusAnnualCap===undefined)DB.settings.adminBonusAnnualCap=DEFAULT_ADMIN_BONUS_ANNUAL_CAP;
-  if(!DB.settings.adminBonusChanges)DB.settings.adminBonusChanges=[];
+  DB.settings=DB.settings||{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}};
   if(!DB.settings.bank) DB.settings.bank={};
   DB.members=DB.members||[];DB.investments=DB.investments||[];
   DB.loans=DB.loans||[];DB.transactions=DB.transactions||[];DB.memberPins=DB.memberPins||{};
@@ -1046,7 +1033,7 @@ function calcAdminBonus(){
     return s+rows.reduce((ss,r)=>ss+r.profit,0);
   },0);
   const pendingIncome=Math.max(0,pendingInvProfit);
-  const bonusPool=pendingIncome*(adminBonusPct()/100);
+  const bonusPool=pendingIncome*(ADMIN_BONUS_PCT/100);
   const admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
   const bonusPerAdmin=admins.length>0?bonusPool/admins.length:0;
   return{bonusPool,bonusPerAdmin,admins,totalIncome:pendingIncome};
@@ -1383,7 +1370,7 @@ function openMemberPortfolio(id){
         <div class="divider"></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Investment Profit (daily weighted)</span><span style="color:${invProfit>=0?'var(--green)':'var(--red)'};font-weight:700">${invProfit>=0?'+':''}${fmtF(invProfit)}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loan Interest Share</span><span style="color:var(--gold);font-weight:700">+${fmtF(loanInc)}</span></div>
-        ${bonus>0?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Management Bonus (${adminBonusPct()}%)</span><span style="color:var(--gold);font-weight:700">+${fmtF(bonus)}</span></div>`:''}
+        ${bonus>0?`<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Management Bonus (${ADMIN_BONUS_PCT}%)</span><span style="color:var(--gold);font-weight:700">+${fmtF(bonus)}</span></div>`:''}
         <div class="divider"></div>
         <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px">Final Net Worth</span>
         <span style="font-family:'DM Serif Display',Georgia,serif;font-size:20px;color:${netWorth>=0?'var(--green)':'var(--red)'}">${fmtF(netWorth)}</span></div>
@@ -1608,7 +1595,7 @@ function renderReports(){
   const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   const int=intEarned();
   const totalInvProfit=DB.investments.reduce((s,inv)=>{const rows=calcInvProfit(inv);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
-  const bonusPool=totalInvProfit>0?+(totalInvProfit*(adminBonusPct()/100)).toFixed(2):0;
+  const bonusPool=totalInvProfit>0?+(totalInvProfit*(ADMIN_BONUS_PCT/100)).toFixed(2):0;
   const netIncome=totalInvProfit+int-exp;
   const roi=cap>0?(netIncome/cap*100):0;
   document.getElementById('rp-cap').textContent=fmtF(cap);
@@ -1620,7 +1607,7 @@ function renderReports(){
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Investment Profit (daily weighted)</span><span style="color:${totalInvProfit>=0?'var(--green)':'var(--red)'}">${totalInvProfit>=0?'+':''}${fmtF(totalInvProfit)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Loan Interest Earned</span><span style="color:var(--green)">+${fmtF(int)}</span></div>
       <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">Expenses</span><span style="color:var(--red)">−${fmtF(exp)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Mgmt Bonus Pool (${adminBonusPct()}%)</span><span style="color:var(--gold)">−${fmtF(bonusPool)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">★ Mgmt Bonus Pool (${ADMIN_BONUS_PCT}%)</span><span style="color:var(--gold)">−${fmtF(bonusPool)}</span></div>
       <div class="divider"></div>
       <div style="display:flex;justify-content:space-between"><span style="font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700">Net Income</span>
       <span style="font-family:'DM Serif Display',Georgia,serif;font-size:18px;color:${netIncome>=0?'var(--green)':'var(--red)'}">${fmtF(netIncome)}</span></div>
@@ -1663,8 +1650,6 @@ function loadSettingsForm(){
   document.getElementById('s-cur').value=DB.settings.currency||'$';
   document.getElementById('s-res').value=DB.settings.reserveTarget||20;
   document.getElementById('s-rate').value=DB.settings.defaultRate||10;
-  document.getElementById('s-admin-bonus').value=adminBonusPct();
-  document.getElementById('s-admin-cap').value=adminBonusAnnualCap();
   loadBankForm();
   renderPinList();
   const t=localStorage.getItem('ig_last_sync');
@@ -1677,15 +1662,6 @@ function saveSettings(){
   DB.settings.currency=document.getElementById('s-cur').value;
   DB.settings.reserveTarget=parseFloat(document.getElementById('s-res').value)||20;
   DB.settings.defaultRate=parseFloat(document.getElementById('s-rate').value)||10;
-  const newPct=Math.max(0,Math.min(100,parseFloat(document.getElementById('s-admin-bonus').value)||DEFAULT_ADMIN_BONUS_PCT));
-  const newCap=Math.max(0,parseFloat(document.getElementById('s-admin-cap').value)||DEFAULT_ADMIN_BONUS_ANNUAL_CAP);
-  const oldPct=adminBonusPct(),oldCap=adminBonusAnnualCap();
-  DB.settings.adminBonusPct=round2(newPct);
-  DB.settings.adminBonusAnnualCap=round2(newCap);
-  if(oldPct!==DB.settings.adminBonusPct||oldCap!==DB.settings.adminBonusAnnualCap){
-    if(!DB.settings.adminBonusChanges)DB.settings.adminBonusChanges=[];
-    DB.settings.adminBonusChanges.push({date:new Date().toISOString(),changedBy:(DB.settings.currentUserName||'Treasurer/Admin'),fromPct:oldPct,toPct:DB.settings.adminBonusPct,fromCap:oldCap,toCap:DB.settings.adminBonusAnnualCap});
-  }
   save();alert('✓ Settings saved!');
 }
 function loadBankForm(){
@@ -1902,26 +1878,16 @@ function distributeInvProfits(inv){
   // Take management bonus off the top (only if there's a positive profit to take it from)
   let bonusPool=0,bonusPerAdmin=0,admins=[];
   if(totalProfit>0){
-    const requestedBonus=round2(totalProfit*(adminBonusPct()/100));
+    bonusPool=+(totalProfit*(ADMIN_BONUS_PCT/100)).toFixed(2);
     admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
-    const year=String(closeDate||today()).slice(0,4);
-    const cap=adminBonusAnnualCap();
-    const alreadyPaid=adminBonusPaidThisYear(year);
-    const capRemaining=Math.max(0,round2(cap-alreadyPaid));
-    bonusPool=admins.length>0?round2(Math.min(requestedBonus,capRemaining)):0;
-    bonusPerAdmin=admins.length>0?round2(bonusPool/admins.length):0;
-    if(admins.length>0&&bonusPerAdmin>0){
-      let allocated=0;
-      admins.forEach((a,idx)=>{
-        let share=idx===admins.length-1?round2(bonusPool-allocated):bonusPerAdmin;
-        if(share<=0)return;
-        allocated=round2(allocated+share);
-        postEarningsWithAutoRepay(a.id,share,`Mgmt Bonus (${adminBonusPct()}%): ${inv.name}`,closeDate);
-        DB.transactions.push({id:uid(),date:closeDate,type:'profit',
-          desc:`Management bonus — ${inv.name}`,amount:share,memberId:a.id,
-          notes:`${adminBonusPct()}% requested management bonus, annual cap ${fmtF(cap)}, split among ${admins.length} admin(s)`});
-      });
-    }
+    bonusPerAdmin=admins.length>0?+(bonusPool/admins.length).toFixed(2):0;
+    admins.forEach(a=>{
+      if(bonusPerAdmin===0)return;
+      postEarningsWithAutoRepay(a.id,bonusPerAdmin,`Mgmt Bonus (${ADMIN_BONUS_PCT}%): ${inv.name}`,closeDate);
+      DB.transactions.push({id:uid(),date:closeDate,type:'profit',
+        desc:`Management bonus — ${inv.name}`,amount:bonusPerAdmin,memberId:a.id,
+        notes:`${ADMIN_BONUS_PCT}% management bonus, split among ${admins.length} admin(s)`});
+    });
   }
 
   // Remaining profit (after bonus) split among members by their time-weighted share
@@ -1945,7 +1911,7 @@ function distributeInvProfits(inv){
     DB.transactions.push({id:uid(),date:closeDate,type:'profit',
       desc:`Profit distribution — ${inv.name}`,amount:round2(s.profit),memberId,
       investmentId:inv.id,
-      notes:`${(s.weightedShare*100).toFixed(2)}% share${bonusPool>0?` · after ${adminBonusPct()}% mgmt bonus`:''}`});
+      notes:`${(s.weightedShare*100).toFixed(2)}% share${bonusPool>0?` · after ${ADMIN_BONUS_PCT}% mgmt bonus`:''}`});
   });
   inv.profitDistributed=true;
   return true;
@@ -2054,11 +2020,11 @@ function updateInv(){
     if(!wasAlreadyClosed){
       const totalProfit=calcInvProfit(i).reduce((s,r)=>s+r.profit,0);
       const admins=DB.members.filter(m=>m.role==='admin'||m.role==='treasurer');
-      const bonusPool=totalProfit>0?+(totalProfit*(adminBonusPct()/100)).toFixed(2):0;
+      const bonusPool=totalProfit>0?+(totalProfit*(ADMIN_BONUS_PCT/100)).toFixed(2):0;
       const scale=totalProfit!==0?(totalProfit-bonusPool)/totalProfit:1;
       const memberRowsPreview=calcInvProfit(i).map(r=>`${r.memberName}: +${fmtF(+(r.profit*scale).toFixed(2))}`).join('\n');
       distributeInvProfits(i);
-      const bonusLine=bonusPool>0&&admins.length>0?`\n\nManagement bonus (${adminBonusPct()}%): ${fmtF(bonusPool)} split among ${admins.map(a=>a.name).join(', ')}`:'';
+      const bonusLine=bonusPool>0&&admins.length>0?`\n\nManagement bonus (${ADMIN_BONUS_PCT}%): ${fmtF(bonusPool)} split among ${admins.map(a=>a.name).join(', ')}`:'';
       alert(`✓ Investment closed!\n\nProfits distributed to capital accounts:\n${memberRowsPreview||'No contributions to distribute.'}${bonusLine}\n\nThis investment is now permanently closed.`);
     }
   } else if(newStatus==='open'||newStatus==='funding'){
@@ -2178,7 +2144,7 @@ function clearPin(id){if(!safeConfirm('Clear this PIN?'))return;delete DB.member
 function clearAll(){
   if(!safeConfirm('Delete ALL data permanently?'))return;
   if(!safeConfirm('This cannot be undone. Are you absolutely sure?'))return;
-  DB={settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{}},members:[],investments:[],loans:[],transactions:[],memberPins:{}};save();
+  DB={settings:{groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,bank:{}},members:[],investments:[],loans:[],transactions:[],memberPins:{}};save();
 }
 
 // Remove orphaned/bad auto-repayment and cascade-duplicate transactions from before the bug fix.
@@ -2419,7 +2385,7 @@ function exportPDF(){
   const cap=capPool(),res=reserve(),inv=totInv(),lo=lnOut();
   const int=intEarned();
   const totalInvProfit=DB.investments.reduce((s,inv2)=>{const rows=calcInvProfit(inv2);return s+rows.reduce((ss,r)=>ss+r.profit,0);},0);
-  const bonusPool=totalInvProfit>0?+(totalInvProfit*(adminBonusPct()/100)).toFixed(2):0;
+  const bonusPool=totalInvProfit>0?+(totalInvProfit*(ADMIN_BONUS_PCT/100)).toFixed(2):0;
   const netIncome=totalInvProfit+int;
   const roi=cap>0?(netIncome/cap*100):0;
   const gname=DB.settings.groupName||'Investment Group';
@@ -2535,7 +2501,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
   <div class="kpi-row">
     <div class="kpi green"><div class="kpi-label">Investment Profit</div><div class="kpi-value green">${fmtF(totalInvProfit)}</div></div>
     <div class="kpi gold"><div class="kpi-label">Interest Earned</div><div class="kpi-value gold">${fmtF(int)}</div></div>
-    <div class="kpi"><div class="kpi-label">Mgmt Bonus (${adminBonusPct()}%)</div><div class="kpi-value">${fmtF(bonusPool)}</div></div>
+    <div class="kpi"><div class="kpi-label">Mgmt Bonus (${ADMIN_BONUS_PCT}%)</div><div class="kpi-value">${fmtF(bonusPool)}</div></div>
     <div class="kpi ${roi>=0?'green':'red'}"><div class="kpi-label">Group ROI</div><div class="kpi-value ${roi>=0?'green':'red'}">${roi.toFixed(2)}%</div></div>
   </div>
 
@@ -2544,7 +2510,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
       <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:#111827">Income Statement</div>
       <div class="summary-row"><span style="color:#6b7280">Investment Profit (daily weighted)</span><span style="color:${totalInvProfit>=0?'#059669':'#dc2626'};font-weight:600">${totalInvProfit>=0?'+':''}${fmtF(totalInvProfit)}</span></div>
       <div class="summary-row"><span style="color:#6b7280">Loan Interest Earned</span><span style="color:#059669;font-weight:600">+${fmtF(int)}</span></div>
-      <div class="summary-row"><span style="color:#6b7280">★ Management Bonus Pool (${adminBonusPct()}%)</span><span style="color:#d97706;font-weight:600">−${fmtF(bonusPool)}</span></div>
+      <div class="summary-row"><span style="color:#6b7280">★ Management Bonus Pool (${ADMIN_BONUS_PCT}%)</span><span style="color:#d97706;font-weight:600">−${fmtF(bonusPool)}</span></div>
       <div class="summary-total"><span>Net Income</span><span style="color:${netIncome>=0?'#059669':'#dc2626'}">${netIncome>=0?'+':''}${fmtF(netIncome)}</span></div>
     </div>
     <div>
@@ -2561,7 +2527,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 <div class="section page-break">
   <div class="section-title">Member Summary</div>
   <div class="section-sub">Individual member positions including daily-weighted investment profits and management bonus</div>
-  <div class="note">★ Management Bonus: up to ${adminBonusPct()}% of realized investment profit, subject to an annual cap of ${fmtF(adminBonusAnnualCap())}, is split among Admin/Treasurer roles. Net equity is calculated after withdrawals.</div>
+  <div class="note">★ Management Bonus: ${ADMIN_BONUS_PCT}% of total income (${fmtF(bonusPool)}) is split equally among Admin/Treasurer roles. Net equity is calculated after withdrawals.</div>
   <br>
   <table>
     <thead><tr><th>Member</th><th>Role</th><th>Contributed</th><th>Withdrawn</th><th>Net Capital</th><th>Equity%</th><th>Inv. Profit</th><th>Mgmt Bonus</th><th>Total Profit</th><th>ROI%</th></tr></thead>
@@ -2609,9 +2575,56 @@ function exportData(){
   const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='InvestGroup-'+today()+'.json';a.click();
 }
+let pendingImportData=null;
 function importData(e){
-  const file=e.target.files[0];if(!file)return;
-  const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!safeConfirm('Replace all current data with this backup?'))return;DB=d;save();alert('✓ Imported!');}catch{alert('Invalid file.');}};r.readAsText(file);
+  const file=e.target.files&&e.target.files[0];
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(!d||typeof d!=='object'||!Array.isArray(d.members)||!Array.isArray(d.transactions)||!Array.isArray(d.loans)||!Array.isArray(d.investments)){
+        throw new Error('This is not a valid InvestGroup backup.');
+      }
+      pendingImportData=d;
+      const s=d.settings||{};
+      const msg='BACKUP READY\n\nMembers: '+d.members.length+'\nInvestments: '+d.investments.length+'\nLoans: '+d.loans.length+'\nTransactions: '+d.transactions.length+'\nCurrency: '+(s.currency||'UGX')+'\n\nPress OK to APPLY this backup. Your current data will be replaced.';
+      if(!safeConfirm(msg)){pendingImportData=null;e.target.value='';return;}
+      applyImportedData();
+    }catch(err){
+      pendingImportData=null;
+      alert('Invalid backup file. '+(err.message||''));
+      e.target.value='';
+    }
+  };
+  r.onerror=()=>{pendingImportData=null;alert('Could not read the backup file.');};
+  r.readAsText(file);
+}
+function applyImportedData(){
+  if(!pendingImportData)return;
+  try{
+    const d=pendingImportData;
+    const defaults={groupName:'My Investment Group',currency:'$',reserveTarget:20,defaultRate:10,adminBonusPct:5,adminBonusAnnualCap:2000000,bank:{},cashReconciliation:{date:'',physicalCash:null,adjustment:0}};
+    DB={...d,settings:{...defaults,...(d.settings||{}),bank:{...defaults.bank,...((d.settings&&d.settings.bank)||{})}}};
+    DB.members=Array.isArray(DB.members)?DB.members:[];
+    DB.investments=Array.isArray(DB.investments)?DB.investments:[];
+    DB.loans=Array.isArray(DB.loans)?DB.loans:[];
+    DB.transactions=Array.isArray(DB.transactions)?DB.transactions:[];
+    DB.memberPins=DB.memberPins||{};
+    loadDB();
+    saveDB();
+    renderAll();
+    loadSettingsForm();
+    pendingImportData=null;
+    const input=document.getElementById('imp-file');if(input)input.value='';
+    if(fbDB){
+      syncToFirebase();
+    }else{
+      alert('✓ Backup applied and saved on this device.\n\nFirebase is not connected, so use “Sync to Firebase” later if you want this imported data uploaded.');
+    }
+  }catch(err){
+    alert('Import could not be applied: '+(err.message||err));
+  }
 }
 // ════════════════════════════════════════
 // FIREBASE
@@ -2652,7 +2665,7 @@ function syncToFirebase(){
   if(!fbDB){alert('Not connected to Firebase yet.\n\nThis usually means the Firebase scripts are still loading, or failed to load. Wait a few seconds and try again — if it persists, check that nothing is blocking gstatic.com/firebaseio.com (ad-blocker, restrictive network, etc).');return;}
   setSyncStatus('⟳ Syncing…','var(--gold)');
   const payload={
-    settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate,adminBonusPct:adminBonusPct(),adminBonusAnnualCap:adminBonusAnnualCap(),adminBonusChanges:DB.settings.adminBonusChanges||[]},
+    settings:{groupName:DB.settings.groupName,currency:DB.settings.currency,bank:DB.settings.bank||{},reserveTarget:DB.settings.reserveTarget,defaultRate:DB.settings.defaultRate},
     members:DB.members.map(m=>({id:m.id,name:m.name,role:m.role,email:m.email||'',phone:m.phone||'',notes:m.notes||'',capitalAccount:m.capitalAccount||{balance:0,history:[]}})),
     investments:DB.investments,loans:DB.loans,transactions:DB.transactions,
     memberPins:DB.memberPins||{},lastUpdated:new Date().toISOString()
