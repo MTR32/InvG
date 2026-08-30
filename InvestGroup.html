@@ -13,28 +13,10 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text y='.9em' font-size='70' x='12' fill='%23c8f04a'>◆</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0b0c0e;--surface:rgba(17,19,24,0.75);--surface2:rgba(24,27,34,0.65);
-  --border:rgba(255,255,255,0.08);--border-bright:rgba(255,255,255,0.14);
-  --accent:#c8f04a;--green:#4af0b8;--red:#f04a6a;--gold:#f0c14a;--blue:#4af0b8;
-  --text:#e8eaf0;--muted:#6b7280;--muted2:#9ca3af;--nav-h:62px;
-  --glass-bg:rgba(17,19,24,0.72);--glass-card:rgba(24,27,34,0.60);
-  --glow-indigo:rgba(99,102,241,0.18);--glow-emerald:rgba(16,185,129,0.14);--glow-lime:rgba(200,240,74,0.10);
-}
+:root{--bg:#0b0c0e;--surface:#111318;--surface2:#181b22;--border:#232630;--accent:#c8f04a;--green:#4af0b8;--red:#f04a6a;--gold:#f0c14a;--blue:#4af0b8;--text:#e8eaf0;--muted:#6b7280;--muted2:#9ca3af;--nav-h:62px;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{height:100%;height:-webkit-fill-available;}
 body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:13px;line-height:1.5;-webkit-text-size-adjust:100%;text-size-adjust:100%;min-height:100dvh;overflow:hidden;position:fixed;width:100%;top:0;left:0;}
-
-/* FROSTED MESH AMBIENT BACKGROUND */
-body::before{
-  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-  background:
-    radial-gradient(ellipse 70% 50% at 15% 20%, var(--glow-indigo), transparent),
-    radial-gradient(ellipse 55% 45% at 85% 75%, var(--glow-emerald), transparent),
-    radial-gradient(ellipse 50% 40% at 50% 50%, var(--glow-lime), transparent),
-    radial-gradient(ellipse 40% 35% at 80% 10%, rgba(99,102,241,0.10), transparent);
-}
-#app,#lock{position:relative;z-index:1;}
 
 /* LOCK */
 #lock{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
@@ -42,7 +24,7 @@ body::before{
 .lk-logo{font-family:'DM Serif Display',Georgia,serif;font-size:44px;color:var(--accent);margin-bottom:4px;}
 .lk-title{font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--text);}
 .lk-sub{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:28px;margin-top:2px;}
-.lk-card{background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border-bright);border-radius:20px;padding:22px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+.lk-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;width:100%;max-width:340px;}
 .lk-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:8px;font-family:'DM Mono',ui-monospace,monospace;font-size:18px;outline:none;letter-spacing:6px;text-align:center;transition:border-color .15s;margin-bottom:10px;}
 .lk-input:focus{border-color:var(--accent);}
 .lk-btn{width:100%;background:var(--accent);color:#0b0c0e;border:none;border-radius:8px;padding:13px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:14px;cursor:pointer;}
@@ -55,7 +37,7 @@ body::before{
 #app.off{display:none;}
 
 /* TOPBAR */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;padding-top:calc(11px + env(safe-area-inset-top));background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--border-bright);flex-shrink:0;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;padding-top:calc(11px + env(safe-area-inset-top));background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
 .tb-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 .tb-title{font-family:'DM Serif Display',Georgia,serif;font-size:17px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .back-btn{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:5px 9px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
@@ -70,16 +52,16 @@ body::before{
 .page.active{display:block;}
 
 /* BOTTOM NAV */
-.bottom-nav{display:flex;background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border-bright);flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--nav-h) + env(safe-area-inset-bottom));box-shadow:0 -4px 24px rgba(0,0,0,0.3);}
+.bottom-nav{display:flex;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--nav-h) + env(safe-area-inset-bottom));}
 .nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 2px;cursor:pointer;color:var(--muted);font-size:7px;letter-spacing:.2px;text-transform:uppercase;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;gap:2px;border:none;background:none;overflow:hidden;position:relative;}
 .nav-tab .ni{font-size:18px;line-height:1;}
-.nav-tab.active{color:var(--accent);}.nav-tab.active::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:20px;height:2px;background:var(--accent);border-radius:2px;}
+.nav-tab.active{color:var(--accent);}
 .nav-badge{position:absolute;top:4px;right:calc(50% - 16px);background:var(--red);color:#fff;font-size:8px;font-weight:700;border-radius:10px;padding:1px 4px;min-width:14px;text-align:center;display:none;}
 .nav-badge.show{display:block;}
 
 /* KPI */
 .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
-.kpi-card{background:var(--glass-card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border-bright);border-radius:16px;padding:14px;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.25);}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;position:relative;overflow:hidden;}
 .kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
 .kpi-card.yellow::after{background:var(--accent);}.kpi-card.green::after{background:var(--green);}.kpi-card.blue::after{background:var(--blue);}.kpi-card.red::after{background:var(--red);}.kpi-card.gold::after{background:var(--gold);}
 .kl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
@@ -88,7 +70,7 @@ body::before{
 .ks{font-size:10px;color:var(--muted);margin-top:4px;}
 
 /* CARD */
-.card{background:var(--glass-card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border-bright);border-radius:20px;overflow:hidden;margin-bottom:12px;box-shadow:0 4px 20px rgba(0,0,0,0.22);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px;}
 .card-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);}
 .card-title{font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px;color:var(--text);}
 .card-body{padding:14px;}
@@ -102,7 +84,7 @@ tbody tr:last-child{border-bottom:none;}
 tbody td{padding:9px 10px;color:var(--text);vertical-align:middle;}
 
 /* BADGES */
-.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:9px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;letter-spacing:.3px;text-transform:uppercase;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;letter-spacing:.3px;text-transform:uppercase;}
 .bg{background:rgba(74,240,184,.12);color:var(--green);}.br{background:rgba(240,74,106,.12);color:var(--red);}
 .by{background:rgba(200,240,74,.12);color:var(--accent);}.bgold{background:rgba(240,193,74,.12);color:var(--gold);}
 .bb{background:rgba(74,240,184,.1);color:var(--blue);}.bm{background:rgba(107,114,128,.2);color:var(--muted2);}
@@ -113,7 +95,7 @@ tbody td{padding:9px 10px;color:var(--text);vertical-align:middle;}
 .fg:last-child{margin-bottom:0;}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
-input,select,textarea{background:rgba(24,27,34,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border-bright);color:var(--text);padding:9px 10px;border-radius:10px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;transition:border-color .15s;width:100%;max-width:100%;}
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 10px;border-radius:8px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;transition:border-color .15s;width:100%;max-width:100%;}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);}
 select option{background:var(--surface2);}
 
@@ -126,9 +108,9 @@ select option{background:var(--surface2);}
 .brow .btn,.brow .btn-g{flex:1;min-width:0;}
 
 /* MODAL */
-.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
 .mo.open{display:flex;}
-.modal{background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--border-bright);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:sup .2s ease;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 40px rgba(0,0,0,0.4);}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:sup .2s ease;padding-bottom:env(safe-area-inset-bottom);}
 @keyframes sup{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .mhandle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 0;cursor:pointer;}
 .mhd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;}
@@ -155,7 +137,7 @@ select option{background:var(--surface2);}
 .section-title{font-family:'DM Serif Display',Georgia,serif;font-size:18px;margin-bottom:12px;}
 .filter-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none;}
 .filter-bar::-webkit-scrollbar{display:none;}
-.chip{background:rgba(24,27,34,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border-bright);border-radius:20px;padding:5px 12px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;color:var(--muted2);cursor:pointer;white-space:nowrap;display:inline-block;}
+.chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;color:var(--muted2);cursor:pointer;white-space:nowrap;display:inline-block;}
 .chip.active{background:rgba(200,240,74,.1);border-color:var(--accent);color:var(--accent);}
 .flow-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .flow-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
@@ -772,19 +754,11 @@ function totInv(){return DB.investments.filter(i=>i.status!=='closed').reduce((s
 // Total outstanding on loans — principal + interest still owed, across all loans
 function lnOut(){return DB.loans.reduce((s,l)=>s+Math.max(0,loanTotalOwed(l)-l.repaid),0);}
 
-// Cash Reserve = actual physical cash available in the group's account.
-// Formula: total cash ever received (contributions + loan repayments + returns)
-//         minus cash that physically left (withdrawals + cash deployed to investments + loans issued + expenses)
-// We use ORIGINAL deployed amounts for investments (not currentValue) since market gains
-// don't affect the physical cash balance. We use principal only for loans (not interest)
-// since uncollected interest hasn't physically arrived yet.
-function reserve(){
-  const totalIn=sumTx('contribution')+sumTx('return')+lnRepaid();
-  const totalOut=sumTx('withdrawal')+sumTx('expense')+
-    DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+i.amount,0)+
-    lnTotal();
-  return totalIn-totalOut;
-}
+// Cash Reserve = the liquid portion of members' total balances — what's left after
+// subtracting whatever is currently tied up in open investments or out on loan.
+// This is real, available cash; it does not subtract posted profit/bonus since that money
+// hasn't left the bank, it's just been credited to a member's capital account.
+function reserve(){return capPool()-totInv()-lnOut();}
 function lnRepaid(){return DB.loans.reduce((s,l)=>s+l.repaid,0);}
 function lnTotal(){return DB.loans.reduce((s,l)=>s+l.amount,0);}
 function loanTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
@@ -879,9 +853,7 @@ function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date, exclud
   return{applied,remainder:remaining};
 }
 function postEarningsWithAutoRepay(memberId, amount, desc, date, excludeLoanId){
-  if(amount===0)return;
-  // Losses (negative amounts) post directly to capital account — no auto-repayment intercept needed
-  if(amount<0){caPost(memberId,amount,desc,date);return;}
+  if(amount<=0)return;
   const{flagged}=memberLoanStatus(memberId, excludeLoanId);
   if(flagged){
     const{remainder}=applyAutoRepayment(memberId,amount,desc,date,excludeLoanId);
@@ -1805,16 +1777,11 @@ function autoGenContributions(startDate, deployedAmount){
   const balances=DB.members.map(m=>({m,bal:caBalance(m.id)})).filter(x=>x.bal>0);
   const totalBal=balances.reduce((s,x)=>s+x.bal,0);
   if(totalBal<=0||!deployedAmount)return[];
-  const rows=balances.map(({m,bal})=>{
+  return balances.map(({m,bal})=>{
     const pctEquity=bal/totalBal;
     const amount=+(pctEquity*deployedAmount).toFixed(2);
     return{id:uid(),memberId:m.id,memberName:m.name,amount,date,pctEquity};
   }).filter(r=>r.amount>0);
-  // Rounding correction: last member absorbs any penny discrepancy so sum = deployedAmount exactly
-  const rowSum=rows.reduce((s,r)=>s+r.amount,0);
-  const diff=+(deployedAmount-rowSum).toFixed(2);
-  if(diff!==0&&rows.length>0)rows[rows.length-1].amount=+(rows[rows.length-1].amount+diff).toFixed(2);
-  return rows;
 }
 
 
@@ -1849,24 +1816,13 @@ function distributeInvProfits(inv){
   // Remaining profit (after bonus) split among members by their time-weighted share
   const remainingProfit=totalProfit-bonusPool;
   const scale=totalProfit!==0?remainingProfit/totalProfit:1;
-  const memberShares={};
   rows.forEach(r=>{
-    const adj=+(r.profit*scale).toFixed(2);
-    if(!memberShares[r.memberId])memberShares[r.memberId]={profit:0,weightedShare:0};
-    memberShares[r.memberId].profit=+(memberShares[r.memberId].profit+adj).toFixed(2);
-    memberShares[r.memberId].weightedShare=+(memberShares[r.memberId].weightedShare+r.weightedShare).toFixed(4);
-  });
-  const mIds=Object.keys(memberShares);
-  const sumCheck=mIds.reduce((s,id)=>s+memberShares[id].profit,0);
-  const penny=+(remainingProfit-sumCheck).toFixed(2);
-  if(penny!==0&&mIds.length>0)memberShares[mIds[mIds.length-1]].profit=+(memberShares[mIds[mIds.length-1]].profit+penny).toFixed(2);
-  mIds.forEach(memberId=>{
-    const s=memberShares[memberId];
-    if(s.profit===0)return;
-    postEarningsWithAutoRepay(memberId,s.profit,`Profit: ${inv.name}`,closeDate);
+    const adjustedProfit=+(r.profit*scale).toFixed(2);
+    if(adjustedProfit===0)return;
+    postEarningsWithAutoRepay(r.memberId,adjustedProfit,`Profit: ${inv.name}`,closeDate);
     DB.transactions.push({id:uid(),date:closeDate,type:'profit',
-      desc:`Profit distribution — ${inv.name}`,amount:s.profit,memberId,
-      notes:`${(s.weightedShare*100).toFixed(2)}% share${bonusPool>0?` · after ${ADMIN_BONUS_PCT}% mgmt bonus`:''}`});
+      desc:`Profit distribution — ${inv.name}`,amount:adjustedProfit,memberId:r.memberId,
+      notes:`${(r.weightedShare*100).toFixed(2)}% share · ${r.activeDays} days active${bonusPool>0?` · after ${ADMIN_BONUS_PCT}% mgmt bonus`:''}`});
   });
 }
 
@@ -2061,17 +2017,11 @@ function delLoan(id){
   // - Any profit/interest records distributed from this loan (matched by desc)
   const borrowerLower=l.borrower.toLowerCase();
   DB.transactions=DB.transactions.filter(t=>{
-    const d=(t.desc||'').toLowerCase();
-    // Match loan_out precisely: "loan to BORROWER"
-    if(t.type==='loan_out'&&d===('loan to '+borrowerLower))return false;
-    // Match manual repayments precisely: "repayment — BORROWER"
-    if(t.type==='loan_repayment'&&!t.isAutoRepay&&d===('repayment — '+borrowerLower))return false;
-    // Match auto-repayments: must start with "auto-repayment — BORROWER"
-    if(t.type==='loan_repayment'&&t.isAutoRepay&&d.startsWith('auto-repayment — '+borrowerLower))return false;
-    // Match interest and bonus profit entries precisely
-    if(t.type==='profit'&&(
-      d.startsWith('loan interest — '+borrowerLower)||
-      d.startsWith('borrower repayment bonus — '+borrowerLower)
+    if(t.type==='loan_out'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
+    if(t.type==='loan_repayment'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
+    if(t.type==='profit'&&(t.desc||'').toLowerCase().includes(borrowerLower)&&(
+      (t.desc||'').toLowerCase().startsWith('loan interest')||
+      (t.desc||'').toLowerCase().startsWith('borrower repayment bonus')
     ))return false;
     return true;
   });
@@ -2219,9 +2169,8 @@ function distributeLoanInterest(l, date){
       notes:`10% borrower bonus on ${fmtF(newlyRealized)} realized interest`});
   }
 
-  // If borrower is not a member, recycle their 10% back into the pool — no interest lost.
-  // 90% (or 100% if no member borrower) split by equity snapshot.
-  const pool90=borrowerMember?+(newlyRealized-borrowerBonus).toFixed(2):newlyRealized;
+  // 90% split by equity snapshot
+  const pool90=+(newlyRealized-borrowerBonus).toFixed(2);
   l.equitySnapshot.forEach(e=>{
     const share=+(pool90*e.pctEquity).toFixed(2);
     if(share<0.01)return;
@@ -2575,13 +2524,10 @@ function loadFromFirebase(){
     if(!data){alert('No data found on Firebase. Make sure the primary admin has synced first.');setSyncStatus('✗ No data','var(--red)');return;}
     if(data.settings)DB.settings={...DB.settings,...data.settings};
     if(!DB.settings.bank)DB.settings.bank={};
-    // Firebase RTDB can return objects instead of arrays (when keys are non-sequential).
-    // ensureArray() safely converts either to a proper JS array.
-    const ensureArray=v=>!v?[]:Array.isArray(v)?v:Object.values(v);
-    if(data.members)DB.members=ensureArray(data.members);
-    if(data.investments)DB.investments=ensureArray(data.investments);
-    if(data.loans)DB.loans=ensureArray(data.loans);
-    if(data.transactions)DB.transactions=ensureArray(data.transactions);
+    if(data.members)DB.members=data.members;
+    if(data.investments)DB.investments=data.investments;
+    if(data.loans)DB.loans=data.loans;
+    if(data.transactions)DB.transactions=data.transactions;
     if(data.memberPins)DB.memberPins=data.memberPins;
     // Migrate investments
     DB.investments=DB.investments.map(i=>{if(!i.contributions)i.contributions=[];if(!i.valueHistory)i.valueHistory=[];if(!i.status)i.status='open';if(!i.startDate)i.startDate=i.date||today();return i;});
