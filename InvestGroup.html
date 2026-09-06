@@ -12,11 +12,30 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text y='.9em' font-size='70' x='12' fill='%23c8f04a'>◆</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text y='.9em' font-size='70' x='12' fill='%23c8f04a'>◆</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{--bg:#0b0c0e;--surface:#111318;--surface2:#181b22;--border:#232630;--accent:#c8f04a;--green:#4af0b8;--red:#f04a6a;--gold:#f0c14a;--blue:#4af0b8;--text:#e8eaf0;--muted:#6b7280;--muted2:#9ca3af;--nav-h:62px;}
+:root{
+  --bg:#0b0c0e;--surface:rgba(17,19,24,0.75);--surface2:rgba(24,27,34,0.65);
+  --border:rgba(255,255,255,0.08);--border-bright:rgba(255,255,255,0.14);
+  --accent:#c8f04a;--green:#4af0b8;--red:#f04a6a;--gold:#f0c14a;--blue:#4af0b8;
+  --text:#e8eaf0;--muted:#6b7280;--muted2:#9ca3af;--nav-h:62px;
+  --glass-bg:rgba(17,19,24,0.72);--glass-card:rgba(24,27,34,0.60);
+  --glow-indigo:rgba(99,102,241,0.18);--glow-emerald:rgba(16,185,129,0.14);--glow-lime:rgba(200,240,74,0.10);
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html{height:100%;height:-webkit-fill-available;}
 body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,monospace;font-size:13px;line-height:1.5;-webkit-text-size-adjust:100%;text-size-adjust:100%;min-height:100dvh;overflow:hidden;position:fixed;width:100%;top:0;left:0;}
+
+/* FROSTED MESH AMBIENT BACKGROUND */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 20%, var(--glow-indigo), transparent),
+    radial-gradient(ellipse 55% 45% at 85% 75%, var(--glow-emerald), transparent),
+    radial-gradient(ellipse 50% 40% at 50% 50%, var(--glow-lime), transparent),
+    radial-gradient(ellipse 40% 35% at 80% 10%, rgba(99,102,241,0.10), transparent);
+}
+#app,#lock{position:relative;z-index:1;}
 
 /* LOCK */
 #lock{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
@@ -24,7 +43,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 .lk-logo{font-family:'DM Serif Display',Georgia,serif;font-size:44px;color:var(--accent);margin-bottom:4px;}
 .lk-title{font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--text);}
 .lk-sub{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:28px;margin-top:2px;}
-.lk-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;width:100%;max-width:340px;}
+.lk-card{background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--border-bright);border-radius:20px;padding:22px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
 .lk-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px;border-radius:8px;font-family:'DM Mono',ui-monospace,monospace;font-size:18px;outline:none;letter-spacing:6px;text-align:center;transition:border-color .15s;margin-bottom:10px;}
 .lk-input:focus{border-color:var(--accent);}
 .lk-btn{width:100%;background:var(--accent);color:#0b0c0e;border:none;border-radius:8px;padding:13px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:800;font-size:14px;cursor:pointer;}
@@ -37,7 +56,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 #app.off{display:none;}
 
 /* TOPBAR */
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;padding-top:calc(11px + env(safe-area-inset-top));background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;padding-top:calc(11px + env(safe-area-inset-top));background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--border-bright);flex-shrink:0;}
 .tb-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 .tb-title{font-family:'DM Serif Display',Georgia,serif;font-size:17px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .back-btn{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:5px 9px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
@@ -52,16 +71,16 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 .page.active{display:block;}
 
 /* BOTTOM NAV */
-.bottom-nav{display:flex;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--nav-h) + env(safe-area-inset-bottom));}
+.bottom-nav{display:flex;background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border-bright);flex-shrink:0;position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:env(safe-area-inset-bottom);height:calc(var(--nav-h) + env(safe-area-inset-bottom));box-shadow:0 -4px 24px rgba(0,0,0,0.3);}
 .nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px 2px;cursor:pointer;color:var(--muted);font-size:7px;letter-spacing:.2px;text-transform:uppercase;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;gap:2px;border:none;background:none;overflow:hidden;position:relative;}
 .nav-tab .ni{font-size:18px;line-height:1;}
-.nav-tab.active{color:var(--accent);}
+.nav-tab.active{color:var(--accent);}.nav-tab.active::after{content:'';position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:20px;height:2px;background:var(--accent);border-radius:2px;}
 .nav-badge{position:absolute;top:4px;right:calc(50% - 16px);background:var(--red);color:#fff;font-size:8px;font-weight:700;border-radius:10px;padding:1px 4px;min-width:14px;text-align:center;display:none;}
 .nav-badge.show{display:block;}
 
 /* KPI */
 .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
-.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;position:relative;overflow:hidden;}
+.kpi-card{background:var(--glass-card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border-bright);border-radius:16px;padding:14px;position:relative;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.25);}
 .kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
 .kpi-card.yellow::after{background:var(--accent);}.kpi-card.green::after{background:var(--green);}.kpi-card.blue::after{background:var(--blue);}.kpi-card.red::after{background:var(--red);}.kpi-card.gold::after{background:var(--gold);}
 .kl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
@@ -70,7 +89,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',ui-monospace,m
 .ks{font-size:10px;color:var(--muted);margin-top:4px;}
 
 /* CARD */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px;}
+.card{background:var(--glass-card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border-bright);border-radius:20px;overflow:hidden;margin-bottom:12px;box-shadow:0 4px 20px rgba(0,0,0,0.22);}
 .card-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);}
 .card-title{font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;font-size:13px;color:var(--text);}
 .card-body{padding:14px;}
@@ -84,7 +103,7 @@ tbody tr:last-child{border-bottom:none;}
 tbody td{padding:9px 10px;color:var(--text);vertical-align:middle;}
 
 /* BADGES */
-.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;letter-spacing:.3px;text-transform:uppercase;}
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:9px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;letter-spacing:.3px;text-transform:uppercase;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.08);}
 .bg{background:rgba(74,240,184,.12);color:var(--green);}.br{background:rgba(240,74,106,.12);color:var(--red);}
 .by{background:rgba(200,240,74,.12);color:var(--accent);}.bgold{background:rgba(240,193,74,.12);color:var(--gold);}
 .bb{background:rgba(74,240,184,.1);color:var(--blue);}.bm{background:rgba(107,114,128,.2);color:var(--muted2);}
@@ -95,7 +114,7 @@ tbody td{padding:9px 10px;color:var(--text);vertical-align:middle;}
 .fg:last-child{margin-bottom:0;}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;}
-input,select,textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 10px;border-radius:8px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;transition:border-color .15s;width:100%;max-width:100%;}
+input,select,textarea{background:rgba(24,27,34,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border-bright);color:var(--text);padding:9px 10px;border-radius:10px;font-family:'DM Mono',ui-monospace,monospace;font-size:12px;outline:none;transition:border-color .15s;width:100%;max-width:100%;}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);}
 select option{background:var(--surface2);}
 
@@ -108,9 +127,9 @@ select option{background:var(--surface2);}
 .brow .btn,.brow .btn-g{flex:1;min-width:0;}
 
 /* MODAL */
-.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:flex-end;justify-content:center;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .mo.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:18px 18px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:sup .2s ease;padding-bottom:env(safe-area-inset-bottom);}
+.modal{background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--border-bright);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;animation:sup .2s ease;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -8px 40px rgba(0,0,0,0.4);}
 @keyframes sup{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .mhandle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 0;cursor:pointer;}
 .mhd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;}
@@ -137,7 +156,7 @@ select option{background:var(--surface2);}
 .section-title{font-family:'DM Serif Display',Georgia,serif;font-size:18px;margin-bottom:12px;}
 .filter-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:12px;scrollbar-width:none;}
 .filter-bar::-webkit-scrollbar{display:none;}
-.chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;color:var(--muted2);cursor:pointer;white-space:nowrap;display:inline-block;}
+.chip{background:rgba(24,27,34,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--border-bright);border-radius:20px;padding:5px 12px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;color:var(--muted2);cursor:pointer;white-space:nowrap;display:inline-block;}
 .chip.active{background:rgba(200,240,74,.1);border-color:var(--accent);color:var(--accent);}
 .flow-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .flow-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
@@ -338,7 +357,7 @@ select option{background:var(--surface2);}
       <div class="card"><div class="card-hd"><div class="card-title">Income Statement</div></div><div class="card-body" id="rp-income"></div></div>
       <div class="card"><div class="card-hd"><div class="card-title">Balance Sheet</div></div><div class="card-body" id="rp-balance"></div></div>
       <div class="card">
-        <div class="card-hd"><div class="card-title">Member P&amp;L (incl. 10% mgmt bonus)</div></div>
+        <div class="card-hd"><div class="card-title" id="rp-mem-title">Member P&amp;L</div></div>
         <div class="tw"><table><thead><tr><th>Member</th><th>Contributed</th><th>Mgmt Bonus</th><th>Inv. Profit</th><th>Total</th><th>ROI</th></tr></thead><tbody id="rp-mem"></tbody></table></div>
       </div>
     </div>
@@ -402,6 +421,14 @@ select option{background:var(--surface2);}
         <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
           <button class="btn-g" onclick="openModal('modal-change-pw')">🔐 Change Password</button>
           <button class="btn-g" style="color:var(--red);border-color:rgba(240,74,106,.3);" onclick="lockApp()">🔒 Lock App</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">📖 Reconcile with Books (Excel)</div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:11px;color:var(--muted2);margin-bottom:4px;">Export the ledger (contributions, withdrawals, expenses), fix it against the physical books in Excel, then import it back. Every change is shown for review before anything is applied — nothing overwrites silently. Loans, investments and posted profit stay managed in-app since they carry linked records that a spreadsheet edit can't safely touch.</div>
+          <button class="btn" onclick="exportLedgerExcel()">↓ Export Ledger to Excel</button>
+          <div class="fg"><label>Import Reconciled Excel</label><input type="file" id="recon-file" accept=".xlsx,.xls" onchange="importLedgerExcel(event)"></div>
         </div>
       </div>
       <div class="card">
@@ -638,6 +665,18 @@ select option{background:var(--surface2);}
 </div>
 
 <!-- CHANGE PASSWORD -->
+<div class="mo" id="modal-recon-diff">
+  <div class="modal">
+    <div class="mhandle" onclick="cancelReconImport()"></div>
+    <div class="mhd"><div class="mtitle">Review Reconciliation Changes</div><button class="mclose" onclick="cancelReconImport()">×</button></div>
+    <div class="mbody" id="recon-diff-body" style="font-size:12px;line-height:1.6;max-height:50vh;overflow-y:auto;"></div>
+    <div class="mfoot">
+      <button class="btn" id="recon-confirm-btn" onclick="confirmReconImport()">Apply Changes</button>
+      <button class="btn-g" onclick="cancelReconImport()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div class="mo" id="modal-change-pw">
   <div class="modal">
     <div class="mhandle" onclick="closeModal('modal-change-pw')"></div>
@@ -680,8 +719,10 @@ let cfFilter='all', repFilter='thisyear';
 let pageHistory=[], curPage='dashboard';
 let activeMemberPortfolioId=null;
 let fbApp=null, fbDB=null;
+let reconPending=null;
+const RECON_TYPES=['contribution','withdrawal','expense'];
 
-const ADMIN_BONUS_PCT=10;
+const ADMIN_BONUS_PCT=3;
 
 const IN_T=['contribution','return','loan_repayment','profit'];
 const OUT_T=['withdrawal','investment','loan_out','expense'];
@@ -751,14 +792,34 @@ function capPool(){return DB.members.reduce((s,m)=>s+caBalance(m.id),0);}
 // so an open investment that has appreciated/depreciated is reflected accurately)
 function totInv(){return DB.investments.filter(i=>i.status!=='closed').reduce((s,i)=>s+i.currentValue,0);}
 
-// Total outstanding on loans — principal + interest still owed, across all loans
-function lnOut(){return DB.loans.reduce((s,l)=>s+Math.max(0,loanTotalOwed(l)-l.repaid),0);}
+// Total outstanding on loans — principal + interest still owed, across all loans.
+// Written-off loans are excluded: that debt is a realized loss, not a collectible asset,
+// so it shouldn't inflate the group's "loans outstanding" / total assets figure.
+function lnOut(){return DB.loans.filter(l=>!l.writtenOff).reduce((s,l)=>s+Math.max(0,loanTotalOwed(l)-l.repaid),0);}
 
-// Cash Reserve = the liquid portion of members' total balances — what's left after
-// subtracting whatever is currently tied up in open investments or out on loan.
-// This is real, available cash; it does not subtract posted profit/bonus since that money
-// hasn't left the bank, it's just been credited to a member's capital account.
-function reserve(){return capPool()-totInv()-lnOut();}
+// Cash Reserve = actual physical cash available in the group's account.
+// Formula: total cash ever received (contributions + loan repayments + returns + cash back from CLOSED investments)
+//         minus cash that physically left (withdrawals + cash deployed to ALL investments ever + loans issued + expenses)
+// BUG FIX (Sep 2026): deployed investment cash must be subtracted the moment it leaves —
+// regardless of whether that investment is later closed. The old version only summed
+// still-open investments in totalOut, which meant the instant an investment's status flipped
+// to 'closed' its original outflow silently disappeared from the formula with no matching real
+// cash-in transaction ever recorded (distributeInvProfits() only posts 'profit' entries to
+// members' capital accounts — it never records the principal actually landing back in the bank).
+// Net effect of the old formula: reserve() jumped up by the full original investment amount
+// every time an investment closed, phantom cash that was never in the account. This is the
+// most likely reason on-screen reserve stopped matching the physical books.
+// Fix: always subtract every investment's deployed amount (cash-out is a historical fact,
+// independent of current status), and add back currentValue (principal + gain/loss) for
+// investments that have actually closed — that's the point cash truly returns to the reserve.
+function reserve(){
+  const totalIn=sumTx('contribution')+sumTx('return')+lnRepaid()+
+    DB.investments.filter(i=>i.status==='closed').reduce((s,i)=>s+i.currentValue,0);
+  const totalOut=sumTx('withdrawal')+sumTx('expense')+
+    DB.investments.reduce((s,i)=>s+i.amount,0)+
+    lnTotal();
+  return totalIn-totalOut;
+}
 function lnRepaid(){return DB.loans.reduce((s,l)=>s+l.repaid,0);}
 function lnTotal(){return DB.loans.reduce((s,l)=>s+l.amount,0);}
 function loanTotalOwed(l){return l.amount+(l.amount*l.rate/100);}
@@ -779,12 +840,12 @@ function loanBelongsToMember(l, memberId){
 function memberOverdueLoans(memberId, excludeLoanId){
   const t2=today();
   return DB.loans
-    .filter(l=>l.id!==excludeLoanId&&loanBelongsToMember(l,memberId)&&loanBalance(l)>0.01&&l.dueDate&&l.dueDate<t2)
+    .filter(l=>l.id!==excludeLoanId&&!l.writtenOff&&loanBelongsToMember(l,memberId)&&loanBalance(l)>0.01&&l.dueDate&&l.dueDate<t2)
     .sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
 }
 
 function memberTotalLoanBalance(memberId, excludeLoanId){
-  return DB.loans.filter(l=>l.id!==excludeLoanId&&loanBelongsToMember(l,memberId)).reduce((s,l)=>s+loanBalance(l),0);
+  return DB.loans.filter(l=>l.id!==excludeLoanId&&!l.writtenOff&&loanBelongsToMember(l,memberId)).reduce((s,l)=>s+loanBalance(l),0);
 }
 
 function memberLoanStatus(memberId, excludeLoanId){
@@ -804,7 +865,7 @@ function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date, exclud
   const t2=today();
 
   const allMemberLoans=DB.loans
-    .filter(l=>l.id!==excludeLoanId&&loanBelongsToMember(l,memberId)&&loanBalance(l)>0.01)
+    .filter(l=>l.id!==excludeLoanId&&!l.writtenOff&&loanBelongsToMember(l,memberId)&&loanBalance(l)>0.01)
     .sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999'));
 
   let remaining=earningsAmount;
@@ -853,7 +914,9 @@ function applyAutoRepayment(memberId, earningsAmount, earningsDesc, date, exclud
   return{applied,remainder:remaining};
 }
 function postEarningsWithAutoRepay(memberId, amount, desc, date, excludeLoanId){
-  if(amount<=0)return;
+  if(amount===0)return;
+  // Losses (negative amounts) post directly to capital account — no auto-repayment intercept needed
+  if(amount<0){caPost(memberId,amount,desc,date);return;}
   const{flagged}=memberLoanStatus(memberId, excludeLoanId);
   if(flagged){
     const{remainder}=applyAutoRepayment(memberId,amount,desc,date,excludeLoanId);
@@ -1468,11 +1531,11 @@ function renderLoans(){
   const t2=today();
   el.innerHTML=DB.loans.map(l=>{
     const bal=loanBalance(l),tot=loanTotalOwed(l),isPaid=bal<0.01,isOver=!isPaid&&l.dueDate&&l.dueDate<t2;
-    const sb=isPaid?'bg':isOver?'br':'by',pct=Math.min(100,(l.repaid/tot)*100);
-    return `<div class="card${isOver?' overdue-row':''}">
+    const sb=l.writtenOff?'br':isPaid?'bg':isOver?'br':'by',pct=Math.min(100,(l.repaid/tot)*100);
+    return `<div class="card${isOver&&!l.writtenOff?' overdue-row':''}">
       <div class="card-hd">
         <div><div class="card-title">${l.borrower}</div><div style="font-size:9px;color:var(--muted)">Rate: ${l.rate}% · Due: ${l.dueDate||'—'}</div></div>
-        <span class="badge ${sb}">${isPaid?'Paid':isOver?'Overdue':'Active'}</span>
+        <span class="badge ${sb}">${l.writtenOff?'Written Off':isPaid?'Paid':isOver?'Overdue':'Active'}</span>
       </div>
       <div class="card-body" style="padding:10px 14px;">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center;margin-bottom:8px;">
@@ -1483,9 +1546,11 @@ function renderLoans(){
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px"><span>Repayment progress</span><span>${pct.toFixed(0)}%</span></div>
         <div class="prog-wrap"><div class="prog-fill" style="background:${isPaid?'var(--green)':isOver?'var(--red)':'var(--accent)'};width:${pct}%"></div></div>
         ${l.equitySnapshot&&l.equitySnapshot.length?`<div style="font-size:9px;color:var(--muted);margin-top:6px">💡 Interest split among ${l.equitySnapshot.length} member(s) present at loan issue, by their capital account % at that time. No mgmt bonus applies.</div>`:''}
+        ${l.writtenOff?`<div style="font-size:10px;color:var(--red);margin-top:6px">✕ Written off ${l.writeOffDate} — ${fmtF(bal)} recorded as an unrecoverable loss</div>`:''}
         ${l.notes?`<div style="font-size:11px;color:var(--muted);margin-top:6px">${l.notes}</div>`:''}
         <div class="brow">
-          ${bal>0?`<button class="btn-g btn-sm" onclick="openRepay('${l.id}')">Record Repayment</button>`:''}
+          ${bal>0&&!l.writtenOff?`<button class="btn-g btn-sm" onclick="openRepay('${l.id}')">Record Repayment</button>`:''}
+          ${bal>0&&!l.writtenOff?`<button class="btn-d btn-sm" onclick="writeOffLoan('${l.id}')">⚠ Write Off</button>`:''}
           <button class="btn-d btn-sm" onclick="delLoan('${l.id}')">✕ Delete</button>
         </div>
       </div>
@@ -1520,6 +1585,7 @@ function getRepRange(){
   return{from:`${now.getFullYear()}-01-01`,to:today()};
 }
 function renderReports(){
+  const titleEl=document.getElementById('rp-mem-title');if(titleEl)titleEl.textContent=`Member P&L (incl. ${ADMIN_BONUS_PCT}% mgmt bonus)`;
   const{from,to}=getRepRange();
   const txs=DB.transactions.filter(t=>{if(from&&t.date<from)return false;if(to&&t.date>to)return false;return true;});
   const cap=capPool();
@@ -1777,11 +1843,16 @@ function autoGenContributions(startDate, deployedAmount){
   const balances=DB.members.map(m=>({m,bal:caBalance(m.id)})).filter(x=>x.bal>0);
   const totalBal=balances.reduce((s,x)=>s+x.bal,0);
   if(totalBal<=0||!deployedAmount)return[];
-  return balances.map(({m,bal})=>{
+  const rows=balances.map(({m,bal})=>{
     const pctEquity=bal/totalBal;
     const amount=+(pctEquity*deployedAmount).toFixed(2);
     return{id:uid(),memberId:m.id,memberName:m.name,amount,date,pctEquity};
   }).filter(r=>r.amount>0);
+  // Rounding correction: last member absorbs any penny discrepancy so sum = deployedAmount exactly
+  const rowSum=rows.reduce((s,r)=>s+r.amount,0);
+  const diff=+(deployedAmount-rowSum).toFixed(2);
+  if(diff!==0&&rows.length>0)rows[rows.length-1].amount=+(rows[rows.length-1].amount+diff).toFixed(2);
+  return rows;
 }
 
 
@@ -1816,13 +1887,24 @@ function distributeInvProfits(inv){
   // Remaining profit (after bonus) split among members by their time-weighted share
   const remainingProfit=totalProfit-bonusPool;
   const scale=totalProfit!==0?remainingProfit/totalProfit:1;
+  const memberShares={};
   rows.forEach(r=>{
-    const adjustedProfit=+(r.profit*scale).toFixed(2);
-    if(adjustedProfit===0)return;
-    postEarningsWithAutoRepay(r.memberId,adjustedProfit,`Profit: ${inv.name}`,closeDate);
+    const adj=+(r.profit*scale).toFixed(2);
+    if(!memberShares[r.memberId])memberShares[r.memberId]={profit:0,weightedShare:0};
+    memberShares[r.memberId].profit=+(memberShares[r.memberId].profit+adj).toFixed(2);
+    memberShares[r.memberId].weightedShare=+(memberShares[r.memberId].weightedShare+r.weightedShare).toFixed(4);
+  });
+  const mIds=Object.keys(memberShares);
+  const sumCheck=mIds.reduce((s,id)=>s+memberShares[id].profit,0);
+  const penny=+(remainingProfit-sumCheck).toFixed(2);
+  if(penny!==0&&mIds.length>0)memberShares[mIds[mIds.length-1]].profit=+(memberShares[mIds[mIds.length-1]].profit+penny).toFixed(2);
+  mIds.forEach(memberId=>{
+    const s=memberShares[memberId];
+    if(s.profit===0)return;
+    postEarningsWithAutoRepay(memberId,s.profit,`Profit: ${inv.name}`,closeDate);
     DB.transactions.push({id:uid(),date:closeDate,type:'profit',
-      desc:`Profit distribution — ${inv.name}`,amount:adjustedProfit,memberId:r.memberId,
-      notes:`${(r.weightedShare*100).toFixed(2)}% share · ${r.activeDays} days active${bonusPool>0?` · after ${ADMIN_BONUS_PCT}% mgmt bonus`:''}`});
+      desc:`Profit distribution — ${inv.name}`,amount:s.profit,memberId,
+      notes:`${(s.weightedShare*100).toFixed(2)}% share${bonusPool>0?` · after ${ADMIN_BONUS_PCT}% mgmt bonus`:''}`});
   });
 }
 
@@ -2009,7 +2091,7 @@ function delInv(id){
 }
 function delLoan(id){
   const l=DB.loans.find(x=>x.id===id);if(!l)return;
-  if(!safeConfirm(`Delete loan for "${l.borrower}"?\n\nThis will also remove any associated repayment and interest transactions from the ledger and reverse the interest already distributed to members' capital accounts.`))return;
+  if(!safeConfirm(`Delete loan for "${l.borrower}"?\n\nUse Delete only for a genuine mistake (wrong entry, duplicate) — it erases all record that this cash ever left, including from your Reserve. If this loan is simply not going to be repaid, use "Write Off" instead so the cash-out stays counted.\n\nThis will also remove any associated repayment and interest transactions from the ledger and reverse the interest already distributed to members' capital accounts.`))return;
   DB.loans=DB.loans.filter(x=>x.id!==id);
   // Remove the loan's associated transactions from the ledger:
   // - The original loan_out record
@@ -2017,15 +2099,35 @@ function delLoan(id){
   // - Any profit/interest records distributed from this loan (matched by desc)
   const borrowerLower=l.borrower.toLowerCase();
   DB.transactions=DB.transactions.filter(t=>{
-    if(t.type==='loan_out'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
-    if(t.type==='loan_repayment'&&(t.desc||'').toLowerCase().includes(borrowerLower))return false;
-    if(t.type==='profit'&&(t.desc||'').toLowerCase().includes(borrowerLower)&&(
-      (t.desc||'').toLowerCase().startsWith('loan interest')||
-      (t.desc||'').toLowerCase().startsWith('borrower repayment bonus')
+    const d=(t.desc||'').toLowerCase();
+    // Match loan_out precisely: "loan to BORROWER"
+    if(t.type==='loan_out'&&d===('loan to '+borrowerLower))return false;
+    // Match manual repayments precisely: "repayment — BORROWER"
+    if(t.type==='loan_repayment'&&!t.isAutoRepay&&d===('repayment — '+borrowerLower))return false;
+    // Match auto-repayments: must start with "auto-repayment — BORROWER"
+    if(t.type==='loan_repayment'&&t.isAutoRepay&&d.startsWith('auto-repayment — '+borrowerLower))return false;
+    // Match interest and bonus profit entries precisely
+    if(t.type==='profit'&&(
+      d.startsWith('loan interest — '+borrowerLower)||
+      d.startsWith('borrower repayment bonus — '+borrowerLower)
     ))return false;
     return true;
   });
   rebuildCapitalAccounts();
+  save();
+}
+
+// Write off an unrecoverable loan — distinct from Delete. The loan's original cash-out stays
+// counted in lnTotal() (so Reserve keeps reflecting that the money genuinely left), but the
+// loan is flagged so it stops appearing as active, stops triggering overdue flags, and stops
+// intercepting the borrower's future earnings for auto-repayment. Excluded from lnOut() too,
+// since an unrecoverable balance isn't really an asset anymore.
+function writeOffLoan(id){
+  const l=DB.loans.find(x=>x.id===id);if(!l)return;
+  const bal=loanBalance(l);
+  if(!safeConfirm(`Write off remaining balance of ${fmtF(bal)} on ${l.borrower}'s loan?\n\nThis records it as an unrecoverable loss. The original amount stays counted as cash that left (so Reserve stays accurate), but this loan will no longer show as active, overdue, or trigger auto-repayment.`))return;
+  l.writtenOff=true;
+  l.writeOffDate=today();
   save();
 }
 function delTx(id){
@@ -2169,8 +2271,9 @@ function distributeLoanInterest(l, date){
       notes:`10% borrower bonus on ${fmtF(newlyRealized)} realized interest`});
   }
 
-  // 90% split by equity snapshot
-  const pool90=+(newlyRealized-borrowerBonus).toFixed(2);
+  // If borrower is not a member, recycle their 10% back into the pool — no interest lost.
+  // 90% (or 100% if no member borrower) split by equity snapshot.
+  const pool90=borrowerMember?+(newlyRealized-borrowerBonus).toFixed(2):newlyRealized;
   l.equitySnapshot.forEach(e=>{
     const share=+(pool90*e.pctEquity).toFixed(2);
     if(share<0.01)return;
@@ -2465,6 +2568,231 @@ function importData(e){
   const file=e.target.files[0];if(!file)return;
   const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!safeConfirm('Replace all current data with this backup?'))return;DB=d;save();alert('✓ Imported!');}catch{alert('Invalid file.');}};r.readAsText(file);
 }
+
+// ════════════════════════════════════════
+// BOOKS RECONCILIATION (Excel export/import)
+// Scope: only contribution/withdrawal/expense rows — the raw cash-register entries a
+// treasurer checks against the physical books. Loans, investments and posted profit are
+// deliberately excluded: they carry linked records (equity snapshots, loan balances,
+// contribution schedules) that a spreadsheet edit can't safely keep in sync, so those stay
+// managed through their own in-app flows.
+// ════════════════════════════════════════
+function exportLedgerExcel(){
+  if(typeof XLSX==='undefined'){alert('Excel library failed to load — check your internet connection and try again.');return;}
+  const rows=DB.transactions.filter(t=>RECON_TYPES.includes(t.type)).sort((a,b)=>a.date.localeCompare(b.date));
+  const data=rows.map(t=>{
+    const m=t.memberId?DB.members.find(x=>x.id===t.memberId):null;
+    return{ID:t.id,Date:t.date,Type:t.type,Member:m?m.name:'',Amount:t.amount,Description:t.desc||'',Notes:t.notes||'',Delete:''};
+  });
+  const ws=XLSX.utils.json_to_sheet(data,{header:['ID','Date','Type','Member','Amount','Description','Notes','Delete']});
+  ws['!cols']=[{wch:12},{wch:11},{wch:12},{wch:18},{wch:10},{wch:30},{wch:24},{wch:8}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Ledger');
+
+  const memberRows=DB.members.map(m=>({ID:m.id,Name:m.name,Role:m.role,'Capital Balance':caBalance(m.id)}));
+  const ws2=XLSX.utils.json_to_sheet(memberRows);
+  ws2['!cols']=[{wch:12},{wch:18},{wch:10},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Members (reference)');
+
+  // Investments (reference only) — dates + amounts so historical profit timing can be audited
+  const invRows=DB.investments.map(i=>({
+    Name:i.name,Status:i.status,'Start Date':i.startDate||i.date||'',
+    'Close Date':i.closeDate||'',Deployed:i.amount,'Current Value':i.currentValue,
+    'Gain/Loss':+(i.currentValue-i.amount).toFixed(2)
+  }));
+  const ws4=XLSX.utils.json_to_sheet(invRows);
+  ws4['!cols']=[{wch:20},{wch:9},{wch:11},{wch:11},{wch:11},{wch:13},{wch:11}];
+  XLSX.utils.book_append_sheet(wb,ws4,'Investments (reference)');
+
+  // Profit & bonus history (reference only) — every profit/bonus/interest transaction with its
+  // date, so you can check a given payout against the investment's close date or loan's repayment
+  // date and verify the time-weighted calculation behind it.
+  const profitRows=DB.transactions.filter(t=>t.type==='profit').sort((a,b)=>a.date.localeCompare(b.date)).map(t=>{
+    const m=t.memberId?DB.members.find(x=>x.id===t.memberId):null;
+    return{Date:t.date,Member:m?m.name:'',Amount:t.amount,Description:t.desc||'',Notes:t.notes||''};
+  });
+  const ws5=XLSX.utils.json_to_sheet(profitRows);
+  ws5['!cols']=[{wch:11},{wch:18},{wch:10},{wch:30},{wch:40}];
+  XLSX.utils.book_append_sheet(wb,ws5,'Profit History (reference)');
+
+  // Member Fund Timeline (reference) — one row per member per event (contribution, withdrawal,
+  // loan issued, loan repayment, investment funds active, profit/bonus posted), each with its
+  // date. This is what actually drives day-weighted investment profit — a member's profit share
+  // depends on how many days their money sat in an investment before it closed, so seeing every
+  // dated event per member lets you check that math against your books directly.
+  const timeline=[];
+  DB.members.forEach(m=>{
+    DB.transactions.filter(t=>t.memberId===m.id&&['contribution','withdrawal'].includes(t.type)).forEach(t=>{
+      timeline.push({Member:m.name,Date:t.date,Event:t.type==='contribution'?'Contribution':'Withdrawal',
+        'Investment / Loan':'',Amount:t.amount,'Active Days':'','Profit Share %':'',Description:t.desc||''});
+    });
+    DB.loans.filter(l=>loanBelongsToMember(l,m.id)).forEach(l=>{
+      timeline.push({Member:m.name,Date:l.date||'',Event:'Loan Issued','Investment / Loan':'Loan — '+l.borrower,
+        Amount:l.amount,'Active Days':'','Profit Share %':'',Description:`Rate ${l.rate}%, due ${l.dueDate||'—'}`});
+    });
+    DB.transactions.filter(t=>t.memberId===m.id&&t.type==='loan_repayment').forEach(t=>{
+      timeline.push({Member:m.name,Date:t.date,Event:t.isAutoRepay?'Loan Repayment (auto)':'Loan Repayment',
+        'Investment / Loan':'',Amount:t.amount,'Active Days':'','Profit Share %':'',Description:t.desc||''});
+    });
+    DB.investments.forEach(inv=>{
+      (inv.contributions||[]).filter(c=>c.memberId===m.id).forEach(c=>{
+        const rows=calcInvProfit(inv);
+        const r=rows.find(x=>x.memberId===m.id&&x.joinDate===c.date&&x.contribution===c.amount);
+        timeline.push({Member:m.name,Date:c.date,Event:'Investment Funds Active','Investment / Loan':inv.name,
+          Amount:c.amount,'Active Days':r?r.activeDays:'','Profit Share %':r?(r.weightedShare*100).toFixed(2)+'%':'',
+          Description:inv.status==='closed'?'Closed '+(inv.closeDate||''):'Still open'});
+      });
+    });
+    DB.transactions.filter(t=>t.memberId===m.id&&t.type==='profit').forEach(t=>{
+      timeline.push({Member:m.name,Date:t.date,Event:'Profit / Bonus Posted','Investment / Loan':'',
+        Amount:t.amount,'Active Days':'','Profit Share %':'',Description:t.desc||''});
+    });
+  });
+  timeline.sort((a,b)=>a.Member.localeCompare(b.Member)||a.Date.localeCompare(b.Date));
+  const ws6=XLSX.utils.json_to_sheet(timeline,{header:['Member','Date','Event','Investment / Loan','Amount','Active Days','Profit Share %','Description']});
+  ws6['!cols']=[{wch:18},{wch:11},{wch:22},{wch:20},{wch:10},{wch:11},{wch:13},{wch:34}];
+  XLSX.utils.book_append_sheet(wb,ws6,'Member Fund Timeline');
+
+  const notes=[
+    {Note:'This sheet only carries contribution / withdrawal / expense entries — the physical cash ledger.'},
+    {Note:'To EDIT a row: change its values, keep the ID column as-is.'},
+    {Note:'To ADD a row: leave ID blank, fill in the rest. Member is required for contribution/withdrawal, leave blank for expense.'},
+    {Note:'To DELETE a row: put Y in the Delete column, leave everything else as-is.'},
+    {Note:'Rows you leave untouched (and any row you simply omit) are left unchanged — nothing is auto-deleted.'},
+    {Note:'Import shows every detected change for your approval before anything is applied.'},
+    {Note:'The Investments and Profit History sheets are reference only — for checking dates and profit-split calculations against your books. Editing them has no effect on import; profit and loan records stay managed in-app.'},
+    {Note:'Member Fund Timeline shows every dated event per member (contributions, loans, loan repayments, days a member\'s money sat in an investment, and profit/bonus posted) — use it to check the day-weighted profit math against your books. Reference only, not imported.'}
+  ];
+  const ws3=XLSX.utils.json_to_sheet(notes);
+  ws3['!cols']=[{wch:90}];
+  XLSX.utils.book_append_sheet(wb,ws3,'How to use');
+
+  XLSX.writeFile(wb,'InvestGroup-Ledger-'+today()+'.xlsx');
+}
+
+function importLedgerExcel(e){
+  const file=e.target.files[0];if(!file)return;
+  if(typeof XLSX==='undefined'){alert('Excel library failed to load — check your internet connection and try again.');e.target.value='';return;}
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'binary'});
+      const ws=wb.Sheets['Ledger']||wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      const currentById={};
+      DB.transactions.filter(t=>RECON_TYPES.includes(t.type)).forEach(t=>currentById[t.id]=t);
+
+      const toAdd=[],toModify=[],toDelete=[],errors=[];
+      let unchanged=0;
+
+      rows.forEach((row,idx)=>{
+        const rn=idx+2;
+        const id=(row.ID||'').toString().trim();
+        const date=(row.Date||'').toString().trim();
+        const type=(row.Type||'').toString().trim().toLowerCase();
+        const memberName=(row.Member||'').toString().trim();
+        const amount=parseFloat(row.Amount);
+        const desc=(row.Description||'').toString().trim();
+        const notes=(row.Notes||'').toString().trim();
+        const del=(row.Delete||'').toString().trim().toUpperCase()==='Y';
+
+        if(!id&&!date&&!type&&(row.Amount===''||row.Amount===undefined))return; // fully blank row
+
+        if(!RECON_TYPES.includes(type)){errors.push(`Row ${rn}: Type must be contribution, withdrawal or expense (got "${row.Type}")`);return;}
+        if(!date||isNaN(new Date(date).getTime())){errors.push(`Row ${rn}: invalid or missing Date`);return;}
+        if(isNaN(amount)||amount<=0){errors.push(`Row ${rn}: Amount must be a positive number`);return;}
+
+        let memberId=null;
+        if(type!=='expense'){
+          if(!memberName){errors.push(`Row ${rn}: Member is required for ${type}`);return;}
+          const m=DB.members.find(x=>x.name.trim().toLowerCase()===memberName.toLowerCase());
+          if(!m){errors.push(`Row ${rn}: Unknown member "${memberName}"`);return;}
+          memberId=m.id;
+        }
+
+        if(id){
+          const existing=currentById[id];
+          if(!existing){errors.push(`Row ${rn}: ID "${id}" not found — leave ID blank for new entries`);return;}
+          if(del){
+            const em=existing.memberId?DB.members.find(x=>x.id===existing.memberId):null;
+            toDelete.push({id,summary:`${existing.date} · ${existing.type} · ${fmtF(existing.amount)}${em?' · '+em.name:''}`});
+            return;
+          }
+          const changed=existing.date!==date||existing.type!==type||+existing.amount!==+amount||
+            (existing.memberId||null)!==memberId||(existing.desc||'')!==desc||(existing.notes||'')!==notes;
+          if(changed)toModify.push({id,before:existing,after:{date,type,amount,memberId,desc,notes}});
+          else unchanged++;
+        } else {
+          if(del)return;
+          toAdd.push({id:uid(),date,type,amount,memberId,desc,notes});
+        }
+      });
+
+      reconPending={toAdd,toModify,toDelete,unchanged,errors};
+      renderReconDiff();
+      openModal('modal-recon-diff');
+    }catch(err){alert('Could not read file: '+err.message);}
+  };
+  r.readAsBinaryString(file);
+  e.target.value='';
+}
+
+function renderReconDiff(){
+  const p=reconPending,box=document.getElementById('recon-diff-body');
+  const mName=id=>{const m=DB.members.find(x=>x.id===id);return m?m.name:'';};
+  let html='';
+  if(p.errors.length){
+    html+=`<div style="color:var(--red);margin-bottom:10px;"><strong>${p.errors.length} error(s) — fix these in Excel and re-import:</strong><br>`+
+      p.errors.map(x=>'• '+x).join('<br>')+'</div>';
+  }
+  html+=`<div style="margin-bottom:10px;">${p.unchanged} unchanged &nbsp;·&nbsp; `+
+    `<span style="color:var(--green)">${p.toAdd.length} new</span> &nbsp;·&nbsp; `+
+    `<span style="color:var(--gold)">${p.toModify.length} changed</span> &nbsp;·&nbsp; `+
+    `<span style="color:var(--red)">${p.toDelete.length} to delete</span></div>`;
+  if(p.toAdd.length)html+='<div style="margin-bottom:8px;"><strong>New:</strong><br>'+
+    p.toAdd.map(a=>`• ${a.date} · ${a.type} · ${fmtF(a.amount)}${a.memberId?' · '+mName(a.memberId):''}${a.desc?' — '+a.desc:''}`).join('<br>')+'</div>';
+  if(p.toModify.length)html+='<div style="margin-bottom:8px;"><strong>Changed:</strong><br>'+
+    p.toModify.map(m=>{
+      const bits=[];
+      if(m.before.date!==m.after.date)bits.push(`date ${m.before.date}→${m.after.date}`);
+      if(m.before.type!==m.after.type)bits.push(`type ${m.before.type}→${m.after.type}`);
+      if(+m.before.amount!==+m.after.amount)bits.push(`amount ${fmtF(m.before.amount)}→${fmtF(m.after.amount)}`);
+      if((m.before.memberId||null)!==m.after.memberId)bits.push(`member ${mName(m.before.memberId)||'—'}→${mName(m.after.memberId)||'—'}`);
+      if((m.before.desc||'')!==m.after.desc)bits.push('description changed');
+      if((m.before.notes||'')!==m.after.notes)bits.push('notes changed');
+      return `• ${m.before.date} · ${m.before.type}: `+bits.join(', ');
+    }).join('<br>')+'</div>';
+  if(p.toDelete.length)html+='<div><strong>To delete:</strong><br>'+p.toDelete.map(d=>'• '+d.summary).join('<br>')+'</div>';
+  if(!p.toAdd.length&&!p.toModify.length&&!p.toDelete.length&&!p.errors.length)html+='<div style="color:var(--muted2);">No changes detected — everything already matches.</div>';
+  box.innerHTML=html;
+  document.getElementById('recon-confirm-btn').disabled=p.errors.length>0;
+  document.getElementById('recon-confirm-btn').style.opacity=p.errors.length>0?0.5:1;
+}
+
+function confirmReconImport(){
+  const p=reconPending;if(!p)return;
+  if(p.errors.length){alert('Fix the errors shown before importing.');return;}
+  if(!p.toAdd.length&&!p.toModify.length&&!p.toDelete.length){closeModal('modal-recon-diff');reconPending=null;return;}
+  if(!safeConfirm(`Apply ${p.toAdd.length} new, ${p.toModify.length} changed and ${p.toDelete.length} deleted ledger entries? This updates capital account balances immediately.`))return;
+
+  p.toDelete.forEach(d=>{DB.transactions=DB.transactions.filter(t=>t.id!==d.id);});
+  p.toModify.forEach(m=>{
+    const t=DB.transactions.find(x=>x.id===m.id);
+    if(t){t.date=m.after.date;t.type=m.after.type;t.amount=m.after.amount;t.memberId=m.after.memberId;t.desc=m.after.desc;t.notes=m.after.notes;}
+  });
+  p.toAdd.forEach(a=>{
+    DB.transactions.push({id:a.id,date:a.date,type:a.type,amount:a.amount,memberId:a.memberId,
+      desc:a.desc||(a.type.charAt(0).toUpperCase()+a.type.slice(1)),notes:a.notes});
+  });
+
+  rebuildCapitalAccounts();
+  saveDB();renderAll();
+  closeModal('modal-recon-diff');
+  alert(`✓ Reconciled — ${p.toAdd.length} added, ${p.toModify.length} updated, ${p.toDelete.length} removed.`);
+  reconPending=null;
+}
+
+function cancelReconImport(){reconPending=null;closeModal('modal-recon-diff');}
 // ════════════════════════════════════════
 // FIREBASE
 // ════════════════════════════════════════
@@ -2524,10 +2852,13 @@ function loadFromFirebase(){
     if(!data){alert('No data found on Firebase. Make sure the primary admin has synced first.');setSyncStatus('✗ No data','var(--red)');return;}
     if(data.settings)DB.settings={...DB.settings,...data.settings};
     if(!DB.settings.bank)DB.settings.bank={};
-    if(data.members)DB.members=data.members;
-    if(data.investments)DB.investments=data.investments;
-    if(data.loans)DB.loans=data.loans;
-    if(data.transactions)DB.transactions=data.transactions;
+    // Firebase RTDB can return objects instead of arrays (when keys are non-sequential).
+    // ensureArray() safely converts either to a proper JS array.
+    const ensureArray=v=>!v?[]:Array.isArray(v)?v:Object.values(v);
+    if(data.members)DB.members=ensureArray(data.members);
+    if(data.investments)DB.investments=ensureArray(data.investments);
+    if(data.loans)DB.loans=ensureArray(data.loans);
+    if(data.transactions)DB.transactions=ensureArray(data.transactions);
     if(data.memberPins)DB.memberPins=data.memberPins;
     // Migrate investments
     DB.investments=DB.investments.map(i=>{if(!i.contributions)i.contributions=[];if(!i.valueHistory)i.valueHistory=[];if(!i.status)i.status='open';if(!i.startDate)i.startDate=i.date||today();return i;});
