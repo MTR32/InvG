@@ -2615,43 +2615,67 @@ function exportLedgerExcel(){
   ws5['!cols']=[{wch:11},{wch:18},{wch:10},{wch:30},{wch:40}];
   XLSX.utils.book_append_sheet(wb,ws5,'Profit History (reference)');
 
-  // Member Fund Timeline (reference) — one row per member per event (contribution, withdrawal,
-  // loan issued, loan repayment, investment funds active, profit/bonus posted), each with its
-  // date. This is what actually drives day-weighted investment profit — a member's profit share
-  // depends on how many days their money sat in an investment before it closed, so seeing every
-  // dated event per member lets you check that math against your books directly.
-  const timeline=[];
+  // Member Ledger (reference) — grouped in a block per member: their contributions, withdrawals,
+  // loans issued, and loan repayments together, sorted by date, with a summary line underneath.
+  // Easiest layout for a treasurer to open, find one person, and follow their whole cash trail.
+  const ledgerAoa=[];
   DB.members.forEach(m=>{
+    const rows=[];
     DB.transactions.filter(t=>t.memberId===m.id&&['contribution','withdrawal'].includes(t.type)).forEach(t=>{
-      timeline.push({Member:m.name,Date:t.date,Event:t.type==='contribution'?'Contribution':'Withdrawal',
-        'Investment / Loan':'',Amount:t.amount,'Active Days':'','Profit Share %':'',Description:t.desc||''});
+      rows.push([t.date,t.type==='contribution'?'Contribution':'Withdrawal',t.amount,t.desc||'']);
     });
     DB.loans.filter(l=>loanBelongsToMember(l,m.id)).forEach(l=>{
-      timeline.push({Member:m.name,Date:l.date||'',Event:'Loan Issued','Investment / Loan':'Loan — '+l.borrower,
-        Amount:l.amount,'Active Days':'','Profit Share %':'',Description:`Rate ${l.rate}%, due ${l.dueDate||'—'}`});
+      rows.push([l.date||'','Loan Issued',l.amount,`Rate ${l.rate}%, due ${l.dueDate||'—'}`]);
     });
     DB.transactions.filter(t=>t.memberId===m.id&&t.type==='loan_repayment').forEach(t=>{
-      timeline.push({Member:m.name,Date:t.date,Event:t.isAutoRepay?'Loan Repayment (auto)':'Loan Repayment',
-        'Investment / Loan':'',Amount:t.amount,'Active Days':'','Profit Share %':'',Description:t.desc||''});
+      rows.push([t.date,t.isAutoRepay?'Loan Repayment (auto)':'Loan Repayment',t.amount,t.desc||'']);
     });
+    rows.sort((a,b)=>a[0].localeCompare(b[0]));
+    const totC=rows.filter(r=>r[1]==='Contribution').reduce((s,r)=>s+r[2],0);
+    const totW=rows.filter(r=>r[1]==='Withdrawal').reduce((s,r)=>s+r[2],0);
+    const totLI=rows.filter(r=>r[1]==='Loan Issued').reduce((s,r)=>s+r[2],0);
+    const totLR=rows.filter(r=>r[1].startsWith('Loan Repayment')).reduce((s,r)=>s+r[2],0);
+    ledgerAoa.push(['MEMBER:',m.name,'','']);
+    ledgerAoa.push(['Date','Event','Amount','Description']);
+    if(rows.length)rows.forEach(r=>ledgerAoa.push(r));
+    else ledgerAoa.push(['','(no records)','','']);
+    ledgerAoa.push(['','Total Contributions',totC,'']);
+    ledgerAoa.push(['','Total Withdrawals',totW,'']);
+    ledgerAoa.push(['','Total Loans Issued',totLI,'']);
+    ledgerAoa.push(['','Total Loan Repayments',totLR,'']);
+    ledgerAoa.push(['','Capital Account Balance (per app)',caBalance(m.id),'']);
+    ledgerAoa.push([]);ledgerAoa.push([]);
+  });
+  const ws6=XLSX.utils.aoa_to_sheet(ledgerAoa);
+  ws6['!cols']=[{wch:11},{wch:24},{wch:12},{wch:36}];
+  XLSX.utils.book_append_sheet(wb,ws6,'Member Ledger');
+
+  // Investment Participation (reference) — kept separate from the personal ledger above since
+  // investments are pooled funds, not a member's own cash movement. Still grouped per member so
+  // you can see, for each person, which investments their capital sat in, for how many days, and
+  // what profit share that earned — the exact basis for day-weighted investment profit.
+  const invAoa=[];
+  DB.members.forEach(m=>{
+    const rows=[];
     DB.investments.forEach(inv=>{
       (inv.contributions||[]).filter(c=>c.memberId===m.id).forEach(c=>{
-        const rows=calcInvProfit(inv);
-        const r=rows.find(x=>x.memberId===m.id&&x.joinDate===c.date&&x.contribution===c.amount);
-        timeline.push({Member:m.name,Date:c.date,Event:'Investment Funds Active','Investment / Loan':inv.name,
-          Amount:c.amount,'Active Days':r?r.activeDays:'','Profit Share %':r?(r.weightedShare*100).toFixed(2)+'%':'',
-          Description:inv.status==='closed'?'Closed '+(inv.closeDate||''):'Still open'});
+        const calc=calcInvProfit(inv);
+        const r=calc.find(x=>x.memberId===m.id&&x.joinDate===c.date&&x.contribution===c.amount);
+        rows.push([c.date,inv.name,c.amount,r?r.activeDays:'',r?(r.weightedShare*100).toFixed(2)+'%':'',
+          r?+r.profit.toFixed(2):'',inv.status==='closed'?'Closed '+(inv.closeDate||''):'Still open']);
       });
     });
-    DB.transactions.filter(t=>t.memberId===m.id&&t.type==='profit').forEach(t=>{
-      timeline.push({Member:m.name,Date:t.date,Event:'Profit / Bonus Posted','Investment / Loan':'',
-        Amount:t.amount,'Active Days':'','Profit Share %':'',Description:t.desc||''});
-    });
+    if(!rows.length)return; // skip members with no investment participation
+    rows.sort((a,b)=>a[0].localeCompare(b[0]));
+    invAoa.push(['MEMBER:',m.name,'','','','','']);
+    invAoa.push(['Date','Investment','Amount','Active Days','Profit Share %','Profit','Status']);
+    rows.forEach(r=>invAoa.push(r));
+    invAoa.push(['','','','','','Total Profit',rows.reduce((s,r)=>s+(typeof r[5]==='number'?r[5]:0),0)]);
+    invAoa.push([]);invAoa.push([]);
   });
-  timeline.sort((a,b)=>a.Member.localeCompare(b.Member)||a.Date.localeCompare(b.Date));
-  const ws6=XLSX.utils.json_to_sheet(timeline,{header:['Member','Date','Event','Investment / Loan','Amount','Active Days','Profit Share %','Description']});
-  ws6['!cols']=[{wch:18},{wch:11},{wch:22},{wch:20},{wch:10},{wch:11},{wch:13},{wch:34}];
-  XLSX.utils.book_append_sheet(wb,ws6,'Member Fund Timeline');
+  const ws7=XLSX.utils.aoa_to_sheet(invAoa);
+  ws7['!cols']=[{wch:11},{wch:20},{wch:10},{wch:11},{wch:13},{wch:10},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws7,'Investment Participation');
 
   const notes=[
     {Note:'This sheet only carries contribution / withdrawal / expense entries — the physical cash ledger.'},
@@ -2661,7 +2685,7 @@ function exportLedgerExcel(){
     {Note:'Rows you leave untouched (and any row you simply omit) are left unchanged — nothing is auto-deleted.'},
     {Note:'Import shows every detected change for your approval before anything is applied.'},
     {Note:'The Investments and Profit History sheets are reference only — for checking dates and profit-split calculations against your books. Editing them has no effect on import; profit and loan records stay managed in-app.'},
-    {Note:'Member Fund Timeline shows every dated event per member (contributions, loans, loan repayments, days a member\'s money sat in an investment, and profit/bonus posted) — use it to check the day-weighted profit math against your books. Reference only, not imported.'}
+    {Note:'Member Ledger groups each member\'s contributions, withdrawals and loans together for easy reading. Investment Participation is kept separate (grouped per member too) since investments are pooled funds, and shows the active days and profit share behind each person\'s payout. Both are reference only, not imported.'}
   ];
   const ws3=XLSX.utils.json_to_sheet(notes);
   ws3['!cols']=[{wch:90}];
