@@ -426,9 +426,9 @@ select option{background:var(--surface2);}
       <div class="card">
         <div class="card-hd"><div class="card-title">📖 Reconcile with Books (Excel)</div></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
-          <div style="font-size:11px;color:var(--muted2);margin-bottom:4px;">Export the ledger (contributions, withdrawals, expenses), fix it against the physical books in Excel, then import it back. Every change is shown for review before anything is applied — nothing overwrites silently. Loans, investments and posted profit stay managed in-app since they carry linked records that a spreadsheet edit can't safely touch.</div>
-          <button class="btn" onclick="exportLedgerExcel()">↓ Export Ledger to Excel</button>
-          <div class="fg"><label>Import Reconciled Excel</label><input type="file" id="recon-file" accept=".xlsx,.xls" onchange="importLedgerExcel(event)"></div>
+          <div style="font-size:11px;color:var(--muted2);margin-bottom:4px;">Export gives one sheet per member (their contributions, withdrawals and loans taken, each dated) plus an Investments sheet (initial input, one optional top-up, and output + close date). Fill it in against the physical books, then import it back — every change is shown for review before anything is applied. You only enter dates and amounts; the app calculates and posts all profit, interest and bonus itself.</div>
+          <button class="btn" onclick="exportLedgerExcel()">↓ Export Data to Excel</button>
+          <div class="fg"><label>Import Filled Excel</label><input type="file" id="recon-file" accept=".xlsx,.xls" onchange="importLedgerExcel(event)"></div>
         </div>
       </div>
       <div class="card">
@@ -720,7 +720,6 @@ let pageHistory=[], curPage='dashboard';
 let activeMemberPortfolioId=null;
 let fbApp=null, fbDB=null;
 let reconPending=null;
-const RECON_TYPES=['contribution','withdrawal','expense'];
 
 const ADMIN_BONUS_PCT=3;
 
@@ -1780,6 +1779,22 @@ function caBalance(memberId){
   return m&&m.capitalAccount?m.capitalAccount.balance:0;
 }
 
+// Get a member's capital account balance AS OF a specific date (not their current balance).
+// Used whenever an equity split needs to reflect what each member actually held at the time —
+// e.g. a loan issued last year should split interest by who held what THEN, not by today's
+// balances. Relies on capitalAccount.history being chronologically ordered, which
+// rebuildCapitalAccounts() guarantees — call it first if you've just added new transactions
+// before computing a historical balance from them.
+function caBalanceAsOf(memberId, date){
+  const m=DB.members.find(x=>x.id===memberId);
+  if(!m||!m.capitalAccount||!m.capitalAccount.history||!m.capitalAccount.history.length)return 0;
+  let bal=0;
+  for(const h of m.capitalAccount.history){
+    if(h.date<=date)bal=h.balance;else break;
+  }
+  return bal;
+}
+
 // ── YEAR-END WITHDRAWAL ALLOWANCE ──
 // Amount = 20% of (capital account balance minus contributions currently tied up in OPEN investments)
 // Window: accessible Jan 2 – Jan 10 each year (Jan 2 is the primary date; 3rd–10th covers late withdrawal allowance)
@@ -1838,9 +1853,12 @@ function yearEndWindowStatus(){
 // before an investment starts has the same effective active-days from the
 // investment's perspective. Separate rows with different dates only arise from
 // MANUAL top-ups added AFTER the investment is already open (via "Add Contribution").
+// Splits a deployed amount across members proportional to each member's capital balance
+// AS OF startDate (not today's balance) — so a backdated investment/top-up reflects who
+// actually held equity at that point in time.
 function autoGenContributions(startDate, deployedAmount){
   const date=startDate||today();
-  const balances=DB.members.map(m=>({m,bal:caBalance(m.id)})).filter(x=>x.bal>0);
+  const balances=DB.members.map(m=>({m,bal:caBalanceAsOf(m.id,date)})).filter(x=>x.bal>0);
   const totalBal=balances.reduce((s,x)=>s+x.bal,0);
   if(totalBal<=0||!deployedAmount)return[];
   const rows=balances.map(({m,bal})=>{
@@ -1915,7 +1933,7 @@ function previewInvestment(){
   const contribs=autoGenContributions(startDate,deployedAmount);
   if(!contribs.length){alert('No members have a capital account balance yet.\nRecord member contributions via Ledger first.');return false;}
   const lines=contribs.map(c=>`${c.memberName}: ${fmtF(c.amount)} (${(c.pctEquity*100).toFixed(1)}% equity)`).join('\n');
-  return safeConfirm(`% Equity Preview — Investment Pool:\n\n${lines}\n\nTotal deployed: ${fmtF(deployedAmount)}\n\nEach member's contribution is their current % share of total group capital, applied to this investment amount.\n\nProceed to create investment?`);
+  return safeConfirm(`% Equity Preview — Investment Pool:\n\n${lines}\n\nTotal deployed: ${fmtF(deployedAmount)}\n\nEach member's contribution is their % share of total group capital as of ${startDate} (not today's balance, if this is backdated), applied to this investment amount.\n\nProceed to create investment?`);
 }
 
 function saveInvestment(){
@@ -2225,15 +2243,17 @@ function fixLoanRates(){
 function saveLoan(){
   const bor=document.getElementById('ln-bor').value.trim(),amt=parseFloat(document.getElementById('ln-amt').value)||0;
   if(!bor||amt<=0)return alert('Fill borrower and amount.');
-  // Snapshot each member's % equity at loan issue date (for 90% interest split)
-  const balances=DB.members.map(m=>({memberId:m.id,bal:caBalance(m.id)})).filter(x=>x.bal>0);
+  const loanDate=document.getElementById('ln-date').value||today();
+  // Snapshot each member's % equity AS OF the loan's issue date (for 90% interest split) —
+  // not today's balance, so a backdated loan reflects who actually held equity then.
+  const balances=DB.members.map(m=>({memberId:m.id,bal:caBalanceAsOf(m.id,loanDate)})).filter(x=>x.bal>0);
   const totalBal=balances.reduce((s,x)=>s+x.bal,0);
   const equitySnapshot=totalBal>0?balances.map(x=>({memberId:x.memberId,pctEquity:x.bal/totalBal})):[];
   // Find the member record matching the borrower name (for auto-repayment and 10% bonus)
   const borrowerMember=DB.members.find(m=>m.name===bor);
   const loan={id:uid(),borrower:bor,borrowerMemberId:borrowerMember?borrowerMember.id:null,
     amount:amt,rate:parseFloat(document.getElementById('ln-rate').value)||DB.settings.defaultRate||10,
-    date:document.getElementById('ln-date').value||today(),
+    date:loanDate,
     dueDate:document.getElementById('ln-due').value||'',
     notes:document.getElementById('ln-notes').value,repaid:0,interestDistributed:0,equitySnapshot};
   DB.loans.push(loan);
@@ -2570,128 +2590,70 @@ function importData(e){
 }
 
 // ════════════════════════════════════════
-// BOOKS RECONCILIATION (Excel export/import)
-// Scope: only contribution/withdrawal/expense rows — the raw cash-register entries a
-// treasurer checks against the physical books. Loans, investments and posted profit are
-// deliberately excluded: they carry linked records (equity snapshots, loan balances,
-// contribution schedules) that a spreadsheet edit can't safely keep in sync, so those stay
-// managed through their own in-app flows.
+// DATA IMPORT/EXPORT (Excel) — one sheet per member (contributions, withdrawals, loans taken,
+// each dated), plus one Investments sheet (initial input, one optional top-up, output + close
+// date). This carries only the raw inputs the app's calculations depend on — dates and amounts.
+// Profit, interest, and bonus are never entered here; the app computes and posts those itself
+// the moment a row creates a loan or closes an investment.
 // ════════════════════════════════════════
+function sheetSafeName(name, used){
+  let base=(name||'Member').replace(/[\\\/\?\*\[\]:]/g,'').trim().slice(0,28)||'Member';
+  let n=base,i=2;
+  while(used.has(n)){n=base.slice(0,25)+'_'+i;i++;}
+  used.add(n);
+  return n;
+}
+
 function exportLedgerExcel(){
   if(typeof XLSX==='undefined'){alert('Excel library failed to load — check your internet connection and try again.');return;}
-  const rows=DB.transactions.filter(t=>RECON_TYPES.includes(t.type)).sort((a,b)=>a.date.localeCompare(b.date));
-  const data=rows.map(t=>{
-    const m=t.memberId?DB.members.find(x=>x.id===t.memberId):null;
-    return{ID:t.id,Date:t.date,Type:t.type,Member:m?m.name:'',Amount:t.amount,Description:t.desc||'',Notes:t.notes||'',Delete:''};
-  });
-  const ws=XLSX.utils.json_to_sheet(data,{header:['ID','Date','Type','Member','Amount','Description','Notes','Delete']});
-  ws['!cols']=[{wch:12},{wch:11},{wch:12},{wch:18},{wch:10},{wch:30},{wch:24},{wch:8}];
   const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Ledger');
+  const used=new Set();
 
-  const memberRows=DB.members.map(m=>({ID:m.id,Name:m.name,Role:m.role,'Capital Balance':caBalance(m.id)}));
-  const ws2=XLSX.utils.json_to_sheet(memberRows);
-  ws2['!cols']=[{wch:12},{wch:18},{wch:10},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,ws2,'Members (reference)');
-
-  // Investments (reference only) — dates + amounts so historical profit timing can be audited
-  const invRows=DB.investments.map(i=>({
-    Name:i.name,Status:i.status,'Start Date':i.startDate||i.date||'',
-    'Close Date':i.closeDate||'',Deployed:i.amount,'Current Value':i.currentValue,
-    'Gain/Loss':+(i.currentValue-i.amount).toFixed(2)
-  }));
-  const ws4=XLSX.utils.json_to_sheet(invRows);
-  ws4['!cols']=[{wch:20},{wch:9},{wch:11},{wch:11},{wch:11},{wch:13},{wch:11}];
-  XLSX.utils.book_append_sheet(wb,ws4,'Investments (reference)');
-
-  // Profit & bonus history (reference only) — every profit/bonus/interest transaction with its
-  // date, so you can check a given payout against the investment's close date or loan's repayment
-  // date and verify the time-weighted calculation behind it.
-  const profitRows=DB.transactions.filter(t=>t.type==='profit').sort((a,b)=>a.date.localeCompare(b.date)).map(t=>{
-    const m=t.memberId?DB.members.find(x=>x.id===t.memberId):null;
-    return{Date:t.date,Member:m?m.name:'',Amount:t.amount,Description:t.desc||'',Notes:t.notes||''};
-  });
-  const ws5=XLSX.utils.json_to_sheet(profitRows);
-  ws5['!cols']=[{wch:11},{wch:18},{wch:10},{wch:30},{wch:40}];
-  XLSX.utils.book_append_sheet(wb,ws5,'Profit History (reference)');
-
-  // Member Ledger (reference) — grouped in a block per member: their contributions, withdrawals,
-  // loans issued, and loan repayments together, sorted by date, with a summary line underneath.
-  // Easiest layout for a treasurer to open, find one person, and follow their whole cash trail.
-  const ledgerAoa=[];
   DB.members.forEach(m=>{
     const rows=[];
     DB.transactions.filter(t=>t.memberId===m.id&&['contribution','withdrawal'].includes(t.type)).forEach(t=>{
-      rows.push([t.date,t.type==='contribution'?'Contribution':'Withdrawal',t.amount,t.desc||'']);
+      rows.push({ID:t.id,Date:t.date,Type:t.type==='contribution'?'Contribution':'Withdrawal',
+        Amount:t.amount,'Rate %':'','Due Date':'',Description:t.desc||'',Delete:''});
     });
     DB.loans.filter(l=>loanBelongsToMember(l,m.id)).forEach(l=>{
-      rows.push([l.date||'','Loan Issued',l.amount,`Rate ${l.rate}%, due ${l.dueDate||'—'}`]);
+      rows.push({ID:l.id,Date:l.date||'',Type:'Loan Taken',Amount:l.amount,'Rate %':l.rate,
+        'Due Date':l.dueDate||'',Description:l.notes||'',Delete:''});
     });
-    DB.transactions.filter(t=>t.memberId===m.id&&t.type==='loan_repayment').forEach(t=>{
-      rows.push([t.date,t.isAutoRepay?'Loan Repayment (auto)':'Loan Repayment',t.amount,t.desc||'']);
-    });
-    rows.sort((a,b)=>a[0].localeCompare(b[0]));
-    const totC=rows.filter(r=>r[1]==='Contribution').reduce((s,r)=>s+r[2],0);
-    const totW=rows.filter(r=>r[1]==='Withdrawal').reduce((s,r)=>s+r[2],0);
-    const totLI=rows.filter(r=>r[1]==='Loan Issued').reduce((s,r)=>s+r[2],0);
-    const totLR=rows.filter(r=>r[1].startsWith('Loan Repayment')).reduce((s,r)=>s+r[2],0);
-    ledgerAoa.push(['MEMBER:',m.name,'','']);
-    ledgerAoa.push(['Date','Event','Amount','Description']);
-    if(rows.length)rows.forEach(r=>ledgerAoa.push(r));
-    else ledgerAoa.push(['','(no records)','','']);
-    ledgerAoa.push(['','Total Contributions',totC,'']);
-    ledgerAoa.push(['','Total Withdrawals',totW,'']);
-    ledgerAoa.push(['','Total Loans Issued',totLI,'']);
-    ledgerAoa.push(['','Total Loan Repayments',totLR,'']);
-    ledgerAoa.push(['','Capital Account Balance (per app)',caBalance(m.id),'']);
-    ledgerAoa.push([]);ledgerAoa.push([]);
+    rows.sort((a,b)=>(a.Date||'').localeCompare(b.Date||''));
+    const ws=XLSX.utils.json_to_sheet(rows,{header:['ID','Date','Type','Amount','Rate %','Due Date','Description','Delete']});
+    ws['!cols']=[{wch:12},{wch:11},{wch:14},{wch:10},{wch:8},{wch:11},{wch:26},{wch:8}];
+    XLSX.utils.book_append_sheet(wb,ws,sheetSafeName(m.name,used));
   });
-  const ws6=XLSX.utils.aoa_to_sheet(ledgerAoa);
-  ws6['!cols']=[{wch:11},{wch:24},{wch:12},{wch:36}];
-  XLSX.utils.book_append_sheet(wb,ws6,'Member Ledger');
 
-  // Investment Participation (reference) — kept separate from the personal ledger above since
-  // investments are pooled funds, not a member's own cash movement. Still grouped per member so
-  // you can see, for each person, which investments their capital sat in, for how many days, and
-  // what profit share that earned — the exact basis for day-weighted investment profit.
-  const invAoa=[];
-  DB.members.forEach(m=>{
-    const rows=[];
-    DB.investments.forEach(inv=>{
-      (inv.contributions||[]).filter(c=>c.memberId===m.id).forEach(c=>{
-        const calc=calcInvProfit(inv);
-        const r=calc.find(x=>x.memberId===m.id&&x.joinDate===c.date&&x.contribution===c.amount);
-        rows.push([c.date,inv.name,c.amount,r?r.activeDays:'',r?(r.weightedShare*100).toFixed(2)+'%':'',
-          r?+r.profit.toFixed(2):'',inv.status==='closed'?'Closed '+(inv.closeDate||''):'Still open']);
-      });
-    });
-    if(!rows.length)return; // skip members with no investment participation
-    rows.sort((a,b)=>a[0].localeCompare(b[0]));
-    invAoa.push(['MEMBER:',m.name,'','','','','']);
-    invAoa.push(['Date','Investment','Amount','Active Days','Profit Share %','Profit','Status']);
-    rows.forEach(r=>invAoa.push(r));
-    invAoa.push(['','','','','','Total Profit',rows.reduce((s,r)=>s+(typeof r[5]==='number'?r[5]:0),0)]);
-    invAoa.push([]);invAoa.push([]);
-  });
-  const ws7=XLSX.utils.aoa_to_sheet(invAoa);
-  ws7['!cols']=[{wch:11},{wch:20},{wch:10},{wch:11},{wch:13},{wch:10},{wch:16}];
-  XLSX.utils.book_append_sheet(wb,ws7,'Investment Participation');
+  const invRows=DB.investments.map(i=>({
+    ID:i.id,Name:i.name,
+    'Initial Input Amount':i.initialAmount!=null?i.initialAmount:i.amount,
+    'Initial Input Date':i.startDate||i.date||'',
+    '2nd Input Amount':i.topUpAmount||'',
+    '2nd Input Date':i.topUpDate||'',
+    'Output Amount':i.status==='closed'?i.currentValue:'',
+    'Close Date':i.closeDate||''
+  }));
+  const wsInv=XLSX.utils.json_to_sheet(invRows,{header:['ID','Name','Initial Input Amount','Initial Input Date','2nd Input Amount','2nd Input Date','Output Amount','Close Date']});
+  wsInv['!cols']=[{wch:12},{wch:20},{wch:16},{wch:14},{wch:14},{wch:14},{wch:12},{wch:11}];
+  XLSX.utils.book_append_sheet(wb,wsInv,'Investments');
 
   const notes=[
-    {Note:'This sheet only carries contribution / withdrawal / expense entries — the physical cash ledger.'},
-    {Note:'To EDIT a row: change its values, keep the ID column as-is.'},
-    {Note:'To ADD a row: leave ID blank, fill in the rest. Member is required for contribution/withdrawal, leave blank for expense.'},
+    {Note:'One sheet per member: their Contributions, Withdrawals, and Loans Taken, each with a Date.'},
+    {Note:'To EDIT a row: change the values, keep the ID column as-is.'},
+    {Note:'To ADD a row: leave ID blank and fill in the rest.'},
     {Note:'To DELETE a row: put Y in the Delete column, leave everything else as-is.'},
-    {Note:'Rows you leave untouched (and any row you simply omit) are left unchanged — nothing is auto-deleted.'},
-    {Note:'Import shows every detected change for your approval before anything is applied.'},
-    {Note:'The Investments and Profit History sheets are reference only — for checking dates and profit-split calculations against your books. Editing them has no effect on import; profit and loan records stay managed in-app.'},
-    {Note:'Member Ledger groups each member\'s contributions, withdrawals and loans together for easy reading. Investment Participation is kept separate (grouped per member too) since investments are pooled funds, and shows the active days and profit share behind each person\'s payout. Both are reference only, not imported.'}
+    {Note:'Type must be exactly: Contribution, Withdrawal, or Loan Taken. Rate % and Due Date only apply to Loan Taken.'},
+    {Note:'Investments sheet: leave ID blank to create a new investment with its Initial Input Amount and Date.'},
+    {Note:'2nd Input is for one later top-up of extra funds into an existing investment — leave blank if there was none.'},
+    {Note:'Fill Output Amount + Close Date once an investment is sold/closed — the app calculates and distributes the profit automatically. Leave both blank while still open.'},
+    {Note:'Do not enter profit, interest, or bonus figures anywhere — the app computes those from the dates and amounts you provide here.'},
+    {Note:'Rows you leave untouched (and any row you simply omit) stay unchanged — nothing is auto-deleted. Every detected change is shown for review before anything is applied.'}
   ];
-  const ws3=XLSX.utils.json_to_sheet(notes);
-  ws3['!cols']=[{wch:90}];
-  XLSX.utils.book_append_sheet(wb,ws3,'How to use');
+  const wsNotes=XLSX.utils.json_to_sheet(notes);wsNotes['!cols']=[{wch:100}];
+  XLSX.utils.book_append_sheet(wb,wsNotes,'How to use');
 
-  XLSX.writeFile(wb,'InvestGroup-Ledger-'+today()+'.xlsx');
+  XLSX.writeFile(wb,'InvestGroup-Data-'+today()+'.xlsx');
 }
 
 function importLedgerExcel(e){
@@ -2701,58 +2663,120 @@ function importLedgerExcel(e){
   r.onload=ev=>{
     try{
       const wb=XLSX.read(ev.target.result,{type:'binary'});
-      const ws=wb.Sheets['Ledger']||wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      const currentById={};
-      DB.transactions.filter(t=>RECON_TYPES.includes(t.type)).forEach(t=>currentById[t.id]=t);
+      const used=new Set();
+      const memberBySheet={};
+      DB.members.forEach(m=>{memberBySheet[sheetSafeName(m.name,used)]=m;});
 
-      const toAdd=[],toModify=[],toDelete=[],errors=[];
+      const txAdd=[],txModify=[],txDelete=[];
+      const lnAdd=[],lnModify=[],lnDelete=[];
+      const errors=[];
       let unchanged=0;
 
-      rows.forEach((row,idx)=>{
-        const rn=idx+2;
-        const id=(row.ID||'').toString().trim();
-        const date=(row.Date||'').toString().trim();
-        const type=(row.Type||'').toString().trim().toLowerCase();
-        const memberName=(row.Member||'').toString().trim();
-        const amount=parseFloat(row.Amount);
-        const desc=(row.Description||'').toString().trim();
-        const notes=(row.Notes||'').toString().trim();
-        const del=(row.Delete||'').toString().trim().toUpperCase()==='Y';
+      wb.SheetNames.forEach(sheetName=>{
+        if(sheetName==='Investments'||sheetName==='How to use')return;
+        const member=memberBySheet[sheetName];
+        if(!member){errors.push(`Sheet "${sheetName}": doesn't match any current member's name — rename the sheet to match, or this sheet is ignored.`);return;}
+        const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{defval:''});
+        const currentTx={};
+        DB.transactions.filter(t=>t.memberId===member.id&&['contribution','withdrawal'].includes(t.type)).forEach(t=>currentTx[t.id]=t);
+        const currentLoans={};
+        DB.loans.filter(l=>loanBelongsToMember(l,member.id)).forEach(l=>currentLoans[l.id]=l);
 
-        if(!id&&!date&&!type&&(row.Amount===''||row.Amount===undefined))return; // fully blank row
+        rows.forEach((row,idx)=>{
+          const rn=idx+2;
+          const id=(row.ID||'').toString().trim();
+          const date=(row.Date||'').toString().trim();
+          const typeRaw=(row.Type||'').toString().trim();
+          const type=typeRaw.toLowerCase();
+          const amount=parseFloat(row.Amount);
+          const rate=parseFloat(row['Rate %']);
+          const dueDate=(row['Due Date']||'').toString().trim();
+          const desc=(row.Description||'').toString().trim();
+          const del=(row.Delete||'').toString().trim().toUpperCase()==='Y';
 
-        if(!RECON_TYPES.includes(type)){errors.push(`Row ${rn}: Type must be contribution, withdrawal or expense (got "${row.Type}")`);return;}
-        if(!date||isNaN(new Date(date).getTime())){errors.push(`Row ${rn}: invalid or missing Date`);return;}
-        if(isNaN(amount)||amount<=0){errors.push(`Row ${rn}: Amount must be a positive number`);return;}
+          if(!id&&!date&&!typeRaw&&(row.Amount===''||row.Amount===undefined))return;
 
-        let memberId=null;
-        if(type!=='expense'){
-          if(!memberName){errors.push(`Row ${rn}: Member is required for ${type}`);return;}
-          const m=DB.members.find(x=>x.name.trim().toLowerCase()===memberName.toLowerCase());
-          if(!m){errors.push(`Row ${rn}: Unknown member "${memberName}"`);return;}
-          memberId=m.id;
-        }
-
-        if(id){
-          const existing=currentById[id];
-          if(!existing){errors.push(`Row ${rn}: ID "${id}" not found — leave ID blank for new entries`);return;}
-          if(del){
-            const em=existing.memberId?DB.members.find(x=>x.id===existing.memberId):null;
-            toDelete.push({id,summary:`${existing.date} · ${existing.type} · ${fmtF(existing.amount)}${em?' · '+em.name:''}`});
-            return;
+          if(!['contribution','withdrawal','loan taken'].includes(type)){
+            errors.push(`${sheetName}, row ${rn}: Type must be Contribution, Withdrawal, or Loan Taken (got "${typeRaw}")`);return;
           }
-          const changed=existing.date!==date||existing.type!==type||+existing.amount!==+amount||
-            (existing.memberId||null)!==memberId||(existing.desc||'')!==desc||(existing.notes||'')!==notes;
-          if(changed)toModify.push({id,before:existing,after:{date,type,amount,memberId,desc,notes}});
-          else unchanged++;
-        } else {
-          if(del)return;
-          toAdd.push({id:uid(),date,type,amount,memberId,desc,notes});
-        }
+          if(!date||isNaN(new Date(date).getTime())){errors.push(`${sheetName}, row ${rn}: invalid or missing Date`);return;}
+          if(isNaN(amount)||amount<=0){errors.push(`${sheetName}, row ${rn}: Amount must be a positive number`);return;}
+
+          if(type==='loan taken'){
+            if(isNaN(rate)||rate<0){errors.push(`${sheetName}, row ${rn}: Rate % is required for Loan Taken`);return;}
+            if(id){
+              const existing=currentLoans[id];
+              if(!existing){errors.push(`${sheetName}, row ${rn}: Loan ID "${id}" not found`);return;}
+              if(del){lnDelete.push({id,member:member.name,summary:`${existing.date} · ${fmtF(existing.amount)} @ ${existing.rate}%`});return;}
+              const changed=existing.date!==date||+existing.amount!==+amount||+existing.rate!==+rate||(existing.dueDate||'')!==dueDate||(existing.notes||'')!==desc;
+              if(changed)lnModify.push({id,member:member.name,before:existing,after:{date,amount,rate,dueDate,notes:desc}});
+              else unchanged++;
+            } else {
+              if(del)return;
+              lnAdd.push({id:uid(),member,date,amount,rate,dueDate,notes:desc});
+            }
+          } else {
+            if(id){
+              const existing=currentTx[id];
+              if(!existing){errors.push(`${sheetName}, row ${rn}: ID "${id}" not found`);return;}
+              if(del){txDelete.push({id,summary:`${existing.date} · ${existing.type} · ${fmtF(existing.amount)}`});return;}
+              const changed=existing.date!==date||existing.type!==type||+existing.amount!==+amount||(existing.desc||'')!==desc;
+              if(changed)txModify.push({id,before:existing,after:{date,type,amount,memberId:member.id,desc}});
+              else unchanged++;
+            } else {
+              if(del)return;
+              txAdd.push({id:uid(),date,type,amount,memberId:member.id,desc});
+            }
+          }
+        });
       });
 
-      reconPending={toAdd,toModify,toDelete,unchanged,errors};
+      // Investments sheet
+      const invToCreate=[],invToTopUp=[],invToClose=[];
+      const wsInv=wb.Sheets['Investments'];
+      if(wsInv){
+        const invRows=XLSX.utils.sheet_to_json(wsInv,{defval:''});
+        const currentInv={};DB.investments.forEach(i=>currentInv[i.id]=i);
+        invRows.forEach((row,idx)=>{
+          const rn=idx+2;
+          const id=(row.ID||'').toString().trim();
+          const name=(row.Name||'').toString().trim();
+          const initAmt=parseFloat(row['Initial Input Amount']);
+          const initDate=(row['Initial Input Date']||'').toString().trim();
+          const top2Amt=parseFloat(row['2nd Input Amount']);
+          const top2Date=(row['2nd Input Date']||'').toString().trim();
+          const outAmt=parseFloat(row['Output Amount']);
+          const closeDateVal=(row['Close Date']||'').toString().trim();
+          const hasOut=!isNaN(outAmt)&&row['Output Amount']!=='';
+          const hasTop=!isNaN(top2Amt)&&row['2nd Input Amount']!=='';
+
+          if(!id&&!name)return;
+          if(!name){errors.push(`Investments, row ${rn}: Name is required`);return;}
+
+          if(!id){
+            if(isNaN(initAmt)||initAmt<=0){errors.push(`Investments, row ${rn} (${name}): Initial Input Amount must be a positive number for a new investment`);return;}
+            if(!initDate||isNaN(new Date(initDate).getTime())){errors.push(`Investments, row ${rn} (${name}): invalid or missing Initial Input Date`);return;}
+            if(hasTop&&(!top2Date||isNaN(new Date(top2Date).getTime()))){errors.push(`Investments, row ${rn} (${name}): 2nd Input Date required when 2nd Input Amount is set`);return;}
+            if(hasOut!==!!closeDateVal){errors.push(`Investments, row ${rn} (${name}): Output Amount and Close Date must both be filled, or both left blank`);return;}
+            invToCreate.push({id:uid(),name,initAmt,initDate,topUpAmt:hasTop?top2Amt:0,topUpDate:hasTop?top2Date:'',
+              close:hasOut?{outAmt,closeDateVal}:null});
+          } else {
+            const existing=currentInv[id];
+            if(!existing){errors.push(`Investments, row ${rn}: ID "${id}" not found`);return;}
+            if(hasTop&&!existing.topUpApplied){
+              if(!top2Date||isNaN(new Date(top2Date).getTime())){errors.push(`Investments, row ${rn} (${name}): invalid 2nd Input Date`);return;}
+              invToTopUp.push({id,name:existing.name,amount:top2Amt,date:top2Date});
+            }
+            if(hasOut&&closeDateVal&&existing.status!=='closed'){
+              invToClose.push({id,name:existing.name,outAmt,closeDate:closeDateVal});
+            } else if(hasOut&&existing.status==='closed'&&(+existing.currentValue!==+outAmt||existing.closeDate!==closeDateVal)){
+              errors.push(`Investments, row ${rn} (${name}): already closed with different values — profit was already distributed. Adjust via the app's Update Investment screen, not Excel.`);
+            }
+          }
+        });
+      }
+
+      reconPending={txAdd,txModify,txDelete,lnAdd,lnModify,lnDelete,invToCreate,invToTopUp,invToClose,unchanged,errors};
       renderReconDiff();
       openModal('modal-recon-diff');
     }catch(err){alert('Could not read file: '+err.message);}
@@ -2763,31 +2787,37 @@ function importLedgerExcel(e){
 
 function renderReconDiff(){
   const p=reconPending,box=document.getElementById('recon-diff-body');
-  const mName=id=>{const m=DB.members.find(x=>x.id===id);return m?m.name:'';};
   let html='';
   if(p.errors.length){
-    html+=`<div style="color:var(--red);margin-bottom:10px;"><strong>${p.errors.length} error(s) — fix these in Excel and re-import:</strong><br>`+
+    html+=`<div style="color:var(--red);margin-bottom:10px;"><strong>${p.errors.length} error(s) — fix these and re-import:</strong><br>`+
       p.errors.map(x=>'• '+x).join('<br>')+'</div>';
   }
-  html+=`<div style="margin-bottom:10px;">${p.unchanged} unchanged &nbsp;·&nbsp; `+
-    `<span style="color:var(--green)">${p.toAdd.length} new</span> &nbsp;·&nbsp; `+
-    `<span style="color:var(--gold)">${p.toModify.length} changed</span> &nbsp;·&nbsp; `+
-    `<span style="color:var(--red)">${p.toDelete.length} to delete</span></div>`;
-  if(p.toAdd.length)html+='<div style="margin-bottom:8px;"><strong>New:</strong><br>'+
-    p.toAdd.map(a=>`• ${a.date} · ${a.type} · ${fmtF(a.amount)}${a.memberId?' · '+mName(a.memberId):''}${a.desc?' — '+a.desc:''}`).join('<br>')+'</div>';
-  if(p.toModify.length)html+='<div style="margin-bottom:8px;"><strong>Changed:</strong><br>'+
-    p.toModify.map(m=>{
-      const bits=[];
-      if(m.before.date!==m.after.date)bits.push(`date ${m.before.date}→${m.after.date}`);
-      if(m.before.type!==m.after.type)bits.push(`type ${m.before.type}→${m.after.type}`);
-      if(+m.before.amount!==+m.after.amount)bits.push(`amount ${fmtF(m.before.amount)}→${fmtF(m.after.amount)}`);
-      if((m.before.memberId||null)!==m.after.memberId)bits.push(`member ${mName(m.before.memberId)||'—'}→${mName(m.after.memberId)||'—'}`);
-      if((m.before.desc||'')!==m.after.desc)bits.push('description changed');
-      if((m.before.notes||'')!==m.after.notes)bits.push('notes changed');
-      return `• ${m.before.date} · ${m.before.type}: `+bits.join(', ');
-    }).join('<br>')+'</div>';
-  if(p.toDelete.length)html+='<div><strong>To delete:</strong><br>'+p.toDelete.map(d=>'• '+d.summary).join('<br>')+'</div>';
-  if(!p.toAdd.length&&!p.toModify.length&&!p.toDelete.length&&!p.errors.length)html+='<div style="color:var(--muted2);">No changes detected — everything already matches.</div>';
+  const totalChanges=p.txAdd.length+p.txModify.length+p.txDelete.length+p.lnAdd.length+p.lnModify.length+p.lnDelete.length+
+    p.invToCreate.length+p.invToTopUp.length+p.invToClose.length;
+  html+=`<div style="margin-bottom:10px;">${p.unchanged} unchanged &nbsp;·&nbsp; <span style="color:var(--green)">${totalChanges} change(s) detected</span></div>`;
+
+  if(p.txAdd.length)html+='<div style="margin-bottom:8px;"><strong>New contributions/withdrawals:</strong><br>'+
+    p.txAdd.map(a=>`• ${a.date} · ${a.type} · ${fmtF(a.amount)}`).join('<br>')+'</div>';
+  if(p.txModify.length)html+='<div style="margin-bottom:8px;"><strong>Changed contributions/withdrawals:</strong><br>'+
+    p.txModify.map(m=>`• ${m.before.date} · ${m.before.type} · ${fmtF(m.before.amount)}→${fmtF(m.after.amount)}`).join('<br>')+'</div>';
+  if(p.txDelete.length)html+='<div style="margin-bottom:8px;"><strong>Deleted contributions/withdrawals:</strong><br>'+
+    p.txDelete.map(d=>'• '+d.summary).join('<br>')+'</div>';
+
+  if(p.lnAdd.length)html+='<div style="margin-bottom:8px;"><strong>New loans:</strong><br>'+
+    p.lnAdd.map(a=>`• ${a.member.name} — ${fmtF(a.amount)} @ ${a.rate}%, issued ${a.date}`).join('<br>')+'</div>';
+  if(p.lnModify.length)html+='<div style="margin-bottom:8px;"><strong>Changed loans:</strong><br>'+
+    p.lnModify.map(m=>`• ${m.member} — ${fmtF(m.before.amount)}→${fmtF(m.after.amount)}`).join('<br>')+'</div>';
+  if(p.lnDelete.length)html+='<div style="margin-bottom:8px;color:var(--red)"><strong>Deleted loans (erases cash-out history — use Write Off in-app for genuine write-offs instead):</strong><br>'+
+    p.lnDelete.map(d=>`• ${d.member} — ${d.summary}`).join('<br>')+'</div>';
+
+  if(p.invToCreate.length)html+='<div style="margin-bottom:8px;"><strong>New investments:</strong><br>'+
+    p.invToCreate.map(i=>`• ${i.name} — ${fmtF(i.initAmt)} on ${i.initDate}${i.topUpAmt?` + ${fmtF(i.topUpAmt)} top-up on ${i.topUpDate}`:''}${i.close?` → closed ${i.close.closeDateVal} at ${fmtF(i.close.outAmt)}`:''}`).join('<br>')+'</div>';
+  if(p.invToTopUp.length)html+='<div style="margin-bottom:8px;"><strong>Top-ups to apply:</strong><br>'+
+    p.invToTopUp.map(t=>`• ${t.name} + ${fmtF(t.amount)} on ${t.date}`).join('<br>')+'</div>';
+  if(p.invToClose.length)html+='<div style="margin-bottom:8px;"><strong>Investments to close (profit distributed on confirm):</strong><br>'+
+    p.invToClose.map(c=>`• ${c.name} — output ${fmtF(c.outAmt)} on ${c.closeDate}`).join('<br>')+'</div>';
+
+  if(!totalChanges&&!p.errors.length)html+='<div style="color:var(--muted2);">No changes detected — everything already matches.</div>';
   box.innerHTML=html;
   document.getElementById('recon-confirm-btn').disabled=p.errors.length>0;
   document.getElementById('recon-confirm-btn').style.opacity=p.errors.length>0?0.5:1;
@@ -2796,23 +2826,100 @@ function renderReconDiff(){
 function confirmReconImport(){
   const p=reconPending;if(!p)return;
   if(p.errors.length){alert('Fix the errors shown before importing.');return;}
-  if(!p.toAdd.length&&!p.toModify.length&&!p.toDelete.length){closeModal('modal-recon-diff');reconPending=null;return;}
-  if(!safeConfirm(`Apply ${p.toAdd.length} new, ${p.toModify.length} changed and ${p.toDelete.length} deleted ledger entries? This updates capital account balances immediately.`))return;
+  const totalChanges=p.txAdd.length+p.txModify.length+p.txDelete.length+p.lnAdd.length+p.lnModify.length+p.lnDelete.length+
+    p.invToCreate.length+p.invToTopUp.length+p.invToClose.length;
+  if(!totalChanges){closeModal('modal-recon-diff');reconPending=null;return;}
+  if(!safeConfirm(`Apply ${totalChanges} change(s)? This updates capital accounts, loans and investments immediately.`))return;
 
-  p.toDelete.forEach(d=>{DB.transactions=DB.transactions.filter(t=>t.id!==d.id);});
-  p.toModify.forEach(m=>{
-    const t=DB.transactions.find(x=>x.id===m.id);
-    if(t){t.date=m.after.date;t.type=m.after.type;t.amount=m.after.amount;t.memberId=m.after.memberId;t.desc=m.after.desc;t.notes=m.after.notes;}
+  p.txDelete.forEach(d=>{DB.transactions=DB.transactions.filter(t=>t.id!==d.id);});
+  p.txModify.forEach(m=>{const t=DB.transactions.find(x=>x.id===m.id);if(t)Object.assign(t,m.after);});
+  p.txAdd.forEach(a=>{DB.transactions.push({id:a.id,date:a.date,type:a.type,amount:a.amount,memberId:a.memberId,
+    desc:a.desc||(a.type.charAt(0).toUpperCase()+a.type.slice(1))});});
+
+  // Rebuild capital account history now, before computing any loan/investment equity splits below —
+  // caBalanceAsOf() needs history to already reflect every contribution/withdrawal just applied above,
+  // so a backdated loan or investment split is computed against the correct balance at that date.
+  rebuildCapitalAccounts();
+
+  p.lnDelete.forEach(d=>{
+    const l=DB.loans.find(x=>x.id===d.id);if(!l)return;
+    DB.loans=DB.loans.filter(x=>x.id!==d.id);
+    const bl=l.borrower.toLowerCase();
+    DB.transactions=DB.transactions.filter(t=>{
+      const dsc=(t.desc||'').toLowerCase();
+      if(t.type==='loan_out'&&dsc===('loan to '+bl))return false;
+      if(t.type==='loan_repayment'&&!t.isAutoRepay&&dsc===('repayment — '+bl))return false;
+      if(t.type==='loan_repayment'&&t.isAutoRepay&&dsc.startsWith('auto-repayment — '+bl))return false;
+      if(t.type==='profit'&&(dsc.startsWith('loan interest — '+bl)||dsc.startsWith('borrower repayment bonus — '+bl)))return false;
+      return true;
+    });
   });
-  p.toAdd.forEach(a=>{
-    DB.transactions.push({id:a.id,date:a.date,type:a.type,amount:a.amount,memberId:a.memberId,
-      desc:a.desc||(a.type.charAt(0).toUpperCase()+a.type.slice(1)),notes:a.notes});
+  p.lnModify.forEach(m=>{const l=DB.loans.find(x=>x.id===m.id);if(l)Object.assign(l,m.after);});
+  p.lnAdd.forEach(a=>{
+    // Re-rebuild before each one: an investment closed earlier in this same batch may have just
+    // posted profit into capital account history, and a loan created here needs that already
+    // reflected if its date falls after that profit was posted.
+    rebuildCapitalAccounts();
+    const balances=DB.members.map(mm=>({memberId:mm.id,bal:caBalanceAsOf(mm.id,a.date)})).filter(x=>x.bal>0);
+    const totalBal=balances.reduce((s,x)=>s+x.bal,0);
+    const equitySnapshot=totalBal>0?balances.map(x=>({memberId:x.memberId,pctEquity:x.bal/totalBal})):[];
+    DB.loans.push({id:a.id,borrower:a.member.name,borrowerMemberId:a.member.id,amount:a.amount,rate:a.rate,
+      date:a.date,dueDate:a.dueDate,notes:a.notes,repaid:0,interestDistributed:0,equitySnapshot});
+    DB.transactions.push({id:uid(),date:a.date,type:'loan_out',desc:'Loan to '+a.member.name,amount:a.amount,
+      memberId:a.member.id,notes:a.notes});
+  });
+
+  p.invToTopUp.forEach(t=>{
+    rebuildCapitalAccounts(); // same reasoning as above — keep historical splits correct across the batch
+    const inv=DB.investments.find(x=>x.id===t.id);if(!inv)return;
+    const extra=autoGenContributions(t.date,t.amount);
+    inv.contributions=(inv.contributions||[]).concat(extra);
+    inv.amount=+(inv.amount+t.amount).toFixed(2);
+    if(inv.status!=='closed')inv.currentValue=+(inv.currentValue+t.amount).toFixed(2);
+    inv.topUpAmount=t.amount;inv.topUpDate=t.date;inv.topUpApplied=true;
+    if(!inv.valueHistory)inv.valueHistory=[];
+    inv.valueHistory.push({date:t.date,value:inv.currentValue,note:'Top-up: +'+fmtF(t.amount)});
+    DB.transactions.push({id:uid(),date:t.date,type:'investment',desc:'Investment top-up: '+inv.name,
+      amount:t.amount,memberId:'',investmentId:inv.id});
+  });
+  p.invToClose.forEach(c=>{
+    rebuildCapitalAccounts(); // keep history current before this close's profit posts on top of it
+    const inv=DB.investments.find(x=>x.id===c.id);if(!inv)return;
+    inv.status='closed';inv.currentValue=c.outAmt;inv.closeDate=c.closeDate;
+    if(!inv.valueHistory)inv.valueHistory=[];
+    inv.valueHistory.push({date:c.closeDate,value:c.outAmt,note:'Closed via Excel import'});
+    distributeInvProfits(inv);
+  });
+  p.invToCreate.forEach(c=>{
+    rebuildCapitalAccounts(); // ditto — a previously processed item in this batch may have posted profit
+    const contribs=autoGenContributions(c.initDate,c.initAmt);
+    const inv={id:c.id,name:c.name,type:'Other',date:c.initDate,startDate:c.initDate,
+      amount:c.initAmt,initialAmount:c.initAmt,currentValue:c.initAmt,status:'open',
+      notes:'',contributions:contribs,valueHistory:[{date:c.initDate,value:c.initAmt,note:'Initial valuation'}]};
+    DB.investments.push(inv);
+    DB.transactions.push({id:uid(),date:c.initDate,type:'investment',desc:'Investment: '+c.name,
+      amount:c.initAmt,memberId:'',investmentId:inv.id});
+    if(c.topUpAmt>0){
+      const extra=autoGenContributions(c.topUpDate,c.topUpAmt);
+      inv.contributions=inv.contributions.concat(extra);
+      inv.amount=+(inv.amount+c.topUpAmt).toFixed(2);
+      inv.currentValue=+(inv.currentValue+c.topUpAmt).toFixed(2);
+      inv.topUpAmount=c.topUpAmt;inv.topUpDate=c.topUpDate;inv.topUpApplied=true;
+      inv.valueHistory.push({date:c.topUpDate,value:inv.currentValue,note:'Top-up: +'+fmtF(c.topUpAmt)});
+      DB.transactions.push({id:uid(),date:c.topUpDate,type:'investment',desc:'Investment top-up: '+c.name,
+        amount:c.topUpAmt,memberId:'',investmentId:inv.id});
+    }
+    if(c.close){
+      inv.status='closed';inv.currentValue=c.close.outAmt;inv.closeDate=c.close.closeDateVal;
+      inv.valueHistory.push({date:c.close.closeDateVal,value:c.close.outAmt,note:'Closed via Excel import'});
+      distributeInvProfits(inv);
+    }
   });
 
   rebuildCapitalAccounts();
-  saveDB();renderAll();
+  save();
   closeModal('modal-recon-diff');
-  alert(`✓ Reconciled — ${p.toAdd.length} added, ${p.toModify.length} updated, ${p.toDelete.length} removed.`);
+  alert(`✓ Import applied — ${totalChanges} change(s) processed.`);
   reconPending=null;
 }
 
