@@ -57,6 +57,10 @@ body::before{
 
 /* TOPBAR */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;padding-top:calc(11px + env(safe-area-inset-top));background:var(--glass-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--border-bright);flex-shrink:0;}
+.alerts-bar{display:none;align-items:center;gap:8px;padding:8px 14px;background:rgba(240,193,74,.1);border-bottom:1px solid rgba(240,193,74,.25);color:var(--gold);font-size:11.5px;font-weight:600;cursor:pointer;flex-shrink:0;}
+.alerts-bar.show{display:flex;}
+.alerts-bar .chev{margin-left:auto;opacity:.6;font-size:14px;}
+.alerts-bar.danger{background:rgba(240,74,106,.1);border-bottom-color:rgba(240,74,106,.25);color:var(--red);}
 .tb-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 .tb-title{font-family:'DM Serif Display',Georgia,serif;font-size:17px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .back-btn{background:none;border:1px solid var(--border);color:var(--muted2);border-radius:6px;padding:5px 9px;font-size:11px;font-family:'Syne',ui-sans-serif,sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
@@ -215,11 +219,14 @@ select option{background:var(--surface2);}
     </div>
   </div>
 
+  <div id="alerts-bar" class="alerts-bar" onclick="openModal('modal-alerts')">
+    <span>⚠</span><span id="alerts-bar-text"></span><span class="chev">›</span>
+  </div>
+
   <div class="scroll-area">
 
     <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
-      <div id="d-alerts"></div>
       <div class="kpi-grid">
         <div class="kpi-card yellow"><div class="kl">Capital Pool</div><div class="kv" id="d-cap">--</div><div class="ks">Total member balances</div></div>
         <div class="kpi-card green"><div class="kl">Reserve</div><div class="kv green" id="d-res">--</div><div class="ks" id="d-res-pct">0% of capital</div></div>
@@ -669,6 +676,15 @@ select option{background:var(--surface2);}
 </div>
 
 <!-- CHANGE PASSWORD -->
+<div class="mo" id="modal-alerts">
+  <div class="modal">
+    <div class="mhandle" onclick="closeModal('modal-alerts')"></div>
+    <div class="mhd"><div class="mtitle">Warnings</div><button class="mclose" onclick="closeModal('modal-alerts')">×</button></div>
+    <div class="mbody" id="alerts-modal-body" style="font-size:12.5px;line-height:1.7;max-height:60vh;overflow-y:auto;"></div>
+    <div class="mfoot"><button class="btn-g" onclick="closeModal('modal-alerts')">Close</button></div>
+  </div>
+</div>
+
 <div class="mo" id="modal-recon-diff">
   <div class="modal">
     <div class="mhandle" onclick="cancelReconImport()"></div>
@@ -721,9 +737,55 @@ let DB={
 };
 let cfFilter='all', repFilter='thisyear';
 let pageHistory=[], curPage='dashboard';
+// PERFORMANCE FIX (Sep 2026): renderAll() used to unconditionally rebuild every page's DOM
+// (Dashboard, Cash Flow, Members, Investments, Loans, Transactions, Reports — Reports being the
+// heaviest, since it recomputes day-weighted profit across every investment and member) on
+// EVERY save() AND on every single page navigation via showPage(), even though at most one page
+// is ever visible at a time. With hundreds of transactions/loans this made routine actions and
+// even just switching tabs feel sluggish, since 6 of the 7 rebuilt pages were invisible every
+// time. Fixed with a dirty-page system below: a data change marks every page "needs refresh" but
+// only actually renders the page currently on screen; other pages render lazily, once, the next
+// time the user actually navigates to them — not before.
+const RENDER_FN={dashboard:renderDash,cashflow:renderCF,members:renderMembers,investments:renderInvestments,
+  loans:renderLoans,transactions:renderTx,reports:renderReports};
+let dirtyPages=new Set(Object.keys(RENDER_FN)); // everything starts dirty so the first render always happens
+function markAllDirty(){Object.keys(RENDER_FN).forEach(p=>dirtyPages.add(p));}
+function renderPageIfDirty(page){
+  if(!RENDER_FN[page]||!dirtyPages.has(page))return;
+  RENDER_FN[page]();
+  dirtyPages.delete(page);
+}
 let activeMemberPortfolioId=null;
 let fbApp=null, fbDB=null;
 let reconPending=null;
+let lastAlerts=[];
+// Computes alerts (overdue loans, low/negative reserve) and renders the single collapsed top
+// bar — never a stack of banners. Lives above .scroll-area, outside any single page, so it has
+// to be computed unconditionally in renderAll() (see below), not inside renderDash() — with the
+// lazy per-page rendering above, renderDash() only runs when Dashboard is actually the page on
+// screen, but this bar needs to reflect overdue loans no matter which page the user is viewing.
+function computeAndRenderAlerts(){
+  const alerts=[];const t2=today();
+  DB.loans.forEach(l=>{if(!l.writtenOff&&loanBalance(l)>0&&l.dueDate&&l.dueDate<t2)alerts.push(`Loan to <b>${l.borrower}</b> overdue (due ${l.dueDate}, ${fmtF(loanBalance(l))} remaining)`);});
+  const cap=capPool(),res=reserve();
+  const rp=cap>0?(res/cap*100):0;
+  if(cap>0&&rp<(DB.settings.reserveTarget||20))alerts.push(`Reserve (${rp.toFixed(1)}%) below target ${DB.settings.reserveTarget}%`);
+  if(res<0)alerts.push(`Reserve is NEGATIVE (${fmtF(res)})`);
+  lastAlerts=alerts;
+  renderAlertsBar();
+}
+function renderAlertsBar(){
+  const bar=document.getElementById('alerts-bar');
+  const txt=document.getElementById('alerts-bar-text');
+  const body=document.getElementById('alerts-modal-body');
+  if(!bar||!txt)return;
+  if(!lastAlerts.length){bar.classList.remove('show','danger');return;}
+  const hasDanger=lastAlerts.some(a=>a.includes('NEGATIVE'));
+  bar.classList.add('show');
+  bar.classList.toggle('danger',hasDanger);
+  txt.textContent=lastAlerts.length===1?lastAlerts[0].replace(/<\/?b>/g,''):`${lastAlerts.length} warnings — tap to view`;
+  if(body)body.innerHTML=lastAlerts.map(a=>`<div style="background:rgba(240,193,74,.08);border:1px solid rgba(240,193,74,.2);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;gap:8px;">⚠ <span>${a}</span></div>`).join('');
+}
 
 const ADMIN_BONUS_PCT=3;
 
@@ -1173,7 +1235,7 @@ function showPage(page,addH=true){
   document.getElementById('back-btn').classList.toggle('hidden',pageHistory.length===0);
   document.querySelector('.scroll-area').scrollTop=0;
   if(page==='settings'){loadSettingsForm();}
-  renderAll();
+  renderPageIfDirty(page); // render only if this page's data changed since it was last shown
 }
 
 function goBack(){
@@ -1193,7 +1255,12 @@ function quickAddTxForActiveMember(){
 // RENDER ALL
 // ════════════════════════════════════════
 function renderAll(){
-  renderDash();renderCF();renderMembers();renderInvestments();renderLoans();renderTx();renderReports();updateMemSel();
+  // Only the page currently on screen renders immediately; the rest are marked dirty and will
+  // render lazily, once, the next time the user actually navigates to them (see showPage()).
+  markAllDirty();
+  renderPageIfDirty(curPage);
+  updateMemSel();
+  computeAndRenderAlerts();
 }
 
 // ── DASHBOARD ──
@@ -1219,12 +1286,7 @@ function renderDash(){
   el('d-util-p').textContent=up.toFixed(1)+'%';
   const bar=el('d-util-b');bar.style.width=Math.min(100,up)+'%';
   bar.style.background=up>90?'var(--red)':up>70?'var(--gold)':'var(--accent)';
-  // alerts
-  const alerts=[];const t2=today();
-  DB.loans.forEach(l=>{if(loanBalance(l)>0&&l.dueDate&&l.dueDate<t2)alerts.push(`Loan to <b>${l.borrower}</b> overdue`);});
-  if(cap>0&&rp<(DB.settings.reserveTarget||20))alerts.push(`Reserve (${rp.toFixed(1)}%) below target ${DB.settings.reserveTarget}%`);
-  if(res<0)alerts.push(`Reserve is NEGATIVE (${fmtF(res)})`);
-  el('d-alerts').innerHTML=alerts.map(a=>`<div style="background:rgba(240,193,74,.08);border:1px solid rgba(240,193,74,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--gold);margin-bottom:8px;display:flex;gap:8px;">⚠ <span>${a}</span></div>`).join('');
+
   // member equity
   const me=el('d-mem');
   if(!DB.members.length){
