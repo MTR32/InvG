@@ -428,6 +428,16 @@ select option{background:var(--surface2);}
         </div>
       </div>
       <div class="card">
+        <div class="card-hd"><div class="card-title">🔔 Send Notification</div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:11px;color:var(--muted2);">Loan reminders and contribution alerts are sent automatically. Use this for your own announcements.</div>
+          <select id="nt-to" style="width:100%"></select>
+          <input id="nt-title" placeholder="Title (e.g. Meeting)" style="width:100%">
+          <textarea id="nt-body" rows="3" placeholder="Message" style="width:100%"></textarea>
+          <button class="btn" onclick="sendNotice()">Send to phones</button>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-hd"><div class="card-title">Security</div></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
           <button class="btn-g" onclick="openModal('modal-change-pw')">🔐 Change Password</button>
@@ -3074,6 +3084,24 @@ function initFirebase(){
     }).catch(e=>setSyncStatus('✗ Auth: '+e.message,'var(--red)'));
   }catch(e){console.warn(e);}
 }
+
+
+// ── Custom notification -> outbox (a GitHub Action delivers it within ~10 min) ──
+function fillNoticeTargets(){
+  const el=document.getElementById('nt-to');if(!el)return;
+  el.innerHTML='<option value="all">Everyone</option>'+DB.members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+}
+function sendNotice(){
+  if(!fbDB)return alert('Not connected to Firebase yet.');
+  const title=document.getElementById('nt-title').value.trim();
+  const body=document.getElementById('nt-body').value.trim();
+  const to=document.getElementById('nt-to').value||'all';
+  if(!body)return alert('Type a message first.');
+  fbDB.ref('outbox/'+uid()).set({title:title||'Message from your treasurer',body,to,createdAt:new Date().toISOString()})
+    .then(()=>{document.getElementById('nt-body').value='';alert('✓ Queued. It will reach phones within about 10 minutes.');})
+    .catch(e=>alert('Failed: '+e.message));
+}
+setInterval(()=>{const el=document.getElementById('nt-to');if(el&&el.options.length<=1&&DB.members.length)fillNoticeTargets();},3000);
 
 function syncToFirebase(){
   if(!fbDB){alert('Not connected to Firebase yet.\n\nThis usually means the Firebase scripts are still loading, or failed to load. Wait a few seconds and try again — if it persists, check that nothing is blocking gstatic.com/firebaseio.com (ad-blocker, restrictive network, etc).');return;}
