@@ -1,15 +1,17 @@
 {
-  "name": "InvestGroup — Treasurer",
-  "short_name": "InvestGroup",
-  "start_url": "./InvestGroup.html",
+  "name": "My Portfolio",
+  "short_name": "My Portfolio",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1e293b",
+  "background_color": "#0b0c0e",
+  "theme_color": "#0b0c0e",
+  "start_url": ".",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
