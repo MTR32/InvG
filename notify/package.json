@@ -2,7 +2,5 @@
   "name": "investgroup-notify",
   "private": true,
   "type": "module",
-  "dependencies": {
-    "firebase-admin": "^12.0.0"
-  }
+  "dependencies": { "firebase-admin": "^12.7.0" }
 }
