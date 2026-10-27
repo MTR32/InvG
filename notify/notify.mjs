@@ -27,7 +27,9 @@ async function send(memberId, title, body, tag) {
     data: { title, body, tag: tag || '', url: APP_URL },
     webpush: { headers: { Urgency: 'high', TTL: String(60 * 60 * 24 * 3) } }
   });
-  const dead = [];
+    const dead = [];
+  console.log('sent to', memberId, 'tokens:', entries.length, 'ok:', res.successCount);
+  res.responses.forEach(r => { if (r.error) console.log('FCM error', r.error.code, r.error.message); });
   res.responses.forEach((r, i) => {
     const c = r.error && r.error.code;
     if (c === 'messaging/registration-token-not-registered' || c === 'messaging/invalid-registration-token') dead.push(entries[i]);
