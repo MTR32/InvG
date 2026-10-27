@@ -21,7 +21,7 @@ const fmt = n => cur + Number(n).toLocaleString('en', { maximumFractionDigits: 2
 
 async function send(memberId, title, body, tag) {
   const entries = Object.keys(tokensAll[memberId] || {});
-  if (!entries.length) return 0;
+      if (!entries.length) { console.log('no token for member', memberId); return 0; }
   const res = await admin.messaging().sendEachForMulticast({
     tokens: entries,
     data: { title, body, tag: tag || '', url: APP_URL },
