@@ -1,17 +1,1 @@
-{
-  "name": "My Portfolio",
-  "short_name": "My Portfolio",
-  "display": "standalone",
-  "background_color": "#0b0c0e",
-  "theme_color": "#0b0c0e",
-  "start_url": ".",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    }
-  ]
-}
+{"name":"My Portfolio","short_name":"My Portfolio","id":"/InvG/member","display":"standalone","background_color":"#0b0c0e","theme_color":"#0b0c0e","start_url":"InvestGroup-Member.html","scope":"./","orientation":"portrait","icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
