@@ -1,1 +1,21 @@
-
+name: InvestGroup notifications
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+concurrency: { group: notify, cancel-in-progress: false }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: notify/package.json }
+      - run: npm install --prefix notify
+      - run: node notify/notify.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          APP_URL: https://mtr32.github.io/InvG/member/
+          LOAN_HOUR_UTC: '6'
+          OVERDUE_EVERY_DAYS: '3'
+          LOAN_EVERY_DAYS: '7'
