@@ -34,7 +34,7 @@ async function send(memberId, title, body, tag) {
     const c = r.error && r.error.code;
     if (c === 'messaging/registration-token-not-registered' || c === 'messaging/invalid-registration-token') dead.push(entries[i]);
   });
-  for (const t of dead) await db.ref(`fcmTokens/${memberId}/${t}`).remove();
+    for (const t of dead) { console.log('removing dead token for', memberId); await db.ref(`fcmTokens/${memberId}/${t}`).remove(); }
   return res.successCount;
 }
 
