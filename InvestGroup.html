@@ -428,6 +428,14 @@ select option{background:var(--surface2);}
         </div>
       </div>
       <div class="card">
+        <div class="card-hd"><div class="card-title">🔗 Match old records</div></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+          <div style="font-size:11px;color:var(--muted2);">Finds loans and transactions that aren't linked to a member and suggests who they belong to. Nothing changes until you tap Link. Linking a contribution or withdrawal updates that member's capital balance.</div>
+          <button class="btn" onclick="scanMatches()">Scan old records</button>
+          <div id="mt-list"></div>
+        </div>
+      </div>
+      <div class="card">
         <div class="card-hd"><div class="card-title">🔔 Send Notification</div></div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
           <div style="font-size:11px;color:var(--muted2);">Loan reminders and contribution alerts are sent automatically. Use this for your own announcements.</div>
@@ -646,7 +654,7 @@ select option{background:var(--surface2);}
     <div class="mhandle" onclick="closeModal('modal-add-loan')"></div>
     <div class="mhd"><div class="mtitle">Issue Loan</div><button class="mclose" onclick="closeModal('modal-add-loan')">×</button></div>
     <div class="mbody">
-      <div class="fg"><label>Borrower Name</label><input id="ln-bor" placeholder="Full name"></div>
+      <div class="fg"><label>Borrower Name</label><input id="ln-bor" placeholder="Type part of the name" oninput="suggestBorrower()" autocomplete="off"><div id="ln-sug" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div></div>
       <div class="frow">
         <div class="fg"><label>Amount</label><input type="number" id="ln-amt" min="0" placeholder="0.00"></div>
         <div class="fg"><label>Interest Rate %</label><input type="number" id="ln-rate" min="0" step="0.1" placeholder="10"></div>
@@ -2349,9 +2357,108 @@ function fixLoanRates(){
   }
 }
 
+
+// ── Smart member-name matching ──
+function normName(x){return (x||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();}
+function matchMembers(text){
+  const q=normName(text);if(q.length<2)return[];
+  const qt=q.split(' '),out=[];
+  DB.members.forEach(m=>{
+    const n=normName(m.name),nt=n.split(' ');let score=0;
+    if(n===q)score=100;
+    else if(qt.every(t=>nt.some(w=>w.startsWith(t))))score=qt.length>=2?85:70;
+    else if(n.includes(q))score=60;
+    if(score)out.push({m,score});
+  });
+  return out.sort((a,b)=>b.score-a.score);
+}
+// Returns a member only when the match is clear (one exact, or the only candidate).
+function bestMember(text){
+  const r=matchMembers(text);
+  if(!r.length)return null;
+  const ex=r.filter(x=>x.score===100);
+  if(ex.length===1)return ex[0].m;
+  if(r.length===1&&r[0].score>=70&&normName(text).length>=3)return r[0].m;
+  return null;
+}
+function suggestBorrower(){
+  const box=document.getElementById('ln-sug');if(!box)return;
+  const v=document.getElementById('ln-bor').value;
+  const r=matchMembers(v).slice(0,5);
+  if(r.length===1&&r[0].score===100){box.innerHTML='';return;}
+  box.innerHTML=r.map(x=>`<button type="button" onclick="pickBorrower('${x.m.id}')" style="padding:6px 10px;font-size:12px;border-radius:8px;border:1px solid var(--border,#333);background:transparent;color:inherit">${x.m.name}</button>`).join('');
+}
+function pickBorrower(id){
+  const m=DB.members.find(x=>x.id===id);if(!m)return;
+  document.getElementById('ln-bor').value=m.name;
+  document.getElementById('ln-sug').innerHTML='';
+}
+// Find members mentioned inside free text (descriptions of old transactions)
+function membersInText(text){
+  const T=' '+normName(text)+' ',out=[];
+  DB.members.forEach(m=>{
+    const n=normName(m.name),nt=n.split(' ');let score=0;
+    if(T.includes(' '+n+' '))score=100;
+    else if(nt.length>=2&&T.includes(' '+nt[0]+' ')&&T.includes(' '+nt[nt.length-1]+' '))score=85;
+    else if(nt.some(w=>w.length>=4&&T.includes(' '+w+' ')))score=55;
+    if(score)out.push({m,score});
+  });
+  return out.sort((a,b)=>b.score-a.score);
+}
+window._mtSkip=window._mtSkip||new Set();
+let _mtRows=[];
+function scanMatches(){
+  _mtRows=[];
+  DB.loans.forEach(l=>{
+    if(l.borrowerMemberId||window._mtSkip.has(l.id))return;
+    _mtRows.push({kind:'loan',id:l.id,label:'Loan: '+l.borrower+' · '+fmtF(l.amount)+' · '+(l.date||''),cands:matchMembers(l.borrower)});
+  });
+  DB.transactions.forEach(t=>{
+    if(t.memberId||window._mtSkip.has(t.id))return;
+    if(!['contribution','withdrawal','loan_repayment'].includes(t.type))return;
+    _mtRows.push({kind:'tx',id:t.id,label:(t.date||'')+' · '+t.type+' · '+fmtF(t.amount)+' · '+(t.desc||''),cands:membersInText((t.desc||'')+' '+(t.notes||''))});
+  });
+  const box=document.getElementById('mt-list');
+  if(!_mtRows.length){box.innerHTML='<div style="font-size:12px;padding:8px 0">✓ Nothing to match. Every loan and transaction is linked.</div>';return;}
+  box.innerHTML=_mtRows.map((r,i)=>{
+    const top=r.cands[0],pre=top&&top.score>=70?top.m.id:'';
+    const ids=new Set(r.cands.map(c=>c.m.id));
+    const opts='<option value="">Choose member…</option>'
+      +r.cands.map(c=>`<option value="${c.m.id}"${c.m.id===pre?' selected':''}>★ ${c.m.name}${c.score<70?' (unsure)':''}</option>`).join('')
+      +DB.members.filter(m=>!ids.has(m.id)).map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+    return `<div style="padding:10px 0;border-top:1px solid rgba(255,255,255,.08)">
+      <div style="font-size:12px;margin-bottom:6px">${r.label}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <select id="mt-sel-${i}" style="flex:1;min-width:150px">${opts}</select>
+        <button class="btn" style="padding:6px 12px" onclick="linkMatch(${i})">Link</button>
+        <button style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:transparent;color:inherit" onclick="skipMatch(${i})">Skip</button>
+      </div></div>`;
+  }).join('');
+}
+function skipMatch(i){const r=_mtRows[i];if(!r)return;window._mtSkip.add(r.id);scanMatches();}
+function linkMatch(i){
+  const r=_mtRows[i];if(!r)return;
+  const mid=document.getElementById('mt-sel-'+i).value;
+  if(!mid)return alert('Choose a member first.');
+  const m=DB.members.find(x=>x.id===mid);if(!m)return;
+  if(r.kind==='loan'){
+    const l=DB.loans.find(x=>x.id===r.id);if(!l)return;
+    const old=l.borrower;
+    l.borrowerMemberId=m.id;l.borrower=m.name;
+    DB.transactions.forEach(t=>{if(t.type==='loan_out'&&!t.memberId&&(t.desc||'')==='Loan to '+old&&t.amount===l.amount)t.memberId=m.id;});
+  }else{
+    const t=DB.transactions.find(x=>x.id===r.id);if(!t)return;
+    t.memberId=m.id;
+  }
+  rebuildCapitalAccounts();save();scanMatches();
+}
+
 function saveLoan(){
-  const bor=document.getElementById('ln-bor').value.trim(),amt=parseFloat(document.getElementById('ln-amt').value)||0;
+  let bor=document.getElementById('ln-bor').value.trim(),amt=parseFloat(document.getElementById('ln-amt').value)||0;
   if(!bor||amt<=0)return alert('Fill borrower and amount.');
+  const borrowerMember=bestMember(bor);
+  if(!borrowerMember){const many=matchMembers(bor);if(many.length>1)return alert('More than one member matches "'+bor+'": '+many.slice(0,4).map(x=>x.m.name).join(', ')+'.\n\nTap the right name under the box.');}
+  if(borrowerMember)bor=borrowerMember.name;
   const loanDate=document.getElementById('ln-date').value||today();
   // Snapshot each member's % equity AS OF the loan's issue date (for 90% interest split) —
   // not today's balance, so a backdated loan reflects who actually held equity then.
@@ -2359,7 +2466,6 @@ function saveLoan(){
   const totalBal=balances.reduce((s,x)=>s+x.bal,0);
   const equitySnapshot=totalBal>0?balances.map(x=>({memberId:x.memberId,pctEquity:x.bal/totalBal})):[];
   // Find the member record matching the borrower name (for auto-repayment and 10% bonus)
-  const borrowerMember=DB.members.find(m=>m.name===bor);
   const loan={id:uid(),borrower:bor,borrowerMemberId:borrowerMember?borrowerMember.id:null,
     amount:amt,rate:parseFloat(document.getElementById('ln-rate').value)||DB.settings.defaultRate||10,
     date:loanDate,
@@ -2367,7 +2473,7 @@ function saveLoan(){
     notes:document.getElementById('ln-notes').value,repaid:0,interestDistributed:0,equitySnapshot};
   DB.loans.push(loan);
   DB.transactions.push({id:uid(),date:loan.date,type:'loan_out',desc:'Loan to '+bor,amount:amt,memberId:borrowerMember?borrowerMember.id:'',notes:loan.notes});
-  closeModal('modal-add-loan');['ln-bor','ln-amt','ln-rate','ln-date','ln-due','ln-notes'].forEach(id=>document.getElementById(id).value='');save();
+  closeModal('modal-add-loan');['ln-bor','ln-amt','ln-rate','ln-date','ln-due','ln-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('ln-sug').innerHTML='';save();
 }
 function openRepay(id){
   const l=DB.loans.find(x=>x.id===id);if(!l)return;
