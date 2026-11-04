@@ -72,7 +72,32 @@ if (!state.initialized) {
   if (fresh.length) await db.ref('notifyState/seenTx').update(upd);
   console.log('contributions announced', fresh.length);
 }
-
+// 2b. Saturday weekly summary (debt + what was earned this week)
+const DIGEST_HOUR_UTC = +(process.env.DIGEST_HOUR_UTC ?? 6);
+if (now.getUTCDay() === 6 && now.getUTCHours() >= DIGEST_HOUR_UTC) {
+  const sent = state.weeklyDigest || {};
+  const weekAgo = new Date(now - 7 * 864e5).toISOString().slice(0, 10);
+  const dLoans = arr(GD.loans).filter(l => !l.writtenOff);
+  const dBal = l => Math.max(0, l.amount + l.amount * l.rate / 100 - (l.repaid || 0));
+  for (const m of arr(GD.members)) {
+    if (sent[m.id] === todayStr) continue;
+    const open = dLoans.filter(l => (l.borrowerMemberId ? l.borrowerMemberId === m.id : l.borrower && l.borrower.trim().toLowerCase() === m.name.trim().toLowerCase()) && dBal(l) > 0.01);
+    const debt = open.reduce((s, l) => s + dBal(l), 0);
+    const od = open.filter(l => l.dueDate && l.dueDate < todayStr).reduce((s, l) => s + dBal(l), 0);
+    const earned = arr(GD.transactions).filter(t => t.type === 'profit' && t.memberId === m.id && t.date > weekAgo && t.date <= todayStr).reduce((s, t) => s + (+t.amount || 0), 0);
+    if (debt <= 0.01 && earned <= 0) continue;
+    const parts = [];
+    if (debt > 0.01) parts.push(`Loan balance: ${fmt(debt)}${od > 0.01 ? ` (${fmt(od)} overdue)` : ''}.`);
+    if (earned > 0) parts.push(`Earned this week: ${fmt(earned)}.`);
+    const n = await send(m.id, 'Your weekly summary', parts.join(' '), 'weekly-' + m.id);
+    if (n) {
+      await db.ref('notifyState/weeklyDigest/' + m.id).set(todayStr);
+      await db.ref('notifyState/loanReminded/' + m.id).set(todayStr);
+      state.loanReminded = state.loanReminded || {};
+      state.loanReminded[m.id] = todayStr;
+    }
+  }
+                                                    }
 // 3. Loan reminders (automatic)
 if (now.getUTCHours() >= LOAN_HOUR_UTC) {
   const loans = arr(GD.loans).filter(l => !l.writtenOff);
