@@ -188,40 +188,9 @@ select option{background:var(--surface2);}
 ::-webkit-scrollbar{width:3px;height:3px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
-
-/* ── Ambient background glow (slowly drifting colored light) ── */
-body::before{z-index:-1 !important;}
-body::after{content:'';position:fixed;inset:-25%;z-index:-1;pointer-events:none;
-  background:
-    radial-gradient(circle at 20% 25%,rgba(99,102,241,.26),transparent 38%),
-    radial-gradient(circle at 80% 70%,rgba(16,185,129,.22),transparent 40%),
-    radial-gradient(circle at 62% 14%,rgba(240,193,74,.13),transparent 32%),
-    radial-gradient(circle at 34% 86%,rgba(200,240,74,.13),transparent 34%);
-}
-@keyframes glowdrift{
-  0%{transform:translate3d(-3%,-2%,0) scale(1) rotate(0deg);}
-  50%{transform:translate3d(3%,2%,0) scale(1.08) rotate(6deg);}
-  100%{transform:translate3d(-2%,3%,0) scale(1.03) rotate(-5deg);}}
-body:has(#login:not(.off))::after,body:has(#lock:not(.off))::after{animation:glowdrift 45s ease-in-out infinite alternate;will-change:transform;}
-body:has(#login:not(.off)) #st-bg,body:has(#lock:not(.off)) #st-bg{animation:stpulse 10s ease-in-out infinite alternate;}
-@media (prefers-reduced-motion:reduce){body::after,#st-bg{animation:none !important;}}
-#login,#lock{background:transparent !important;}
-
-/* ── St. Michael background (glow image, strong on login, faint elsewhere) ── */
-#st-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;background:url('stmichael.webp') center 42%/contain no-repeat;opacity:.13;transition:opacity .5s;}
-body:has(#login:not(.off)) #st-bg,body:has(#lock:not(.off)) #st-bg{opacity:.6;}
-@keyframes stpulse{from{transform:scale(1);}to{transform:scale(1.05);}}
-@media (prefers-reduced-motion:reduce){#st-bg{animation:none;}}
-.st-banner{display:none;position:fixed;left:50%;bottom:calc(4% + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(86vw,330px);z-index:10000;pointer-events:none;filter:drop-shadow(0 0 12px rgba(240,193,74,.55)) drop-shadow(0 0 32px rgba(240,193,74,.28));}
-.st-banner svg{display:block;width:100%;height:auto;}
-body:has(#login:not(.off)) .st-banner,body:has(#lock:not(.off)) .st-banner{display:block;}
-@media (max-height:540px){.st-banner{display:none !important;}}
 </style>
 </head>
 <body>
-<div id="st-bg" aria-hidden="true"></div>
-<div class="st-banner" aria-hidden="true"><svg viewBox="0 0 300 64"><path d="M0 18 L50 18 L50 58 L0 58 L16 38 Z" fill="#8a6d1f"/><path d="M300 18 L250 18 L250 58 L300 58 L284 38 Z" fill="#8a6d1f"/><path d="M40 46 L50 46 L50 58 Z" fill="#5c4812"/><path d="M260 46 L250 46 L250 58 Z" fill="#5c4812"/><rect x="40" y="6" width="220" height="40" fill="#d9b44a"/><line x1="40" y1="8" x2="260" y2="8" stroke="#f3dc8a" stroke-width="2"/><line x1="40" y1="44" x2="260" y2="44" stroke="#a8862a" stroke-width="1.5"/><text x="150" y="32" text-anchor="middle" style="fill:#3b2c06;font-family:Georgia,'Times New Roman',serif;font-size:14.5px;letter-spacing:1.2px">Behind St. Michael</text></svg></div>
-
 
 <!-- LOCK -->
 <div id="lock">
